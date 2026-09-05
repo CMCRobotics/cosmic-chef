@@ -1,0 +1,19 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+web_modules/
+
+# Build outputs
+dist/
+build/
+cosmic-chef
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS/IDE files
+.DS_Store
+.vscode/
+.idea/

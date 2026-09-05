@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cosmic Chef</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.4.2/aframe.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/loglevel/1.8.1/loglevel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.4.0/dist/aframe-extras.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script src="https://unpkg.com/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
+ 
+    <script src="components/linear-animation.js"></script>
+    <script src="components/load-fragment.js"></script>
+    <script src="components/ar-utils.js"></script>
+  
+
+</head>
+<body>
+    <script>
+         window.AFRAME_INSPECTOR_CONFIG = {saveEndpoint: "/save"};
+    </script>
+
+    <a-scene
+        start-experience
+        webxr="optionalFeatures: hit-test, local-floor, hand-tracking; requiredFeatures: local-floor;"
+        renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
+        cursor="rayOrigin: mouse"
+        raycaster="objects: .clickable"
+        inspector="url: /aframe-inspector.min.js">
+      
+        <a-assets>
+            <a-asset-item id="table_low"     src="https://cmc-cdn.web.cern.ch/assets/cosmic-chef/furniture/table_low.glb"></a-asset-item>
+        </a-assets>
+
+        <!-- Main world container -->
+        <a-entity id="world-root" world-root>
+            
+            <a-entity environment=" preset: forest; ground: none; groundTexture: none; groundColor: #ffffff; dressing: trees; dressingAmount: 500; dressingColor: #ceebd5; dressingScale: 1; fog: 0.8; fogColor: #adc2d6; playArea: 1; shadow: true; horizonColor: #bfdfff; skyColor: #88c0f4; lighting: point; lightPosition: 1 2 -0.5; "></a-entity>
+            <a-light id="light-floor" type="directional" target="#floor" color="#ffffff" 
+                     intensity="1.2" position="-1 10 -5" castshadow="true" 
+                     shadow="mapSize: 2048x2048; bias: -0.001; near: 0.3; far: 50"></a-light>
+            <a-plane position="0 0 0" rotation="-90 0 0" width="100" height="100" color="#ffffff" shadow="receive: true"> </a-plane>
+          
+            <!-- Environment and Lighting -->
+            <a-entity load-fragment="src: /scene.html; templateId: cosmic-chef-scene"></a-entity>
+
+        </a-entity>
+      
+        <!-- Controller Entities -->
+        <a-entity id="leftHand" laser-controls="hand: left" raycaster="objects: .clickable"></a-entity>
+        <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .clickable"></a-entity>
+
+        <!-- Camera Rig -->
+        <a-entity id="cameraRig">
+            <a-camera position="0 3 4"></a-camera>
+        </a-entity>
+      
+    </a-scene>
+
+    <script>
+        const log = window.log.getLogger('main');
+        log.setLevel('debug');
+
+        const scene = document.querySelector('a-scene');
+        
+        scene.addEventListener('loaded', () => {
+            log.debug('Scene loaded');
+        });
+
+        scene.addEventListener('enter-vr', () => {
+            if (scene.is('vr-mode')) {
+                log.debug('Entered VR mode');
+            }
+        });
+
+        // XR session management
+        scene.addEventListener('sessionstart', () => {
+            log.debug('XR session started');
+        });
+
+        scene.addEventListener('sessionend', () => {
+            log.debug('XR session ended');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "cosmic-chef",
+  "version": "0.1.0",
+  "description": "Cosmic Chef - an Augmented Reality game where you cook the universe",
+  "scripts": {
+    "dev": "bun run src/server.ts",
+    "compile": "bun build src/server.ts --compile --target=bun-linux-x64-baseline --outfile cosmic-chef"
+  },
+  "dependencies": {
+    "aframe": "1.7.1",
+    "aframe-inspector": "github:CMCRobotics/aframe-inspector",
+    "aframe-watcher-bun": "github:CMCRobotics/aframe-watcher-bun",
+    "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0"
+  }
+}
