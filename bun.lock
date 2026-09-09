@@ -94,7 +94,7 @@
 
     "aframe": ["aframe@1.7.1", "", { "dependencies": { "buffer": "^6.0.3", "debug": "^4.3.4", "deep-assign": "^2.0.0", "load-bmfont": "^1.2.3", "super-animejs": "^3.1.0", "three": "npm:super-three@0.173.5", "three-bmfont-text": "github:dmarcos/three-bmfont-text#eed4878795be9b3e38cf6aec6b903f56acd1f695" } }, "sha512-dcc7PWI5z8pyJ0s2W0mUd8d83339frgMXhUvWr1yxkdgg6zSExkuQwsSJjiNn7XWKMUUqKYDvV/WzQQRA+OBXA=="],
 
-    "aframe-inspector": ["aframe-inspector@github:CMCRobotics/aframe-inspector#bc7d583", { "dependencies": { "@fortawesome/free-solid-svg-icons": "^6.5.1", "clipboard-copy": "^4.0.1", "clsx": "^2.1.0", "lodash.debounce": "^4.0.8", "prop-types": "^15.8.1", "react": "^18.2.0", "react-dom": "^18.2.0", "react-select": "^5.8.0", "three": "0.168.0" } }, "CMCRobotics-aframe-inspector-bc7d583"],
+    "aframe-inspector": ["aframe-inspector@github:CMCRobotics/aframe-inspector#4d83c05", { "dependencies": { "@fortawesome/free-solid-svg-icons": "^6.5.1", "clipboard-copy": "^4.0.1", "clsx": "^2.1.0", "lodash.debounce": "^4.0.8", "prop-types": "^15.8.1", "react": "^18.2.0", "react-dom": "^18.2.0", "react-select": "^5.8.0", "three": "0.168.0" } }, "CMCRobotics-aframe-inspector-4d83c05"],
 
     "aframe-watcher-bun": ["@cmcrobotics/aframe-watcher-bun@github:CMCRobotics/aframe-watcher-bun#acae402", { "dependencies": { "@types/bun": "^1.3.11" }, "bin": { "aframe-watcher-bun": "src/cli.ts" } }, "CMCRobotics-aframe-watcher-bun-acae402"],
 
