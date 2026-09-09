@@ -19,20 +19,6 @@ You are a **cosmic chef**. The universe is the kitchen, fundamental particles ar
 
 Core loop: **capture a recipe → direct the sous-chefs to prepare it → serve the dish.**
 
-Game setup : 
-- Participants are regrouped in teams of :
-  - One head chef.
-  - One or more sous-chefs.
-- One head chef wears an augmented reality headset. He captures recipes falling from the sky and starts preparation.
-- At any point, the head chef can :
-   - see the status of the current dish preparation.
-   - cancel the order and have to go capture another recipe, the team is penalised for not fulfilling the order.
-   - trigger the dish delivery - but the dish must be as expected, or the team is penalised.
-- While the recipe is on, the sous-chefs are tasked with preparing it under the vocal direction of the head chef.
-- The three sous-chefs are sitting in front of a screen that reflects their interactions in-game.
-- The three sous-chefs are equipped with motion sensors which are used to trigger in-game preparation steps (we map usual cooking gestures such as slicing and dicing to trigger quarks transformations into different states).
-- When all the preparation steps have been fulfilled, the head chef can trigger the **dish delivery**. Points are scored according to whether the dish matches the recipe and how fast it was produced.
-
 The design bet: the *presentation* is surreal and cosmic, but the *mechanics* are physics-honest. Players learn real particle physics by cooking with it.
 
 ---
