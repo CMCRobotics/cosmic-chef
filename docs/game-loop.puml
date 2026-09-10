@@ -1,0 +1,56 @@
+@startuml
+skinparam StateBackgroundColor #F8F9FA
+skinparam StateBorderColor #333333
+skinparam DefaultTextAlignment left
+
+[*] --> LobbySetup : App Start
+
+state LobbySetup {
+  [*] --> WaitingForTeamRegistration
+  WaitingForTeamRegistration --> ReadyToStart : REGISTER_TEAM
+}
+
+LobbySetup --> Playing : START_GAME
+
+state Playing {
+  [*] --> WaitingForRecipe
+
+  WaitingForRecipe --> PreparingComplexDish : CAPTURE_RECIPE
+
+  state PreparingComplexDish {
+    [*] --> Processing
+    
+    state Processing {
+      [*] --> Idle
+      Idle --> HoldingGesture : SOUS_CHEF_GESTURE_START\n[isAValidSequentialStart / isAValidSynchronizedStart]
+      HoldingGesture --> Processing : GESTURE_TICK / GESTURE_STOP
+    }
+
+    Processing --> CheckStepProgress : SOUS_CHEF_GESTURE_TICK
+    
+    state CheckStepProgress {
+      [*] --> Evaluating
+    }
+
+    CheckStepProgress --> AdvanceStep : hasSequentialStepCompleted\nOR hasSynchronizedStepCompleted
+    CheckStepProgress --> Processing : [No step completed yet]
+
+    state AdvanceStep {
+      [*] --> ApplyingStepIndex
+    }
+
+    AdvanceStep --> Processing : hasMoreRecipeSteps
+    AdvanceStep --> OrderSuccess : [All steps finished]
+  }
+
+  PreparingComplexDish --> OrderPenalized : CANCEL_ORDER OR Timeout (60s)
+  
+  OrderSuccess --> WaitingForRecipe : after 2s
+  OrderPenalized --> WaitingForRecipe : after 2s
+}
+
+Playing --> GameOver : Session Timer Ends (300s)
+GameOver --> LobbySetup : RESTART
+GameOver --> [*]
+
+@enduml
