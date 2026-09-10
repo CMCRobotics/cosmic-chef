@@ -30,8 +30,14 @@ Game setup :
    - cancel the order and have to go capture another recipe, the team is penalized for not fulfilling the order.
    - trigger the dish delivery - but the dish must be as expected, or the team is penalized.
 - While the recipe is on, the sous-chefs are tasked with preparing it under the vocal direction of the head chef.
-- The three sous-chefs are sitting in front of a screen that reflects their interactions in-game.
-- The three sous-chefs are equipped with motion sensors which are used to trigger in-game preparation steps (we map usual cooking gestures such as slicing and dicing to trigger quarks transformations into different states).
+- The sous-chefs are sitting in front of a screen that reflects their interactions in-game.
+- The sous-chefs are equipped with motion sensors which are used to trigger in-game preparation steps (we map usual cooking gestures such as slicing and dicing to trigger quarks transformations into different states).
+- The sous-chefs can be up to three, but the recipe preparation only takes place as two possible preparation modes :
+  - A sequence of distinct preparation steps, during which one sous-chef cannot undertake two consecutive steps (another sous-chef must necessarily take over), unless there is only one sous-chef available at all.
+  - A synchronized action during which all sous-chefs must perform the same steps without interruption until completion.
+- There are two types of preparation steps :
+  - Resumable steps, for which the time of active preparation is accrued even if the preparation is interrupted (e.g. the motion sensor detects the move is not accurately performed).
+  - Uninterruptible steps, which reset the progress of that particular step if the preparation is interrupted.
 - When all the preparation steps have been fulfilled, the head chef can trigger the **dish delivery**. Points are scored according to whether the dish matches the recipe and how fast it was produced.
 - After a given period of time, the entire game is stopped and all-time scores, game scores and per-team scores are being tallied and visualized :
   - How many completed dishes ? How many non-conformant dishes ? How many attempted recipes ? Overall average preparation time per dish ?
