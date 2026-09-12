@@ -24,3 +24,4 @@
 ## Phase 3: Game Over & Analytics
 - When the global session timer expires, the game transitions to `GameOver`.
 - Final statistics are tallied and displayed: completed dishes, non-conformant/penalized orders, individual sous-chef precision, and all-time leaderboards.
+

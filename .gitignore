@@ -17,3 +17,7 @@ cosmic-chef
 .DS_Store
 .vscode/
 .idea/
+
+# Built vendor bundles
+public/vendor/
+

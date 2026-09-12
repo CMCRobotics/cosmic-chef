@@ -16,6 +16,7 @@ Orientation file for coding agents and new contributors. Read this before making
 |---------|--------|
 | Runtime / toolchain | **Bun** (not Node) |
 | Dev server | custom, `src/server.ts` (TypeScript) |
+| Game State Management | **XState** v5 |
 | 3D / XR framework | **A-Frame** 1.7.1 (declarative HTML entity-component scene graph) |
 | Live editing | `aframe-inspector` + `aframe-watcher-bun` (both CMCRobotics forks) |
 | Logging | **loglevel** (`window.log`) |
