@@ -33,25 +33,25 @@ The design bet: the *presentation* is surreal and cosmic, but the *mechanics* ar
 
 | Gen | Flavour | Symbol | Mass (approx.) | Electric charge | Rarity tier |
 |-----|---------|--------|----------------|-----------------|-------------|
-| 1 | up | `u` | ~2.2 MeV | +2⁄3 | common |
-| 1 | down | `d` | ~4.7 MeV | −1⁄3 | common |
-| 2 | strange | `s` | ~93 MeV | −1⁄3 | exotic |
-| 2 | charm | `c` | ~1.27 GeV | +2⁄3 | exotic |
-| 3 | bottom | `b` | ~4.18 GeV | −1⁄3 | rare |
-| 3 | top | `t` | ~173 GeV | +2⁄3 | legendary |
+| 1   | up      | `u`    | ~2.2 MeV       | +2⁄3             | common      |
+| 1   | down    | `d`    | ~4.7 MeV       | −1⁄3             | common      |
+| 2   | strange | `s`    | ~93 MeV        | −1⁄3             | exotic      |
+| 2   | charm   | `c`    | ~1.27 GeV      | +2⁄3             | exotic      |
+| 3   | bottom  | `b`    | ~4.18 GeV      | −1⁄3             | rare        |
+| 3   | top     | `t`    | ~173 GeV       | +2⁄3             | legendary   |
 
 Quarks also carry **colour charge** (red / green / blue — nothing to do with visual colour). Colour is why quarks are never found alone (see §4, Rule 1).
 
 ### 2.2 Leptons
 
-| Gen | Flavour | Symbol | Mass (approx.) | Electric charge | Rarity tier |
-|-----|---------|--------|----------------|-----------------|-------------|
-| 1 | electron | `e` | 0.511 MeV | −1 | common |
-| 1 | electron neutrino | `νe` | < 1 eV (≈ 0) | 0 | common, elusive |
-| 2 | muon | `μ` | 105.7 MeV | −1 | exotic |
-| 2 | muon neutrino | `νμ` | < 1 eV | 0 | exotic, elusive |
-| 3 | tau | `τ` | 1.777 GeV | −1 | rare |
-| 3 | tau neutrino | `ντ` | < 1 eV | 0 | rare, elusive |
+| Gen | Flavour           | Symbol | Mass (approx.) | Electric charge | Rarity tier     |
+|-----|-------------------|--------|----------------|-----------------|-----------------|
+| 1   | electron          | `e`    | 0.511 MeV      | −1              | common          |
+| 1   | electron neutrino | `νe`   | < 1 eV (≈ 0)   | 0               | common, elusive |
+| 2   | muon              | `μ`    | 105.7 MeV      | −1              | exotic          |
+| 2   | muon neutrino     | `νμ`   | < 1 eV         | 0               | exotic, elusive |
+| 3   | tau               | `τ`    | 1.777 GeV      | −1              | rare            |
+| 3   | tau neutrino      | `ντ`   | < 1 eV         | 0               | rare, elusive   |
 
 Leptons carry **no colour charge**, so they are not confined — the electron exists happily on its own.
 
@@ -69,12 +69,12 @@ Every quark and lepton has an **antiparticle** with the same mass and opposite c
 
 **Physics.** Particles interact by exchanging **force-carrier bosons**.
 
-| Boson | Force | What it does | Game framing |
-|-------|-------|--------------|--------------|
-| gluon `g` | strong | binds quarks into hadrons; acts only at nuclear range | **heat** — the technique that fuses ingredients |
-| photon `γ` | electromagnetic | binds electrons to nuclei; acts between charges | **light** — plating electrons around a nucleus |
-| `W⁺`, `W⁻`, `Z` | weak | **changes one flavour into another**; drives decay | **transformation** — swap an ingredient in place |
-| Higgs `H` | (Higgs field) | gives particles their mass | **seasoning/lore** — background, not a pickup |
+| Boson           | Force           | What it does | Game framing |
+|-----------------|-----------------|--------------|--------------|
+| gluon `g`       | strong          | binds quarks into hadrons; acts only at nuclear range | **heat** — the technique that fuses ingredients |
+| photon `γ`      | electromagnetic | binds electrons to nuclei; acts between charges | **light** — plating electrons around a nucleus |
+| `W⁺`, `W⁻`, `Z` | weak            | **changes one flavour into another**; drives decay | **transformation** — swap an ingredient in place |
+| Higgs `H`       | (Higgs field)   | gives particles their mass | **seasoning/lore** — background, not a pickup |
 
 Gravity is *not* part of the Standard Model. Content may mention it, but never list it as one of the kitchen's rules.
 
@@ -118,14 +118,14 @@ Tetraquarks (4) and pentaquarks (5) genuinely exist. Larger assemblies are legal
 
 ### Reference dishes
 
-| Dish | Composition | Charge | Kitchen tier |
-|------|-------------|--------|--------------|
-| proton | `uud` | +1 | staple |
-| neutron | `udd` | 0 | staple |
-| pion π⁺ | `ud̄` | +1 | quick bite |
-| kaon K⁻ | `sū` | −1 | exotic |
-| lambda Λ | `uds` | 0 | exotic |
-| J/ψ | `cc̄` | 0 | showpiece |
+| Dish     | Composition | Charge | Kitchen tier |
+|----------|-------------|--------|--------------|
+| proton   | `uud`       | +1     | staple       |
+| neutron  | `udd`       | 0      | staple       |
+| pion π⁺  | `ud̄`        | +1     | quick bite   |
+| kaon K⁻  | `sū`        | −1     | exotic       |
+| lambda Λ | `uds`       | 0      | exotic       |
+| J/ψ      | `cc̄`        | 0      | showpiece    |
 | hydrogen atom | proton + electron | 0 | plated course |
 
 ---
@@ -171,10 +171,7 @@ Accurate and safe to reuse: 6 quarks, 6 leptons, 3 generations, 12 matter ingred
 
 This document defines the **content contract**, not the storage format. The current codebase has no physics data yet; when you add it, keep the factual tables centralised here and never scatter Standard Model facts across gameplay code.
 
-Two options consistent with the existing architecture (see [`AGENTS.md`](../AGENTS.md)):
-
-1. **Component-driven** — a new A-Frame component in `public/components/` that owns ingredient/dish behaviour, matching the existing `load-fragment` / `linear-animation` pattern.
-2. **Fragment-driven** — declare entities directly in a scene fragment such as `public/scene.html`, for small fixed sets.
+When taking game design decisions, take into account the existing architecture (see [`AGENTS.md`](../AGENTS.md)):
 
 Whichever is chosen, the values above remain the ground truth.
 
