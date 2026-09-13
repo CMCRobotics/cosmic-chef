@@ -1,7 +1,6 @@
 /**
  * preparation-machine.js
  * State machine definition for Cosmic Chef.
- * Supports both browser and Node/Bun test environments.
  */
 
 const getLogger = () => {
@@ -10,92 +9,147 @@ const getLogger = () => {
     }
     return {
         debug: () => {},
-        info: (...args) => console.log('[Test Log Info]', ...args),
-        warn: (...args) => console.warn('[Test Log Warn]', ...args),
-        error: (...args) => console.error('[Test Log Error]', ...args)
+        info: (...args) => console.log('[Test Info]', ...args),
+        warn: (...args) => console.warn('[Test Warn]', ...args)
     };
 };
 
 const _XState = typeof window !== 'undefined' && window.XState ? window.XState : require('xstate');
 const { createMachine, assign } = _XState;
 
+const RECIPES = [
+    {
+        name: 'proton',
+        steps: [
+            { gesture: 'slice', behaviorType: 'resumable' },
+            { gesture: 'dice', behaviorType: 'uninterruptible' },
+            { gesture: 'smash', behaviorType: 'resumable' }
+        ]
+    },
+    {
+        name: 'neutron',
+        steps: [
+            { gesture: 'slice', behaviorType: 'resumable' },
+            { gesture: 'dice', behaviorType: 'uninterruptible' }
+        ]
+    }
+];
+
 const preparationMachine = createMachine({
     id: 'cosmic-chef',
     initial: 'idle',
     context: {
         currentOrder: null,
-        currentIngredients: [],
-        score: 0
+        currentStepIndex: 0,
+        stepProgress: 0,
+        activeChefsCount: 1,
+        lastChefId: null,
+        score: 0,
+        completedCount: 0,
+        penalizedCount: 0
     },
     states: {
         idle: {
-            on: { START_GAME: 'orderRequested' }
+            on: { START_GAME: 'waitingForRecipe' }
         },
-        orderRequested: {
-            entry: 'selectNewOrder',
-            on: { ORDER_ACCEPTED: 'cooking' }
-        },
-        cooking: {
+        waitingForRecipe: {
             on: {
-                ADD_INGREDIENT: { actions: 'addIngredient' },
-                CLEAR_KITCHEN: { actions: 'clearIngredients' },
-                SUBMIT_DISH: 'evaluating'
+                CAPTURE_RECIPE: { target: 'preparingComplexDish', actions: 'selectNewComplexRecipe' },
+                SET_ACTIVE_CHEFS: { actions: 'setActiveChefs' },
+                GAME_OVER: 'gameOver'
             }
         },
-        evaluating: {
+        preparingComplexDish: {
+            on: {
+                GESTURE_TICK: [
+                    { guard: 'isStepComplete', target: 'evaluatingStep', actions: 'incrementStepProgress' },
+                    { guard: 'isValidGestureAndChef', actions: 'incrementStepProgress' }
+                ],
+                STOP_GESTURE: { actions: 'handleStopGesture' },
+                STEP_TIMEOUT: 'orderPenalized',
+                CANCEL_ORDER: 'orderPenalized',
+                SET_ACTIVE_CHEFS: { actions: 'setActiveChefs' },
+                GAME_OVER: 'gameOver'
+            }
+        },
+        evaluatingStep: {
             always: [
-                { guard: 'isValidDish', target: 'serving' },
-                { target: 'roundFailed' }
+                { guard: 'hasMoreSteps', target: 'preparingComplexDish', actions: 'advanceStep' },
+                { target: 'orderSuccess' }
             ]
         },
-        serving: {
-            on: { SERVING_COMPLETE: 'roundSuccess' }
-        },
-        roundSuccess: {
-            entry: 'incrementScore',
-            on: { NEXT_ROUND: 'orderRequested' }
-        },
-        roundFailed: {
+        orderSuccess: {
+            entry: ['incrementScore', 'incrementSuccessCount'],
             on: {
-                RETRY: 'cooking',
-                NEXT_ROUND: 'orderRequested' }
-        }
+                NEXT_ROUND: 'waitingForRecipe',
+                SET_ACTIVE_CHEFS: { actions: 'setActiveChefs' },
+                GAME_OVER: 'gameOver'
+            }
+        },
+        orderPenalized: {
+            entry: ['applyPenalty', 'incrementPenalizedCount'],
+            on: {
+                NEXT_ROUND: 'waitingForRecipe',
+                SET_ACTIVE_CHEFS: { actions: 'setActiveChefs' },
+                GAME_OVER: 'gameOver'
+            }
+        },
+        gameOver: { type: 'final' }
     }
 }, {
     actions: {
-        selectNewOrder: assign(({ context }) => {
-            const recipes = [
-                { name: 'proton', formula: ['u', 'u', 'd'] },
-                { name: 'neutron', formula: ['u', 'd', 'd'] },
-                { name: 'pion π⁺', formula: ['u', 'd_anti'] }
-            ];
-            const index = Math.floor(Math.random() * recipes.length);
-            const currentOrder = recipes[index];
-            const currentIngredients = [];
-            getLogger().info('New Order:', currentOrder.name);
-            return { currentOrder, currentIngredients };
+        setActiveChefs: assign(({ event }) => ({
+            activeChefsCount: typeof event.count === 'number' ? event.count : 1
+        })),
+        selectNewComplexRecipe: assign(({ event }) => {
+            const selectedRecipe = (event.recipe && event.recipe.steps) ? event.recipe : RECIPES[Math.floor(Math.random() * RECIPES.length)];
+            getLogger().info('Recipe Captured:', selectedRecipe.name);
+            return { currentOrder: selectedRecipe, currentStepIndex: 0, stepProgress: 0, lastChefId: null };
         }),
-        addIngredient: assign(({ context, event }) => {
-            const currentIngredients = [...context.currentIngredients, event.ingredient];
-            getLogger().debug(`Added: ${event.ingredient}. Current:`, currentIngredients);
-            return { currentIngredients };
+        incrementStepProgress: assign(({ context, event }) => {
+            const amount = event.progressAmount !== undefined ? event.progressAmount : 10;
+            return { stepProgress: Math.min(100, context.stepProgress + amount) };
         }),
-        clearIngredients: assign(() => {
-            getLogger().debug('Cleared ingredients.');
-            return { currentIngredients: [] };
+        handleStopGesture: assign(({ context }) => {
+            if (!context.currentOrder) return {};
+            const currentStep = context.currentOrder.steps[context.currentStepIndex];
+            if (currentStep && currentStep.behaviorType === 'uninterruptible') {
+                return { stepProgress: 0 };
+            }
+            return {};
         }),
-        incrementScore: assign(({ context }) => {
-            const score = context.score + 100;
-            getLogger().info(`Score: ${score}`);
-            return { score };
-        })
+        advanceStep: assign(({ context, event }) => ({
+            currentStepIndex: context.currentStepIndex + 1,
+            stepProgress: 0,
+            lastChefId: event.chefId || null
+        })),
+        incrementScore: assign(({ context }) => ({ score: context.score + 100 })),
+        incrementSuccessCount: assign(({ context }) => ({ completedCount: context.completedCount + 1 })),
+        applyPenalty: assign(({ context }) => ({ score: Math.max(0, context.score - 50) })),
+        incrementPenalizedCount: assign(({ context }) => ({ penalizedCount: context.penalizedCount + 1 }))
     },
     guards: {
-        isValidDish: ({ context }) => {
+        isValidGestureAndChef: ({ context, event }) => {
             if (!context.currentOrder) return false;
-            const needed = [...context.currentOrder.formula].sort();
-            const got = [...context.currentIngredients].sort();
-            return needed.length === got.length && needed.every((v, i) => v === got[i]);
+            const step = context.currentOrder.steps[context.currentStepIndex];
+            if (!step || event.gesture !== step.gesture) return false;
+            if (context.activeChefsCount > 1 && context.lastChefId !== null && event.chefId === context.lastChefId) {
+                getLogger().warn(`Chef ${event.chefId} attempted consecutive step!`);
+                return false;
+            }
+            return true;
+        },
+        isStepComplete: ({ context, event }) => {
+            if (!context.currentOrder) return false;
+            const step = context.currentOrder.steps[context.currentStepIndex];
+            if (!step || event.gesture !== step.gesture) return false;
+            if (context.activeChefsCount > 1 && context.lastChefId !== null && event.chefId === context.lastChefId) return false;
+            const amount = event.progressAmount !== undefined ? event.progressAmount : 10;
+            return (context.stepProgress + amount) >= 100;
+        },
+        hasMoreSteps: ({ context }) => {
+            if (!context.currentOrder) return false;
+            return (context.currentStepIndex + 1) < context.currentOrder.steps.length;
         }
     }
 });
