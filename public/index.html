@@ -7,10 +7,11 @@
     <!-- Vendor Dependencies Bundle (Offline / Local) -->
     <script src="vendor/bundle.js"></script>
 
-    <script src="components/linear-animation.js"></script>
-    <script src="components/load-fragment.js"></script>
-    <script src="components/ar-utils.js"></script>
-    <script src="components/game-manager.js"></script>
+    <script src="xstate/preparation-machine.js"></script>
+    <script src="aframe-components/linear-animation.js"></script>
+    <script src="aframe-components/load-fragment.js"></script>
+    <script src="aframe-components/ar-utils.js"></script>
+    <script src="aframe-components/preparation-manager.js"></script>
   
 
 </head>
@@ -21,7 +22,7 @@
 
     <a-scene
         start-experience
-        game-manager
+        preparation-manager
         webxr="optionalFeatures: hit-test, local-floor, hand-tracking; requiredFeatures: local-floor;"
         renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
         cursor="rayOrigin: mouse"

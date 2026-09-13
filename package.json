@@ -5,7 +5,8 @@
   "scripts": {
     "build:vendor": "bun build src/vendor.js --outfile public/vendor/bundle.js --minify",
     "dev": "bun run build:vendor && bun run src/server.ts",
-    "compile": "bun run build:vendor && bun build src/server.ts --compile --outfile cosmic-chef"
+    "compile": "bun run build:vendor && bun build src/server.ts --compile --outfile cosmic-chef",
+    "test": "bun test"
   },
   "dependencies": {
     "@tweenjs/tween.js": "^25.0.0",

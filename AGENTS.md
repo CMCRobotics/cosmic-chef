@@ -20,15 +20,17 @@ Orientation file for coding agents and new contributors. Read this before making
 | 3D / XR framework | **A-Frame** 1.7.1 (declarative HTML entity-component scene graph) |
 | Live editing | `aframe-inspector` + `aframe-watcher-bun` (both CMCRobotics forks) |
 | Logging | **loglevel** (`window.log`) |
-| Config | `dotenv` (`.env`) |
+| Config | **dotenv** (`.env`) |
 | 3D assets | GLB models from `https://cmc-cdn.web.cern.ch/assets/...` |
+| Testing | **Bun Test** (unit testing framework) |
 
-There is no build step for client code, no bundler, no test framework and no linter configured. Client code is plain ES5/ES6 JavaScript served as-is.
+There is no build step for client code, no bundler, and no linter configured. Client code is plain ES5/ES6 JavaScript served as-is. We use **Bun Test** for server and logic unit testing.
 
 ## 3. Quickstart
 
 ```bash
 bun install
+bun test             # runs the unit test suite
 bun run dev          # serves http://localhost:3000
 ```
 
@@ -102,8 +104,15 @@ AFRAME.registerComponent('my-thing', {
 
 ## 7. Verifying changes
 
-There are no automated tests. Validate manually:
+We use automated unit tests alongside manual validation.
 
+### Automated Tests
+Run the test suite with:
+```bash
+bun test
+```
+
+### Manual Validation
 1. `bun run dev` and open `http://localhost:3000`.
 2. Check the browser console — loglevel output at debug level shows scene lifecycle (`Scene loaded`, `Entered VR/AR mode`, XR session start/end).
 3. Confirm models actually appear (missing CDN assets fail silently apart from a network error).
