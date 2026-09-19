@@ -31,19 +31,72 @@
       
         <a-assets>
             <a-asset-item id="asset_table_low" src="https://cmc-cdn.web.cern.ch/assets/cosmic-chef/furniture/table_low.glb"></a-asset-item>
+
+            <a-asset-item id="asset_button_floor_square" src="assets/models/factory/button-floor-square.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe" src="assets/models/factory/conveyor-stripe.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_corner" src="assets/models/factory/conveyor-corner.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_corner" src="assets/models/factory/conveyor-stripe-corner.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_junction_t" src="assets/models/factory/conveyor-stripe-junction-t.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_part_end" src="assets/models/factory/conveyor-stripe-part-end.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_part_middle" src="assets/models/factory/conveyor-stripe-part-middle.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_sides" src="assets/models/factory/conveyor-stripe-sides.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_sides_cross" src="assets/models/factory/conveyor-stripe-sides-cross.glb"></a-asset-item>
+
+            <a-asset-item id="asset_hopper_high_round" src="assets/models/factory/hopper-high-round.glb"></a-asset-item>
+
+            <a-asset-item id="asset_machine_connection_pipe" src="assets/models/factory/machine-connection-pipe.glb"></a-asset-item>
+            <a-asset-item id="asset_machine_fortified" src="assets/models/factory/machine-fortified.glb"></a-asset-item>
+            <a-asset-item id="asset_piston_round" src="assets/models/factory/piston-round.glb"></a-asset-item>
+
+            <a-asset-item id="asset_scanner_high" src="assets/models/factory/scanner-high.glb"></a-asset-item>
+            <a-asset-item id="asset_screen_hanging_wide" src="assets/models/factory/screen-hanging-wide.glb"></a-asset-item>
+
+
+
+            <a-asset-item id="asset_cooking_knife" src="assets/models/food/cooking-knife.glb"></a-asset-item>
+            <a-asset-item id="asset_cooking_spatula" src="assets/models/food/cooking-spatula.glb"></a-asset-item>
+            <a-asset-item id="asset_cooking_spoon" src="assets/models/food/cooking-spoon.glb"></a-asset-item>
+            <a-asset-item id="asset_meat_tenderizer" src="assets/models/food/meat-tenderizer.glb"></a-asset-item>
+            <a-asset-item id="asset_cutting_board" src="assets/models/food/cutting-board.glb"></a-asset-item>
+            <a-asset-item id="asset_frying_pan" src="assets/models/food/frying-pan.glb"></a-asset-item>
+
+
         </a-assets>
 
         <!-- Main world container -->
         <a-entity id="world-root" world-root>
             
-            <a-entity environment="preset: starry; lightPosition: 0 -0.01 -0.2; ground: flats; groundTexture: none; groundColor: #cecece; fog: 0.8; fogColor: #adc2d6; shadow: true;"></a-entity>
+            <!-- The light position determines how bright the sun is in the Environment component -->
+            <a-entity environment="preset: starry; stageSize: 100; lightPosition: 0 -0.01 -0.2; ground: none; groundTexture: none;"></a-entity>
+            
             <!-- <a-light id="light-floor" type="directional" target="#floor" color="#ffffff" 
                      intensity="1.2" position="-1 10 -5" castshadow="true" 
                      shadow="mapSize: 2048x2048; bias: -0.001; near: 0.3; far: 50"></a-light>-->
-            <a-plane position="0 0 0" rotation="-90 0 0" width="100" height="100" color="#ffffff" shadow="receive: true"> </a-plane> 
+
+            <a-circle position="0 -30 0" scale="100 100 100" rotation="-90 0 0" color="#black"> </a-circle> 
           
-            <!-- Environment and Lighting -->
             <a-entity load-fragment="src: /scene.html; templateId: cosmic-chef-scene"></a-entity>
+
+
+            <a-entity id="hemisphere-light" position="0 50 0" light="color: #CEE4F0; groundColor: #553e35; intensity: 2.3; type: hemisphere"></a-entity>
+
+
+            <a-entity id="galley" position="0 0 0">
+               <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: red" rotation="-90 0 0" position="0 0.03 0"></a-entity>
+               <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-1"></a-entity>
+            </a-entity>
+
+            <!-- <a-entity id="galley" position="20 0 30" rotation="0 -120 0">
+               <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: blue" rotation="-90 0 0" position="0 0.03 0"></a-entity>
+               <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-2"></a-entity>
+            </a-entity>
+
+
+            <a-entity id="galley" position="-20 0 30" rotation="0 120 0">
+               <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: #fffff" rotation="-90 0 0" position="0 0.03 0"></a-entity>
+               <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-3"></a-entity>
+            </a-entity> -->
+
 
         </a-entity>
       
@@ -53,7 +106,7 @@
 
         <!-- Camera Rig -->
         <a-entity id="cameraRig">
-            <a-camera position="0 3 4"></a-camera>
+            <a-camera position="0 3.5 4"></a-camera>
         </a-entity>
       
     </a-scene>
