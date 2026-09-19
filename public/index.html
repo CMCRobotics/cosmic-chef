@@ -9,6 +9,8 @@
 
     <script src="xstate/preparation-machine.js"></script>
     <script src="aframe-components/linear-animation.js"></script>
+    <script src="aframe-components/cutting-animation.js"></script>
+    <script src="aframe-components/stirring-animation.js"></script>
     <script src="aframe-components/load-fragment.js"></script>
     <script src="aframe-components/ar-utils.js"></script>
     <script src="aframe-components/preparation-manager.js"></script>
@@ -56,6 +58,7 @@
             <a-asset-item id="asset_cooking_knife" src="assets/models/food/cooking-knife.glb"></a-asset-item>
             <a-asset-item id="asset_cooking_spatula" src="assets/models/food/cooking-spatula.glb"></a-asset-item>
             <a-asset-item id="asset_cooking_spoon" src="assets/models/food/cooking-spoon.glb"></a-asset-item>
+            <a-asset-item id="asset_utensil_spoon" src="assets/models/food/utensil-spoon.glb"></a-asset-item>
             <a-asset-item id="asset_meat_tenderizer" src="assets/models/food/meat-tenderizer.glb"></a-asset-item>
             <a-asset-item id="asset_cutting_board" src="assets/models/food/cutting-board.glb"></a-asset-item>
             <a-asset-item id="asset_frying_pan" src="assets/models/food/frying-pan.glb"></a-asset-item>
@@ -73,7 +76,7 @@
                      intensity="1.2" position="-1 10 -5" castshadow="true" 
                      shadow="mapSize: 2048x2048; bias: -0.001; near: 0.3; far: 50"></a-light>-->
 
-            <a-circle position="0 -30 0" scale="100 100 100" rotation="-90 0 0" color="#black"> </a-circle> 
+            <a-circle position="0 -30 0" scale="100 100 100" rotation="-90 0 0" color="black"> </a-circle> 
           
             <a-entity load-fragment="src: /scene.html; templateId: cosmic-chef-scene"></a-entity>
 
@@ -86,7 +89,7 @@
                <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-1"></a-entity>
             </a-entity>
 
-            <!-- <a-entity id="galley" position="20 0 30" rotation="0 -120 0">
+            <a-entity id="galley" position="20 0 30" rotation="0 -120 0">
                <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: blue" rotation="-90 0 0" position="0 0.03 0"></a-entity>
                <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-2"></a-entity>
             </a-entity>
@@ -95,7 +98,7 @@
             <a-entity id="galley" position="-20 0 30" rotation="0 120 0">
                <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: #fffff" rotation="-90 0 0" position="0 0.03 0"></a-entity>
                <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-3"></a-entity>
-            </a-entity> -->
+            </a-entity>
 
 
         </a-entity>

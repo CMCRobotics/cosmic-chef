@@ -1,4 +1,4 @@
-<a-entity id="entity_button_floor_square" gltf-model="assets/models/factory/button-floor-square.glb" position="-2.21196 0 0.45235"
+<a-entity id="entity_button_floor_square" gltf-model="assets/models/factory/button-floor-square.glb" position="-0.225 0.4 2"
     scale="2 1.5 2"></a-entity>
 
 <a-entity id="entity_conveyor_stripe-2" gltf-model="assets/models/factory/conveyor-stripe.glb" position="4 1 0"
@@ -27,18 +27,19 @@
     position="2 0.9 -1"></a-entity>
     <a-entity id="entity_chef_board_1" gltf-model="#asset_cutting_board" rotation="0 90 0" position="2 1.3 -1"></a-entity>
 
-    <a-entity id="entity_chef_knife_1" gltf-model="#asset_cooking_knife" scale="2 2 2" rotation="90 90 -10" position="2 1.8 -1"></a-entity>
+    <a-entity id="entity_chef_knife_1" gltf-model="#asset_cooking_knife" scale="2 2 2" rotation="50 0 -90" position="1.9 2.1 -1" cutting-animation="speed: 0.5; depth: 0.6; angle: 50; sideMotion: 0.1; choppiness: 0.001; randomness: 0.1"></a-entity>
 
     <a-entity id="entity_chef_station_2"
     gltf-model="assets/models/factory/conveyor-stripe-sides-cross.glb" position="0 0.9 -1"></a-entity>
     <a-entity id="entity_chef_board_2" gltf-model="#asset_cutting_board" rotation="0 90 0" position="0 1.3 -1"></a-entity>
-    
+    <!-- <a-entity id="entity_chef_knife_2" gltf-model="#asset_cooking_knife" scale="2 2 2" rotation="50 0 -90" position="-0.1 2.1 -1" cutting-animation="speed: 0.5; depth: 0.6; angle: 45; sideMotion: -0.1; choppiness: 0.002; randomness: 0.05"></a-entity> -->
+    <a-entity id="entity_chef_tenderizer_2" gltf-model="#asset_meat_tenderizer" scale="2 2 2" rotation="60 0 -90" position="-0.1 2.2 -1.2" cutting-animation="speed: 0.3; depth: 0.3; angle: 80; sideMotion: 0; choppiness: 0.001; randomness: 0.01"></a-entity>
     
     <a-entity
     id="entity_chef_station_3" gltf-model="assets/models/factory/conveyor-stripe-sides-cross.glb"
     position="-2 0.9 -1"></a-entity>
     <a-entity id="entity_chef_board_3" gltf-model="#asset_cutting_board" rotation="0 90 0" position="-2 1.3 -1"></a-entity>
-
+    <a-entity id="entity_chef_spoon_3" gltf-model="#asset_utensil_spoon" scale="2.5 2.5 2.5" rotation="0 60 90" position="-1.9 2.1 -1.0" stirring-animation="speed: 1.2; radius: 0.2; depth: 0.2; randomness: 0.05; reverseRandomly: false" ></a-entity>
 
 
 <a-entity id="entity_hopper_high_round" gltf-model="assets/models/factory/hopper-high-round.glb" position="4 2.21289 0"
@@ -62,6 +63,4 @@
 
 <a-circle opacity="0.1" position="0 0.004 0" rotation="-90 0 0" scale="6.2 6.2 6.2" color="#fcfcfc" shadow="receive: true"> </a-plane>
 
-<!-- <a-entity id="entity_top_large_checkerboard" gltf-model="assets/models/factory/top-large-checkerboard.glb"
-    position="0 0.004 0" scale="6.2 6.2 6.2"></a-entity> -->
 
