@@ -31,7 +31,7 @@ Game setup :
    - trigger the dish delivery - but the dish must be as expected, or the team is penalized.
 - While the recipe is on, the sous-chefs are tasked with preparing it under the vocal direction of the head chef.
 - The sous-chefs are sitting in front of a screen that reflects their interactions in-game.
-- The sous-chefs are equipped with motion sensors which are used to trigger in-game preparation steps (we map usual cooking gestures such as slicing and dicing to trigger quarks transformations into different states).
+- The sous-chefs are equipped with motion sensors which are used to trigger in-game preparation steps (we map usual cooking gestures such as slicing and tenderizing to trigger quarks transformations into different states).
 - The sous-chefs can be up to three, but the recipe preparation only takes place as two possible preparation modes :
   - **Sequential Steps (Assembly Line):** A sequence of distinct preparation steps, during which one sous-chef cannot undertake two consecutive steps (another sous-chef must necessarily take over), unless there is only one sous-chef available at all.
   - **Synchronized Steps (Mega-Fusions):** A synchronized action during which all active sous-chefs must perform the required gesture simultaneously without interruption until completion.
@@ -47,6 +47,13 @@ Game setup :
 
 The design bet: the *presentation* is surreal and cosmic, relying on smooth animations and low-poly style assets.
 
+---
+
+## 2. Recipes
+
+See [`recipes.md`](recipes.md) for the full playable recipe catalogue. Each recipe maps sous-chef gestures to particle combinations, combining the physics rules from [`physics.md`](physics.md) with the gameplay mechanics described above.
+
+---
 
 ## 7. From this doc to the game
 
