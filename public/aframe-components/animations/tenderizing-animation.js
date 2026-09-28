@@ -1,4 +1,4 @@
-AFRAME.registerComponent('cutting-animation', {
+AFRAME.registerComponent('tenderizing-animation', {
     schema: {
         speed: {type: 'number', default: 0.6},
         depth: {type: 'number', default: 0.6},
@@ -14,7 +14,7 @@ AFRAME.registerComponent('cutting-animation', {
         var pos = el.getAttribute('position');
         var rot = el.getAttribute('rotation');
 
-        // Store the base position and rotation for the cutting motion
+        // Store the base position and rotation for the tenderizing motion
         this.baseX = pos.x;
         this.baseY = pos.y;
         this.baseZ = pos.z;
@@ -22,7 +22,7 @@ AFRAME.registerComponent('cutting-animation', {
         this.baseRotY = rot.y;
         this.baseRotZ = rot.z;
 
-        // Random startup delay so knives don't cut in sync
+        // Random startup delay so tenderizers don't strike in sync
         var randomDelay = Math.random() * this.data.speed * 1000;
         this.startTime = performance.now() - randomDelay;
 
@@ -39,7 +39,7 @@ AFRAME.registerComponent('cutting-animation', {
         var cycleTime = now - this.startTime;
         var cycleDuration = data.speed * 1000; // Convert to milliseconds
 
-        // Calculate progress through the current cut cycle (0 to 1)
+        // Calculate progress through the current strike cycle (0 to 1)
         var progress = (cycleTime % cycleDuration) / cycleDuration;
         var cycleCount = Math.floor(cycleTime / cycleDuration);
 
