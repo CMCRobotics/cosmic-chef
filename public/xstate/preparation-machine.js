@@ -17,20 +17,35 @@ const getLogger = () => {
 const _XState = typeof window !== 'undefined' && window.XState ? window.XState : require('xstate');
 const { createMachine, assign } = _XState;
 
+function isSynchronizedStep(step) {
+    return !!step && step.stepType === 'synchronized';
+}
+
+function synchronizedChefIds(event) {
+    return Array.isArray(event.chefIds) ? Array.from(new Set(event.chefIds)) : [];
+}
+
 const RECIPES = [
     {
         name: 'proton',
+        composition: 'uud',
+        charge: 1,
         steps: [
-            { gesture: 'slice', behaviorType: 'resumable' },
-            { gesture: 'dice', behaviorType: 'uninterruptible' },
-            { gesture: 'smash', behaviorType: 'resumable' }
+            { ingredient: 'up', gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' },
+            { ingredient: 'up', gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' },
+            { ingredient: 'down', gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' },
+            { ingredient: null, gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
         ]
     },
     {
         name: 'neutron',
+        composition: 'udd',
+        charge: 0,
         steps: [
-            { gesture: 'slice', behaviorType: 'resumable' },
-            { gesture: 'dice', behaviorType: 'uninterruptible' }
+            { ingredient: 'up', gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' },
+            { ingredient: 'down', gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' },
+            { ingredient: 'down', gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' },
+            { ingredient: null, gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
         ]
     }
 ];
@@ -118,11 +133,14 @@ const preparationMachine = createMachine({
             }
             return {};
         }),
-        advanceStep: assign(({ context, event }) => ({
-            currentStepIndex: context.currentStepIndex + 1,
-            stepProgress: 0,
-            lastChefId: event.chefId || null
-        })),
+        advanceStep: assign(({ context, event }) => {
+            const completedStep = context.currentOrder.steps[context.currentStepIndex];
+            return {
+                currentStepIndex: context.currentStepIndex + 1,
+                stepProgress: 0,
+                lastChefId: isSynchronizedStep(completedStep) ? null : (event.chefId || null)
+            };
+        }),
         incrementScore: assign(({ context }) => ({ score: context.score + 100 })),
         incrementSuccessCount: assign(({ context }) => ({ completedCount: context.completedCount + 1 })),
         applyPenalty: assign(({ context }) => ({ score: Math.max(0, context.score - 50) })),
@@ -133,6 +151,11 @@ const preparationMachine = createMachine({
             if (!context.currentOrder) return false;
             const step = context.currentOrder.steps[context.currentStepIndex];
             if (!step || event.gesture !== step.gesture) return false;
+
+            if (isSynchronizedStep(step)) {
+                return synchronizedChefIds(event).length >= context.activeChefsCount;
+            }
+
             if (context.activeChefsCount > 1 && context.lastChefId !== null && event.chefId === context.lastChefId) {
                 getLogger().warn(`Chef ${event.chefId} attempted consecutive step!`);
                 return false;
@@ -143,8 +166,14 @@ const preparationMachine = createMachine({
             if (!context.currentOrder) return false;
             const step = context.currentOrder.steps[context.currentStepIndex];
             if (!step || event.gesture !== step.gesture) return false;
-            if (context.activeChefsCount > 1 && context.lastChefId !== null && event.chefId === context.lastChefId) return false;
             const amount = event.progressAmount !== undefined ? event.progressAmount : 10;
+
+            if (isSynchronizedStep(step)) {
+                if (synchronizedChefIds(event).length < context.activeChefsCount) return false;
+                return (context.stepProgress + amount) >= 100;
+            }
+
+            if (context.activeChefsCount > 1 && context.lastChefId !== null && event.chefId === context.lastChefId) return false;
             return (context.stepProgress + amount) >= 100;
         },
         hasMoreSteps: ({ context }) => {
@@ -155,7 +184,7 @@ const preparationMachine = createMachine({
 });
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { preparationMachine };
+    module.exports = { preparationMachine, RECIPES };
 } else {
     window.preparationMachine = preparationMachine;
 }
