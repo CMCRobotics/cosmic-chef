@@ -101,6 +101,7 @@ AFRAME.registerComponent('my-thing', {
 - **`@ts-ignore` in `server.ts` is intentional** — the `with { type: "text" }` imports of the A-Frame bundles have no type declarations. Leave them.
 - **`node:fs` / path work must stay Bun-compatible** (`Bun.file`, `Bun.serve`). Do not introduce Node-only server APIs or an Express-style framework.
 - **AR requires HTTPS** on real devices; `localhost` is exempt for desktop testing.
+- **`RECIPES` in `public/xstate/preparation-machine.js` is the in-code mirror of [`docs/recipes.md`](docs/recipes.md).** Keep the `gesture`/`ingredient`/`composition`/`charge` fields synchronized whenever a recipe there changes. A step's final assembly action (the head chef's "Stir") is modeled as `stepType: 'synchronized'`, requiring a `GESTURE_TICK` with a `chefIds` array covering every active sous-chef, per `docs/game.md`'s "Synchronized Steps (Mega-Fusions)" rule — distinct from the default single-`chefId` sequential steps, and distinct from the generic `slice/dice/stir/smash` mechanic vocabulary in `docs/game-loop.md`.
 
 ## 7. Verifying changes
 
