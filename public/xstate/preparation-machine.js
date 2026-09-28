@@ -47,6 +47,27 @@ const RECIPES = [
             { ingredient: 'down', gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' },
             { ingredient: null, gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
         ]
+    },
+    {
+        name: 'pion',
+        composition: 'ud̄',
+        charge: 1,
+        steps: [
+            { ingredient: 'up', gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' },
+            { ingredient: 'anti-down', gesture: 'stir', preparedState: 'Stirred Anti-Down', behaviorType: 'resumable' },
+            { ingredient: null, gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
+        ]
+    },
+    {
+        name: 'lambda',
+        composition: 'uds',
+        charge: 0,
+        steps: [
+            { ingredient: 'up', gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' },
+            { ingredient: 'down', gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' },
+            { ingredient: 'strange', gesture: 'stir', preparedState: 'Stirred Strange', behaviorType: 'resumable' },
+            { ingredient: null, gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
+        ]
     }
 ];
 

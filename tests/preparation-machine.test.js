@@ -225,5 +225,67 @@ describe("preparation-machine", () => {
         actor.send({ type: "GESTURE_TICK", gesture: "stir", chefIds: ["chefA", "chefB", "chefC"], progressAmount: 100 });
         expect(actor.getSnapshot().value).toBe("orderSuccess");
     });
+
+    test("Recipe 3 (Pion π⁺) matches docs/recipes.md and completes via tenderize/stir/synchronized-stir", () => {
+        const pion = RECIPES.find(r => r.name === 'pion');
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 2 });
+        actor.send({
+            type: "CAPTURE_RECIPE",
+            recipe: pion
+        });
+        const state1 = actor.getSnapshot();
+        expect(state1.value).toBe("preparingComplexDish");
+        expect(state1.context.currentOrder.composition).toBe("ud̄");
+        expect(state1.context.currentOrder.charge).toBe(1);
+
+        // Tenderize (up quark)
+        actor.send({ type: "GESTURE_TICK", chefId: "chefA", gesture: "tenderize", progressAmount: 100 });
+        expect(actor.getSnapshot().context.currentStepIndex).toBe(1);
+
+        // Stir (anti-down quark)
+        actor.send({ type: "GESTURE_TICK", chefId: "chefB", gesture: "stir", progressAmount: 100 });
+        expect(actor.getSnapshot().context.currentStepIndex).toBe(2);
+
+        // Synchronized Stir - both chefs required
+        actor.send({ type: "GESTURE_TICK", gesture: "stir", chefIds: ["chefA", "chefB"], progressAmount: 100 });
+        expect(actor.getSnapshot().value).toBe("orderSuccess");
+        expect(actor.getSnapshot().context.score).toBe(100);
+        expect(actor.getSnapshot().context.completedCount).toBe(1);
+    });
+
+    test("Recipe 4 (Lambda Λ) matches docs/recipes.md and completes via tenderize/slice/stir/synchronized-stir", () => {
+        const lambda = RECIPES.find(r => r.name === 'lambda');
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 2 });
+        actor.send({
+            type: "CAPTURE_RECIPE",
+            recipe: lambda
+        });
+        const state1 = actor.getSnapshot();
+        expect(state1.value).toBe("preparingComplexDish");
+        expect(state1.context.currentOrder.composition).toBe("uds");
+        expect(state1.context.currentOrder.charge).toBe(0);
+
+        // Tenderize (up quark)
+        actor.send({ type: "GESTURE_TICK", chefId: "chefA", gesture: "tenderize", progressAmount: 100 });
+        expect(actor.getSnapshot().context.currentStepIndex).toBe(1);
+
+        // Slice (down quark)
+        actor.send({ type: "GESTURE_TICK", chefId: "chefB", gesture: "slice", progressAmount: 100 });
+        expect(actor.getSnapshot().context.currentStepIndex).toBe(2);
+
+        // Stir (strange quark)
+        actor.send({ type: "GESTURE_TICK", chefId: "chefA", gesture: "stir", progressAmount: 100 });
+        expect(actor.getSnapshot().context.currentStepIndex).toBe(3);
+
+        // Synchronized Stir - both chefs required
+        actor.send({ type: "GESTURE_TICK", gesture: "stir", chefIds: ["chefA", "chefB"], progressAmount: 100 });
+        expect(actor.getSnapshot().value).toBe("orderSuccess");
+        expect(actor.getSnapshot().context.score).toBe(100);
+        expect(actor.getSnapshot().context.completedCount).toBe(1);
+    });
 });
 
