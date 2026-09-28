@@ -6,7 +6,7 @@ AFRAME.registerComponent('slicing-animation', {
         sideMotion: {type: 'number', default: 0.1},
         choppiness: {type: 'number', default: 0.01},
         randomness: {type: 'number', default: 0.1},
-        gravity: {type: 'number', default: 1}
+        gravity: {type: 'number', default: 1.5}
     },
 
     init: function () {
