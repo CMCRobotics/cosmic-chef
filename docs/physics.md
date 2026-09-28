@@ -171,9 +171,9 @@ Accurate and safe to reuse: 6 quarks, 6 leptons, 3 generations, 12 matter ingred
 
 This document defines the **content contract**, not the storage format. The current codebase has no physics data yet; when you add it, keep the factual tables centralised here and never scatter Standard Model facts across gameplay code.
 
-When taking game design decisions, take into account the existing architecture (see [`AGENTS.md`](../AGENTS.md)):
+When taking game design decisions, take into account the existing architecture (see [`AGENTS.md`](../AGENTS.md)).
 
-Whichever is chosen, the values above remain the ground truth.
+See [`recipes.md`](recipes.md) for the playable recipe catalogue. Each recipe must satisfy the binding rules in §4 (confinement, charge conservation, decay). Whichever gameplay choices are made, the physics values above remain the ground truth.
 
 ---
 
