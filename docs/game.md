@@ -69,3 +69,28 @@ Whichever is chosen, the values above remain the ground truth.
 ---
 
 *Keep this document in sync with any content change that touches gameplay facts.*
+
+## 3. Visual Identity: The Quantum Particle
+
+To help sous-chefs distinguish between ingredients, the game uses a **Visual Identity Matrix** based on real physics properties. This is implemented via the `quantum-particle` A-Frame component.
+
+### 3.1 The Identity Matrix
+
+| Property | Visual Attribute | Mapping Logic |
+| :--- | :--- | :--- |
+| **Generation (Mass)** | **Geometry Complexity** | **Gen 1:** Tetrahedron (4 faces)<br>**Gen 2:** Octahedron (8 faces)<br>**Gen 3:** Icosahedron (20 faces) |
+| **Electric Charge** | **Color Palette** | **Up-type (+2/3):** Yellow/Orange/Red<br>**Down-type (-1/3):** Cyan/Blue/Indigo<br>**Leptons (-1):** Pink/Magenta/Purple<br>**Neutral (0):** White/Silver |
+| **Matter Type** | **Rotation & Overlay** | **Matter:** Clockwise rotation, solid glow.<br>**Antimatter:** Counter-clockwise rotation, wireframe overlay. |
+
+### 3.2 State Feedback
+
+The particle transforms dynamically during the **Core Cooking Loop**:
+
+1.  **Idle:** Small, slow-rotating shape in a neutral blue-grey color.
+2.  **Active Preparation:** When a sous-chef performs the correct gesture, the particle:
+    *   Changes its **Shape** and **Color** to match the required ingredient.
+    *   **Glows** and pulses with an aura.
+    *   **Scales up** progressively (from 1x to 2.5x) as `stepProgress` increases.
+3.  **Completion:** Briefly turns **Lime Green** when progress hits 100% before advancing or finalizing the dish.
+4.  **Fusion:** Assembly steps (like "Stir" with no specific ingredient) use a high-detail Icosahedron to represent the binding process.
+
