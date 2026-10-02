@@ -34,8 +34,6 @@
         inspector="url: /aframe-inspector.min.js">
       
         <a-assets>
-            <a-asset-item id="asset_table_low" src="https://cmc-cdn.web.cern.ch/assets/cosmic-chef/furniture/table_low.glb"></a-asset-item>
-
             <a-asset-item id="asset_button_floor_square" src="assets/models/factory/button-floor-square.glb"></a-asset-item>
             <a-asset-item id="asset_conveyor_stripe" src="assets/models/factory/conveyor-stripe.glb"></a-asset-item>
             <a-asset-item id="asset_conveyor_corner" src="assets/models/factory/conveyor-corner.glb"></a-asset-item>
@@ -80,7 +78,7 @@
 
             <a-circle position="0 -30 0" scale="100 100 100" rotation="-90 0 0" color="black"> </a-circle> 
           
-            <a-entity load-fragment="src: /scene.html; templateId: cosmic-chef-scene"></a-entity>
+            <!-- <a-entity load-fragment="src: /scene.html; templateId: cosmic-chef-scene"></a-entity> -->
 
 
             <a-entity id="hemisphere-light" position="0 50 0" light="color: #CEE4F0; groundColor: #553e35; intensity: 2.3; type: hemisphere"></a-entity>
@@ -91,7 +89,7 @@
                <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-1"></a-entity>
             </a-entity>
 
-            <a-entity id="galley" position="20 0 30" rotation="0 -120 0">
+            <!-- <a-entity id="galley" position="20 0 30" rotation="0 -120 0">
                <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: blue" rotation="-90 0 0" position="0 0.03 0"></a-entity>
                <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-2"></a-entity>
             </a-entity>
@@ -100,7 +98,7 @@
             <a-entity id="galley" position="-20 0 30" rotation="0 120 0">
                <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: #fffff" rotation="-90 0 0" position="0 0.03 0"></a-entity>
                <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-3"></a-entity>
-            </a-entity>
+            </a-entity> -->
 
 
         </a-entity>

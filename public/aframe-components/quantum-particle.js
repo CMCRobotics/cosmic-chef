@@ -86,32 +86,35 @@ AFRAME.registerComponent('quantum-particle', {
         });
         this.el.appendChild(this.aura);
 
-        // Create googly eyes
+        // Create googly eyes - slightly bigger, flat, deep-set
+        // Eyes are children of core so they rotate with stir gesture
         this.eyeLeft = document.createElement('a-entity');
         this.eyeLeft.setAttribute('geometry', {
             primitive: 'sphere',
-            radius: 0.05
+            radius: 0.04
         });
         this.eyeLeft.setAttribute('material', {
             color: '#ffffff',
             metalness: 0.9,
             roughness: 0.1
         });
-        this.eyeLeft.setAttribute('position', '-0.08 0.08 0.16');
-        this.el.appendChild(this.eyeLeft);
+        this.eyeLeft.setAttribute('position', '-0.07 0.07 0.07');
+        this.eyeLeft.setAttribute('scale', '0.9 2.2 1.1');
+        this.core.appendChild(this.eyeLeft);
 
         this.eyeRight = document.createElement('a-entity');
         this.eyeRight.setAttribute('geometry', {
             primitive: 'sphere',
-            radius: 0.05
+            radius: 0.04
         });
         this.eyeRight.setAttribute('material', {
             color: '#ffffff',
             metalness: 0.9,
             roughness: 0.1
         });
-        this.eyeRight.setAttribute('position', '0.08 0.08 0.16');
-        this.el.appendChild(this.eyeRight);
+        this.eyeRight.setAttribute('position', '0.07 0.07 0.07');
+        this.eyeRight.setAttribute('scale', '0.9 2.2 1.1');
+        this.core.appendChild(this.eyeRight);
 
         this.isAntimatter = false;
     },
@@ -163,9 +166,15 @@ AFRAME.registerComponent('quantum-particle', {
     },
 
     tick: function (t, dt) {
-        // Idle rotation (when not active)
+        // Idle breathing and blinking (when not active)
         if (!this.data.active) {
-            this.core.object3D.rotation.y += 0.005;
+            // Subtle breathing
+            const breathe = 1 + Math.sin(t / 1500) * 0.08;
+            this.core.setAttribute('scale', { x: breathe, y: breathe, z: breathe });
+
+            // Eyes blink with randomness
+            this.updateEyeBlink(t);
+
             return;
         }
 
@@ -180,6 +189,11 @@ AFRAME.registerComponent('quantum-particle', {
 
         // Apply eye flattening
         this.applyEyeFlattening(distortion);
+
+        // Eyes blink during active prep with no gesture
+        if (distortion.type === 'none') {
+            this.updateEyeBlink(t);
+        }
     },
 
     computeDistortion: function (t) {
@@ -189,12 +203,12 @@ AFRAME.registerComponent('quantum-particle', {
             // Large, slow bounce
             const period = 300;
             const amount = Math.abs(Math.sin(t / period)) * 0.4;
-            return { type: 'squash', amount: amount, period: period };
+            return { type: 'tenderize', amount: amount, period: period };
         } else if (gesture === 'slice') {
-            // Small, fast compress
-            const period = 100;
-            const amount = Math.abs(Math.sin(t / period)) * 0.15;
-            return { type: 'squash', amount: amount, period: period };
+            // Slow, exaggerated stretch with Z elongation (slime effect)
+            const period = 250;
+            const amount = Math.abs(Math.sin(t / period)) * 0.4;
+            return { type: 'slice', amount: amount, period: period };
         } else if (gesture === 'stir') {
             return { type: 'spin' };
         }
@@ -204,10 +218,11 @@ AFRAME.registerComponent('quantum-particle', {
     applyCoreTransform: function (t, distortion) {
         const rotationSpeed = this.isAntimatter ? -0.02 : 0.02;
 
-        if (distortion.type === 'squash') {
-            // Squash on Y, compensate on X/Z
+        if (distortion.type === 'tenderize') {
+            // Tenderize: particle on surface being squashed from above — no rotation
+            // Bottom stays on ground, top compresses down
             const squashFactor = 1.0 - distortion.amount;
-            const expandFactor = 1.0 + (distortion.amount * 0.5);
+            const expandFactor = 1.0 + (distortion.amount * 0.3);
 
             this.core.setAttribute('scale', {
                 x: expandFactor,
@@ -215,44 +230,69 @@ AFRAME.registerComponent('quantum-particle', {
                 z: expandFactor
             });
 
-            // Vertical bob
-            const bobHeight = distortion.amount * 0.1;
+            // Move center down to keep bottom on surface (core radius is 0.15)
+            const dropAmount = 0.15 * distortion.amount;
             this.core.setAttribute('position', {
                 x: 0,
-                y: bobHeight,
+                y: -dropAmount,
                 z: 0
             });
+        } else if (distortion.type === 'slice') {
+            // Slice: stretched backwards (front stays fixed), pushed through from behind
+            // Bottom stays on ground, minimal Y compression, stretched backwards along -Z
+            const squashFactor = 1.0 - (distortion.amount * 0.4);
+            const elongateFactor = 1.0 + (distortion.amount * 2.5);
+            const compressFactor = 1.0 - (distortion.amount * 0.5);
 
-            // Slow rotation even during squash
-            this.core.object3D.rotation.y += rotationSpeed * 0.3;
-            this.core.object3D.rotation.x += rotationSpeed * 0.15;
+            this.core.setAttribute('scale', {
+                x: compressFactor,
+                y: squashFactor,
+                z: elongateFactor
+            });
+
+            // Move center down to keep bottom on surface (proportional to actual squash)
+            const squashChange = 1.0 - squashFactor;
+            const dropAmount = 0.15 * squashChange;
+
+            // Move backwards so front (z+) stays fixed, stretches backwards (z-)
+            const pullBackAmount = 0.15 * (elongateFactor - 1);
+            this.core.setAttribute('position', {
+                x: 0,
+                y: -dropAmount,
+                z: -pullBackAmount
+            });
         } else if (distortion.type === 'spin') {
-            // Horizontal spin (sideways tumble)
-            this.core.object3D.rotation.x += rotationSpeed * 0.5;
+            // Vertical spin (stir) - rotation around Y axis
+            this.core.object3D.rotation.y -= rotationSpeed * 2.5;
             this.core.setAttribute('scale', { x: 1, y: 1, z: 1 });
             this.core.setAttribute('position', { x: 0, y: 0, z: 0 });
 
             if (this.isAntimatter) {
-                this.wireframe.object3D.rotation.x -= rotationSpeed * 0.75;
+                this.wireframe.object3D.rotation.y -= rotationSpeed * 3.75;
             }
         } else {
-            // No distortion, just gentle spin
-            this.core.object3D.rotation.y += rotationSpeed * 0.3;
-            this.core.setAttribute('scale', { x: 1, y: 1, z: 1 });
+            // No distortion during active prep — subtle breathing, eyes blink separately
+            const breathe = 1 + Math.sin(t / 1500) * 0.06;
+            this.core.setAttribute('scale', { x: breathe, y: breathe, z: breathe });
             this.core.setAttribute('position', { x: 0, y: 0, z: 0 });
         }
     },
 
     applyAuraScale: function (t, distortion) {
-        // Aura pulsates with progress
-        const pulse = 1 + Math.sin(t / 200) * (0.1 + this.data.progress * 0.2);
+        // Aura breathes regardless of progress
+        const pulse = 1 + Math.sin(t / 200) * 0.15;
         this.aura.setAttribute('scale', { x: pulse, y: pulse, z: pulse });
     },
 
     applyEyeFlattening: function (distortion) {
-        if (distortion.type === 'squash') {
-            // Eyes flatten with the core, smaller magnitude
-            const squashFactor = 1.0 - (distortion.amount * 0.6);
+        if (distortion.type === 'tenderize') {
+            // Eyes flatten moderately with tenderize
+            const squashFactor = 1.0 - (distortion.amount * 0.5);
+            this.eyeLeft.setAttribute('scale', { x: 1, y: squashFactor, z: 1 });
+            this.eyeRight.setAttribute('scale', { x: 1, y: squashFactor, z: 1 });
+        } else if (distortion.type === 'slice') {
+            // Eyes flatten more pronounced with slice
+            const squashFactor = 1.0 - (distortion.amount * 0.8);
             this.eyeLeft.setAttribute('scale', { x: 1, y: squashFactor, z: 1 });
             this.eyeRight.setAttribute('scale', { x: 1, y: squashFactor, z: 1 });
         } else {
@@ -260,5 +300,31 @@ AFRAME.registerComponent('quantum-particle', {
             this.eyeLeft.setAttribute('scale', { x: 1, y: 1, z: 1 });
             this.eyeRight.setAttribute('scale', { x: 1, y: 1, z: 1 });
         }
+    },
+
+    updateEyeBlink: function (t) {
+        // Pseudo-random blink timing based on particle ID
+        const cycleNum = Math.floor(t / 5000);
+        const seed = this.el.id.charCodeAt(0) + cycleNum * 73; // Deterministic randomness
+        const randomOffset = (Math.sin(seed) * 0.5 + 0.5) * 0.15; // 0 to 0.15 variation
+        const blinkTrigger = 0.85 + randomOffset; // Blink trigger varies between 0.85 and 1.0
+
+        const blinkCycle = (t % 5000) / 5000;
+        let eyeScale = 1; // Y scale for eyes
+
+        if (blinkCycle > blinkTrigger) {
+            // Blink: close to thin lines and back over remaining cycle
+            const remainingCycle = 1 - blinkTrigger;
+            const blinkPhase = (blinkCycle - blinkTrigger) / remainingCycle;
+            // Squash eyes to thin lines (0.05) and back to normal (0.55) using cosine
+            eyeScale = Math.cos(blinkPhase * Math.PI) * 0.5 + 0.5; // 0.5 to 1.0
+            eyeScale = eyeScale * 0.5 + 0.05; // Map to 0.05 (closed) to 0.55 (normal open)
+        } else {
+            // Normal open state
+            eyeScale = 0.55;
+        }
+
+        this.eyeLeft.setAttribute('scale', { x: 1, y: eyeScale, z: 1 });
+        this.eyeRight.setAttribute('scale', { x: 1, y: eyeScale, z: 1 });
     }
 });
