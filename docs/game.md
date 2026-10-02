@@ -78,19 +78,23 @@ To help sous-chefs distinguish between ingredients, the game uses a **Visual Ide
 
 | Property | Visual Attribute | Mapping Logic |
 | :--- | :--- | :--- |
-| **Generation (Mass)** | **Geometry Complexity** | **Gen 1:** Tetrahedron (4 faces)<br>**Gen 2:** Octahedron (8 faces)<br>**Gen 3:** Icosahedron (20 faces) |
 | **Electric Charge** | **Color Palette** | **Up-type (+2/3):** Yellow/Orange/Red<br>**Down-type (-1/3):** Cyan/Blue/Indigo<br>**Leptons (-1):** Pink/Magenta/Purple<br>**Neutral (0):** White/Silver |
-| **Matter Type** | **Rotation & Overlay** | **Matter:** Clockwise rotation, solid glow.<br>**Antimatter:** Counter-clockwise rotation, wireframe overlay. |
+| **Matter Type** | **Rotation Direction & Overlay** | **Matter:** Clockwise rotation.<br>**Antimatter:** Counter-clockwise rotation, wireframe shell overlay. |
+| **Face & Expression** | **Googly Eyes** | Simple reflective spheres placed on the front of the orb, flatten during cooking gestures to convey interaction. |
 
-### 3.2 State Feedback
+### 3.2 State Feedback & Gesture Response
 
-The particle transforms dynamically during the **Core Cooking Loop**:
+The particle is a **coloured sphere** that transforms dynamically during the **Core Cooking Loop**:
 
-1.  **Idle:** Small, slow-rotating shape in a neutral blue-grey color.
-2.  **Active Preparation:** When a sous-chef performs the correct gesture, the particle:
-    *   Changes its **Shape** and **Color** to match the required ingredient.
-    *   **Glows** and pulses with an aura.
-    *   **Scales up** progressively (from 1x to 2.5x) as `stepProgress` increases.
-3.  **Completion:** Briefly turns **Lime Green** when progress hits 100% before advancing or finalizing the dish.
-4.  **Fusion:** Assembly steps (like "Stir" with no specific ingredient) use a high-detail Icosahedron to represent the binding process.
+1.  **Idle:** Slowly rotating sphere in a neutral blue-grey color. Googly eyes stay full and reflective.
+2.  **Active Preparation:** When a sous-chef performs a cooking gesture, the particle responds:
+    *   **Color**: Changes to match the required ingredient (charge-based palette).
+    *   **Aura Growth**: A glowing halo around the core grows in opacity and scale as `progress` increases, carrying the visual feedback of preparation advancement.
+    *   **Gesture-Specific Distortion**: The particle morphs according to the active gesture:
+        - **Tenderize**: Large, slow squash-and-stretch with vertical bounce, like a thick meat resisting repeated impacts.
+        - **Slice**: Small, fast compression-and-rebound, read as the orb resisting an ineffective cutting stroke.
+        - **Stir**: Sideways tumble (rotation around the horizontal axis), as if being stirred and rolled within a vessel.
+    *   **Eye Flattening**: Googly eyes flatten in sync with the core's gesture distortion, emphasizing the cooking interaction.
+3.  **Completion**: Briefly flashes **Lime Green** when progress reaches 100%, signaling successful preparation.
+4.  **Fusion**: Assembly steps with no specific ingredient render a plain neutral-grey sphere—the aura growth indicates progress toward binding completion.
 

@@ -1,3 +1,120 @@
+<!-- Particle Showcase - Gesture & Progress Animation Loops -->
+<a-entity id="particle-showcase" position="0 2 -5">
+    <!-- Row 1: Gesture Demonstrations -->
+    <!-- Tenderize: Large squash-and-bounce -->
+    <a-entity id="particle-tenderize"
+        quantum-particle="ingredient: up; active: true; progress: 0.5; gesture: tenderize"
+        position="-4 0 0"
+        scale="2 2 2">
+    </a-entity>
 
+    <!-- Slice: Small, fast squash -->
+    <a-entity id="particle-slice"
+        quantum-particle="ingredient: down; active: true; progress: 0.6; gesture: slice"
+        position="0 0 0"
+        scale="2 2 2">
+    </a-entity>
 
+    <!-- Stir: Horizontal tumble -->
+    <a-entity id="particle-stir"
+        quantum-particle="ingredient: charm; active: true; progress: 0.4; gesture: stir"
+        position="4 0 0"
+        scale="2 2 2">
+    </a-entity>
 
+    <!-- Row 2: Progress Loop Demonstration -->
+    <!-- Progress cycling from 0 to 1 with tenderize -->
+    <a-entity id="particle-progress-tenderize"
+        quantum-particle="ingredient: top; active: true; progress: 0; gesture: tenderize"
+        position="-4 -3 0"
+        scale="2 2 2">
+    </a-entity>
+
+    <!-- Progress cycling from 0 to 1 with slice -->
+    <a-entity id="particle-progress-slice"
+        quantum-particle="ingredient: electron; active: true; progress: 0; gesture: slice"
+        position="0 -3 0"
+        scale="2 2 2">
+    </a-entity>
+
+    <!-- Antimatter with progress loop -->
+    <a-entity id="particle-antimatter"
+        quantum-particle="ingredient: anti-up; active: true; progress: 0; gesture: stir"
+        position="4 -3 0"
+        scale="2 2 2">
+    </a-entity>
+</a-entity>
+
+<!-- Labels (text info) -->
+<a-entity position="0 3.5 -5">
+    <a-text value="Tenderize (Large Bounce)" position="-4 -0.8 0" scale="0.4 0.4 0.4" align="center"></a-text>
+    <a-text value="Slice (Fast Squash)" position="0 -0.8 0" scale="0.4 0.4 0.4" align="center"></a-text>
+    <a-text value="Stir (Tumble)" position="4 -0.8 0" scale="0.4 0.4 0.4" align="center"></a-text>
+
+    <a-text value="Progress Loop" position="-4 -3.8 0" scale="0.4 0.4 0.4" align="center"></a-text>
+    <a-text value="Progress Loop" position="0 -3.8 0" scale="0.4 0.4 0.4" align="center"></a-text>
+    <a-text value="Antimatter Loop" position="4 -3.8 0" scale="0.4 0.4 0.4" align="center"></a-text>
+</a-entity>
+
+<script>
+    const scene = document.querySelector('a-scene');
+    scene.addEventListener('loaded', function() {
+        const log = window.log.getLogger('particle-showcase');
+        log.setLevel('debug');
+
+        // Gesture-stable particles (fixed progress)
+        const gestureParticles = [
+            { id: 'particle-tenderize', gesture: 'tenderize', ingredient: 'up', progress: 0.5 },
+            { id: 'particle-slice', gesture: 'slice', ingredient: 'down', progress: 0.6 },
+            { id: 'particle-stir', gesture: 'stir', ingredient: 'charm', progress: 0.4 }
+        ];
+
+        // Progress-looping particles
+        const progressParticles = [
+            { id: 'particle-progress-tenderize', gesture: 'tenderize', ingredient: 'top', duration: 4000 },
+            { id: 'particle-progress-slice', gesture: 'slice', ingredient: 'electron', duration: 4500 },
+            { id: 'particle-antimatter', gesture: 'stir', ingredient: 'anti-up', duration: 5000 }
+        ];
+
+        // Animate progress loops
+        progressParticles.forEach(particle => {
+            let startTime = Date.now();
+            let direction = 1;
+
+            const updateProgress = () => {
+                const elapsed = Date.now() - startTime;
+                const cycle = elapsed % particle.duration;
+                const halfCycle = particle.duration / 2;
+
+                let progress;
+                if (cycle < halfCycle) {
+                    // 0 -> 1
+                    progress = cycle / halfCycle;
+                } else {
+                    // 1 -> 0
+                    progress = 1 - (cycle - halfCycle) / halfCycle;
+                }
+
+                // Clamp to 0-1
+                progress = Math.max(0, Math.min(1, progress));
+
+                const el = document.getElementById(particle.id);
+                if (el) {
+                    el.setAttribute('quantum-particle', {
+                        ingredient: particle.ingredient,
+                        active: true,
+                        progress: progress,
+                        gesture: particle.gesture
+                    });
+                }
+
+                requestAnimationFrame(updateProgress);
+            };
+
+            updateProgress();
+            log.debug(`Started progress loop for ${particle.id} with duration ${particle.duration}ms`);
+        });
+
+        log.debug(`Particle showcase initialized: ${gestureParticles.length} gesture demos + ${progressParticles.length} progress loops`);
+    });
+</script>

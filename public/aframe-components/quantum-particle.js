@@ -1,40 +1,42 @@
 /**
  * quantum-particle.js
  * Visual representation of a fundamental particle (ingredient).
- * Maps physics properties (Generation, Charge, Matter/Antimatter) to visual attributes.
- * Listens for game-state-changed events and updates its appearance based on progress.
+ * Maps physics properties (Charge, Matter/Antimatter) to visual attributes.
+ * Pure stateless renderer: all appearance driven by schema properties.
  */
 
 const PARTICLE_METADATA = {
     // Quarks
-    'up': { gen: 1, charge: 'up-type', color: '#FFD54F' },
-    'down': { gen: 1, charge: 'down-type', color: '#4DD0E1' },
-    'charm': { gen: 2, charge: 'up-type', color: '#FF9800' },
-    'strange': { gen: 2, charge: 'down-type', color: '#2196F3' },
-    'top': { gen: 3, charge: 'up-type', color: '#F44336' },
-    'bottom': { gen: 3, charge: 'down-type', color: '#3F51B5' },
-    
+    'up': { charge: 'up-type', color: '#FFD54F' },
+    'down': { charge: 'down-type', color: '#4DD0E1' },
+    'charm': { charge: 'up-type', color: '#FF9800' },
+    'strange': { charge: 'down-type', color: '#2196F3' },
+    'top': { charge: 'up-type', color: '#F44336' },
+    'bottom': { charge: 'down-type', color: '#3F51B5' },
+
     // Antimatter Quarks (prefixed with anti-)
-    'anti-up': { gen: 1, charge: 'down-type', color: '#FFD54F', isAntimatter: true },
-    'anti-down': { gen: 1, charge: 'up-type', color: '#4DD0E1', isAntimatter: true },
-    'anti-strange': { gen: 2, charge: 'up-type', color: '#2196F3', isAntimatter: true },
-    'anti-charm': { gen: 2, charge: 'down-type', color: '#FF9800', isAntimatter: true },
-    'anti-bottom': { gen: 3, charge: 'up-type', color: '#3F51B5', isAntimatter: true },
-    'anti-top': { gen: 3, charge: 'down-type', color: '#F44336', isAntimatter: true },
+    'anti-up': { charge: 'down-type', color: '#FFD54F', isAntimatter: true },
+    'anti-down': { charge: 'up-type', color: '#4DD0E1', isAntimatter: true },
+    'anti-strange': { charge: 'up-type', color: '#2196F3', isAntimatter: true },
+    'anti-charm': { charge: 'down-type', color: '#FF9800', isAntimatter: true },
+    'anti-bottom': { charge: 'up-type', color: '#3F51B5', isAntimatter: true },
+    'anti-top': { charge: 'down-type', color: '#F44336', isAntimatter: true },
 
     // Leptons
-    'electron': { gen: 1, charge: 'lepton', color: '#E91E63' },
-    'electron-neutrino': { gen: 1, charge: 'neutral', color: '#ECEFF1' },
-    'muon': { gen: 2, charge: 'lepton', color: '#9C27B0' },
-    'muon-neutrino': { gen: 2, charge: 'neutral', color: '#ECEFF1' },
-    'tau': { gen: 3, charge: 'lepton', color: '#673AB7' },
-    'tau-neutrino': { gen: 3, charge: 'neutral', color: '#ECEFF1' }
+    'electron': { charge: 'lepton', color: '#E91E63' },
+    'electron-neutrino': { charge: 'neutral', color: '#ECEFF1' },
+    'muon': { charge: 'lepton', color: '#9C27B0' },
+    'muon-neutrino': { charge: 'neutral', color: '#ECEFF1' },
+    'tau': { charge: 'lepton', color: '#673AB7' },
+    'tau-neutrino': { charge: 'neutral', color: '#ECEFF1' }
 };
 
 AFRAME.registerComponent('quantum-particle', {
     schema: {
-        gesture: { type: 'string', default: '' },
         ingredient: { type: 'string', default: '' },
+        active: { type: 'boolean', default: false },
+        progress: { type: 'number', default: 0 },
+        gesture: { type: 'string', default: '' },
         inactiveColor: { type: 'color', default: '#37474f' }
     },
 
@@ -42,7 +44,7 @@ AFRAME.registerComponent('quantum-particle', {
         this.log = window.log.getLogger('quantum-particle');
         this.log.setLevel('debug');
 
-        // Create the core - geometry will be updated based on particle type
+        // Create the core sphere
         this.core = document.createElement('a-entity');
         this.core.setAttribute('geometry', {
             primitive: 'sphere',
@@ -56,7 +58,7 @@ AFRAME.registerComponent('quantum-particle', {
         });
         this.el.appendChild(this.core);
 
-        // Create the antimatter shell (only visible for antimatter)
+        // Create antimatter wireframe shell
         this.wireframe = document.createElement('a-entity');
         this.wireframe.setAttribute('geometry', {
             primitive: 'sphere',
@@ -71,7 +73,7 @@ AFRAME.registerComponent('quantum-particle', {
         });
         this.el.appendChild(this.wireframe);
 
-        // Create a glow/aura for active state
+        // Create aura
         this.aura = document.createElement('a-entity');
         this.aura.setAttribute('geometry', {
             primitive: 'sphere',
@@ -84,155 +86,179 @@ AFRAME.registerComponent('quantum-particle', {
         });
         this.el.appendChild(this.aura);
 
-        this.isPreparing = false;
-        this.isActuallyInactive = true;
-        this.progress = 0;
-        this.currentIngredient = null;
+        // Create googly eyes
+        this.eyeLeft = document.createElement('a-entity');
+        this.eyeLeft.setAttribute('geometry', {
+            primitive: 'sphere',
+            radius: 0.05
+        });
+        this.eyeLeft.setAttribute('material', {
+            color: '#ffffff',
+            metalness: 0.9,
+            roughness: 0.1
+        });
+        this.eyeLeft.setAttribute('position', '-0.08 0.08 0.16');
+        this.el.appendChild(this.eyeLeft);
 
-        this.onGameStateChanged = this.onGameStateChanged.bind(this);
-        this.el.sceneEl.addEventListener('game-state-changed', this.onGameStateChanged);
+        this.eyeRight = document.createElement('a-entity');
+        this.eyeRight.setAttribute('geometry', {
+            primitive: 'sphere',
+            radius: 0.05
+        });
+        this.eyeRight.setAttribute('material', {
+            color: '#ffffff',
+            metalness: 0.9,
+            roughness: 0.1
+        });
+        this.eyeRight.setAttribute('position', '0.08 0.08 0.16');
+        this.el.appendChild(this.eyeRight);
 
-        if (this.data.ingredient) {
-            this.updateParticleVisuals(this.data.ingredient);
-            this.setActive(0.5);
+        this.isAntimatter = false;
+    },
+
+    update: function (oldData) {
+        const ingredientChanged = oldData.ingredient !== this.data.ingredient;
+        const activeChanged = oldData.active !== this.data.active;
+        const progressChanged = oldData.progress !== this.data.progress;
+
+        if (ingredientChanged) {
+            this.updateIngredient();
+        }
+
+        if (ingredientChanged || progressChanged || activeChanged) {
+            this.updateColors();
+        }
+    },
+
+    updateIngredient: function () {
+        const meta = PARTICLE_METADATA[this.data.ingredient];
+        this.isAntimatter = meta ? !!meta.isAntimatter : false;
+        this.wireframe.setAttribute('visible', this.isAntimatter);
+    },
+
+    updateColors: function () {
+        const meta = PARTICLE_METADATA[this.data.ingredient];
+        const color = meta ? meta.color : this.data.inactiveColor;
+
+        if (this.data.active && this.data.progress > 0) {
+            const targetColor = this.data.progress >= 1.0 ? '#76ff03' : color;
+            const emissiveIntensity = 0.5 + this.data.progress * 2.0;
+            this.core.setAttribute('material', {
+                color: targetColor,
+                emissive: targetColor,
+                emissiveIntensity: emissiveIntensity
+            });
+            this.aura.setAttribute('material', {
+                color: color,
+                opacity: 0.2 + this.data.progress * 0.4
+            });
         } else {
-            this.updateParticleVisuals(null);
+            this.core.setAttribute('material', {
+                color: this.data.inactiveColor,
+                emissive: this.data.inactiveColor,
+                emissiveIntensity: 0.5
+            });
+            this.aura.setAttribute('material', 'opacity', 0);
         }
     },
 
     tick: function (t, dt) {
-        if (this.isPreparing) {
-            // Rotation based on matter/antimatter
-            const rotationSpeed = this.isAntimatter ? -0.02 : 0.02;
-            this.core.object3D.rotation.y += rotationSpeed;
-           this.core.object3D.rotation.x += rotationSpeed * 0.5;
-            
-            if (this.isAntimatter) {
-                this.wireframe.object3D.rotation.y -= rotationSpeed * 1.5;
-            }
-
-            // Pulse based on progress
-            const pulse = 1 + Math.sin(t / 200) * (0.1 + this.progress * 0.2);
-            this.aura.setAttribute('scale', { x: pulse, y: pulse, z: pulse });
-        } else {
-            // Slow rotation when idle
+        // Idle rotation (when not active)
+        if (!this.data.active) {
             this.core.object3D.rotation.y += 0.005;
-        }
-    },
-
-    onGameStateChanged: function (evt) {
-        const { state, context } = evt.detail;
-        
-        if (state !== 'preparingComplexDish') {
-            this.setInactive();
             return;
         }
 
-        const currentStep = context.currentOrder.steps[context.currentStepIndex];
-        if (!currentStep) {
-            this.setInactive();
-            return;
-        }
+        // Get gesture-specific distortion
+        const distortion = this.computeDistortion(t);
 
-        // Check if this station matches the current gesture
-        const matchesGesture = !this.data.gesture || this.data.gesture === currentStep.gesture;
-        
-        if (matchesGesture) {
-            // Update particle type if it changed
-            if (this.currentIngredient !== currentStep.ingredient) {
-                this.updateParticleVisuals(currentStep.ingredient);
-            }
-            this.setActive(context.stepProgress / 100);
-        } else {
-            this.setInactive();
-        }
+        // Apply core transformations
+        this.applyCoreTransform(t, distortion);
+
+        // Apply aura scaling
+        this.applyAuraScale(t, distortion);
+
+        // Apply eye flattening
+        this.applyEyeFlattening(distortion);
     },
 
-    updateParticleVisuals: function (ingredient) {
-        this.currentIngredient = ingredient;
-        let meta = PARTICLE_METADATA[ingredient];
+    computeDistortion: function (t) {
+        const gesture = this.data.gesture;
 
-        // Default or "Fusion" state
-        if (!meta) {
-            this.core.setAttribute('geometry', {
-                primitive: 'icosahedron',
-                radius: 0.08,
-                detail: 2
+        if (gesture === 'tenderize') {
+            // Large, slow bounce
+            const period = 300;
+            const amount = Math.abs(Math.sin(t / period)) * 0.4;
+            return { type: 'squash', amount: amount, period: period };
+        } else if (gesture === 'slice') {
+            // Small, fast compress
+            const period = 100;
+            const amount = Math.abs(Math.sin(t / period)) * 0.15;
+            return { type: 'squash', amount: amount, period: period };
+        } else if (gesture === 'stir') {
+            return { type: 'spin' };
+        }
+        return { type: 'none' };
+    },
+
+    applyCoreTransform: function (t, distortion) {
+        const rotationSpeed = this.isAntimatter ? -0.02 : 0.02;
+
+        if (distortion.type === 'squash') {
+            // Squash on Y, compensate on X/Z
+            const squashFactor = 1.0 - distortion.amount;
+            const expandFactor = 1.0 + (distortion.amount * 0.5);
+
+            this.core.setAttribute('scale', {
+                x: expandFactor,
+                y: squashFactor,
+                z: expandFactor
             });
-            this.isAntimatter = false;
-            this.wireframe.setAttribute('visible', false);
-            return;
+
+            // Vertical bob
+            const bobHeight = distortion.amount * 0.1;
+            this.core.setAttribute('position', {
+                x: 0,
+                y: bobHeight,
+                z: 0
+            });
+
+            // Slow rotation even during squash
+            this.core.object3D.rotation.y += rotationSpeed * 0.3;
+            this.core.object3D.rotation.x += rotationSpeed * 0.15;
+        } else if (distortion.type === 'spin') {
+            // Horizontal spin (sideways tumble)
+            this.core.object3D.rotation.x += rotationSpeed * 0.5;
+            this.core.setAttribute('scale', { x: 1, y: 1, z: 1 });
+            this.core.setAttribute('position', { x: 0, y: 0, z: 0 });
+
+            if (this.isAntimatter) {
+                this.wireframe.object3D.rotation.x -= rotationSpeed * 0.75;
+            }
+        } else {
+            // No distortion, just gentle spin
+            this.core.object3D.rotation.y += rotationSpeed * 0.3;
+            this.core.setAttribute('scale', { x: 1, y: 1, z: 1 });
+            this.core.setAttribute('position', { x: 0, y: 0, z: 0 });
         }
-
-        this.isAntimatter = !!meta.isAntimatter;
-
-        // Shape based on Generation
-        let primitive = 'tetrahedron';
-        if (meta.gen === 2) primitive = 'octahedron';
-        if (meta.gen === 3) primitive = 'icosahedron';
-
-        const geoSettings = {
-            primitive: primitive,
-            radius: 0.15,
-            detail: 0
-        };
-
-        this.core.setAttribute('geometry', geoSettings);
-        this.wireframe.setAttribute('geometry', geoSettings);
-        this.wireframe.setAttribute('visible', this.isAntimatter);
-        
-        // Aura color
-        this.aura.setAttribute('material', 'color', meta.color);
     },
 
-    setActive: function (progress) {
-        this.isPreparing = true;
-        this.isActuallyInactive = false;
-        this.progress = progress;
+    applyAuraScale: function (t, distortion) {
+        // Aura pulsates with progress
+        const pulse = 1 + Math.sin(t / 200) * (0.1 + this.data.progress * 0.2);
+        this.aura.setAttribute('scale', { x: pulse, y: pulse, z: pulse });
+    },
 
-        const meta = PARTICLE_METADATA[this.currentIngredient];
-        const activeColor = meta ? meta.color : '#ffffff';
-        const completeColor = '#76ff03'; // Lime
-
-        // Progressive transformation:
-        const coreScale = 1.0 + progress * 1.5;
-        this.core.setAttribute('scale', { x: coreScale, y: coreScale, z: coreScale });
-        if (this.isAntimatter) {
-            this.wireframe.setAttribute('scale', { x: coreScale * 1.67, y: coreScale * 1.67, z: coreScale * 1.67 });
-            this.wireframe.setAttribute('visible', true);
+    applyEyeFlattening: function (distortion) {
+        if (distortion.type === 'squash') {
+            // Eyes flatten with the core, smaller magnitude
+            const squashFactor = 1.0 - (distortion.amount * 0.6);
+            this.eyeLeft.setAttribute('scale', { x: 1, y: squashFactor, z: 1 });
+            this.eyeRight.setAttribute('scale', { x: 1, y: squashFactor, z: 1 });
+        } else {
+            // Eyes normal
+            this.eyeLeft.setAttribute('scale', { x: 1, y: 1, z: 1 });
+            this.eyeRight.setAttribute('scale', { x: 1, y: 1, z: 1 });
         }
-        
-        this.aura.setAttribute('material', {
-            opacity: 0.2 + progress * 0.4,
-            color: activeColor
-        });
-        
-        // Color shift
-        const targetColor = progress >= 1.0 ? completeColor : activeColor;
-        this.core.setAttribute('material', {
-            color: targetColor,
-            emissive: targetColor,
-            emissiveIntensity: 0.5 + progress * 2.0
-        });
-    },
-
-    setInactive: function () {
-        if (this.isActuallyInactive) return;
-
-        this.isPreparing = false;
-        this.isActuallyInactive = true;
-        this.progress = 0;
-        this.core.setAttribute('scale', { x: 1, y: 1, z: 1 });
-        this.wireframe.setAttribute('visible', false);
-        this.core.setAttribute('material', {
-            color: this.data.inactiveColor,
-            emissive: this.data.inactiveColor,
-            emissiveIntensity: 0.5
-        });
-        this.aura.setAttribute('material', 'opacity', 0);
-    },
-
-    remove: function () {
-        this.el.sceneEl.removeEventListener('game-state-changed', this.onGameStateChanged);
     }
 });
