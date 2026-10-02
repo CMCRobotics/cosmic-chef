@@ -33,7 +33,8 @@ const PARTICLE_METADATA = {
 
 AFRAME.registerComponent('quantum-particle', {
     schema: {
-        gesture: { type: 'string', default: '' }, // The gesture this station handles
+        gesture: { type: 'string', default: '' },
+        ingredient: { type: 'string', default: '' },
         inactiveColor: { type: 'color', default: '#37474f' }
     },
 
@@ -43,6 +44,10 @@ AFRAME.registerComponent('quantum-particle', {
 
         // Create the core - geometry will be updated based on particle type
         this.core = document.createElement('a-entity');
+        this.core.setAttribute('geometry', {
+            primitive: 'sphere',
+            radius: 0.15
+        });
         this.core.setAttribute('material', {
             color: this.data.inactiveColor,
             emissive: this.data.inactiveColor,
@@ -51,12 +56,17 @@ AFRAME.registerComponent('quantum-particle', {
         });
         this.el.appendChild(this.core);
 
-        // Create the antimatter wireframe (only visible for antimatter)
+        // Create the antimatter shell (only visible for antimatter)
         this.wireframe = document.createElement('a-entity');
+        this.wireframe.setAttribute('geometry', {
+            primitive: 'sphere',
+            radius: 0.25
+        });
         this.wireframe.setAttribute('material', {
-            wireframe: true,
-            wireframeLinewidth: 2,
-            color: '#ffffff',
+            color: '#00ff00',
+            transparent: true,
+            opacity: 0.3,
+            side: 'double',
             visible: false
         });
         this.el.appendChild(this.wireframe);
@@ -80,12 +90,22 @@ AFRAME.registerComponent('quantum-particle', {
         this.currentIngredient = null;
 
         this.onGameStateChanged = this.onGameStateChanged.bind(this);
+        this.el.sceneEl.addEventListener('game-state-changed', this.onGameStateChanged);
+
+        if (this.data.ingredient) {
+            this.updateParticleVisuals(this.data.ingredient);
+            this.setActive(0.5);
+        } else {
+            this.updateParticleVisuals(null);
+        }
+    },
+
     tick: function (t, dt) {
         if (this.isPreparing) {
             // Rotation based on matter/antimatter
             const rotationSpeed = this.isAntimatter ? -0.02 : 0.02;
             this.core.object3D.rotation.y += rotationSpeed;
-            this.core.object3D.rotation.x += rotationSpeed * 0.5;
+           this.core.object3D.rotation.x += rotationSpeed * 0.5;
             
             if (this.isAntimatter) {
                 this.wireframe.object3D.rotation.y -= rotationSpeed * 1.5;
@@ -136,7 +156,7 @@ AFRAME.registerComponent('quantum-particle', {
         if (!meta) {
             this.core.setAttribute('geometry', {
                 primitive: 'icosahedron',
-                radius: 0.15,
+                radius: 0.08,
                 detail: 2
             });
             this.isAntimatter = false;
@@ -178,17 +198,22 @@ AFRAME.registerComponent('quantum-particle', {
         const coreScale = 1.0 + progress * 1.5;
         this.core.setAttribute('scale', { x: coreScale, y: coreScale, z: coreScale });
         if (this.isAntimatter) {
-            this.wireframe.setAttribute('scale', { x: coreScale * 1.1, y: coreScale * 1.1, z: coreScale * 1.1 });
+            this.wireframe.setAttribute('scale', { x: coreScale * 1.67, y: coreScale * 1.67, z: coreScale * 1.67 });
             this.wireframe.setAttribute('visible', true);
         }
         
-        this.aura.setAttribute('material', 'opacity', 0.2 + progress * 0.4);
+        this.aura.setAttribute('material', {
+            opacity: 0.2 + progress * 0.4,
+            color: activeColor
+        });
         
         // Color shift
         const targetColor = progress >= 1.0 ? completeColor : activeColor;
-        this.core.setAttribute('material', 'color', targetColor);
-        this.core.setAttribute('material', 'emissive', targetColor);
-        this.core.setAttribute('material', 'emissiveIntensity', 0.5 + progress * 2.0);
+        this.core.setAttribute('material', {
+            color: targetColor,
+            emissive: targetColor,
+            emissiveIntensity: 0.5 + progress * 2.0
+        });
     },
 
     setInactive: function () {
@@ -211,9 +236,3 @@ AFRAME.registerComponent('quantum-particle', {
         this.el.sceneEl.removeEventListener('game-state-changed', this.onGameStateChanged);
     }
 });
-
-        this.el.sceneEl.addEventListener('game-state-changed', this.onGameStateChanged);
-
-        // Set initial state
-        this.updateParticleVisuals(null);
-    },
