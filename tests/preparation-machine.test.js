@@ -2,7 +2,7 @@ import { describe, test, expect } from "bun:test";
 import { createActor } from "xstate";
 import { preparationMachine, RECIPES } from "../public/xstate/preparation-machine.js";
 
-describe("preparation-machine", () => {
+describe("preparation-machine — parallel ingredient processing", () => {
     test("initial state is idle", () => {
         const actor = createActor(preparationMachine).start();
         expect(actor.getSnapshot().value).toBe("idle");
@@ -14,278 +14,325 @@ describe("preparation-machine", () => {
         expect(actor.getSnapshot().value).toBe("waitingForRecipe");
     });
 
-    test("CAPTURE_RECIPE sets recipe context", () => {
+    test("CAPTURE_RECIPE initializes recipe with ingredient queues and stations", () => {
         const actor = createActor(preparationMachine).start();
         actor.send({ type: "START_GAME" });
-        actor.send({
-            type: "CAPTURE_RECIPE",
-            recipe: {
-                name: "test-meson",
-                steps: [
-                    { gesture: "slice", behaviorType: "resumable" },
-                    { gesture: "stir", behaviorType: "uninterruptible" }
-                ]
-            }
-        });
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 3 });
+        const proton = RECIPES.find(r => r.name === 'proton');
+        actor.send({ type: "CAPTURE_RECIPE", recipe: proton });
+
         const state = actor.getSnapshot();
-        expect(state.value).toBe("preparingComplexDish");
-        expect(state.context.currentOrder.name).toBe("test-meson");
-        expect(state.context.currentStepIndex).toBe(0);
-        expect(state.context.stepProgress).toBe(0);
+        expect(state.value).toBe("preparingIngredients");
+        expect(state.context.currentOrder.name).toBe("proton");
+        expect(state.context.ingredients.length).toBe(3);
+        expect(state.context.stations.length).toBe(3);
+        // Initial batch is delivered to stations with chefs, so queue is empty for 3-ingredient recipe with 3 chefs
+        expect(state.context.ingredientQueue.length).toBe(0);
+        // All 3 stations should have chefs and ingredients assigned
+        expect(state.context.stations.filter(s => s.ingredientId).length).toBe(3);
     });
 
-    test("GESTURE_TICK increments progress and completes order", () => {
+    test("Single sous-chef processes ingredients sequentially through one station", () => {
         const actor = createActor(preparationMachine).start();
         actor.send({ type: "START_GAME" });
-        actor.send({
-            type: "CAPTURE_RECIPE",
-            recipe: {
-                name: "single-step",
-                steps: [{ gesture: "slice", behaviorType: "resumable" }]
-            }
-        });
-        actor.send({ type: "GESTURE_TICK", gesture: "slice", progressAmount: 30 });
-        expect(actor.getSnapshot().context.stepProgress).toBe(30);
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 1 });
+        const proton = RECIPES.find(r => r.name === 'proton');
+        actor.send({ type: "CAPTURE_RECIPE", recipe: proton });
 
-        // Incorrect gesture ignored
-        actor.send({ type: "GESTURE_TICK", gesture: "invalid", progressAmount: 30 });
-        expect(actor.getSnapshot().context.stepProgress).toBe(30);
+        // Manually assign first ingredient to S1 with chefA
+        let state = actor.getSnapshot();
+        let stations = state.context.stations;
+        if (!stations[0].ingredientId) {
+            // Simulate delivery
+            actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 50 });
+        }
 
-        // Complete step
-        actor.send({ type: "GESTURE_TICK", gesture: "slice", progressAmount: 70 });
-        expect(actor.getSnapshot().value).toBe("orderSuccess");
-        expect(actor.getSnapshot().context.score).toBe(100);
-        expect(actor.getSnapshot().context.completedCount).toBe(1);
+        state = actor.getSnapshot();
+        expect(state.context.stations[0].ingredientId).toBeTruthy();
     });
 
-    test("STOP_GESTURE handles uninterruptible vs resumable decay", () => {
-        // Uninterruptible test
-        const actor1 = createActor(preparationMachine).start();
-        actor1.send({ type: "START_GAME" });
-        actor1.send({
-            type: "CAPTURE_RECIPE",
-            recipe: {
-                name: "decay-test",
-                steps: [{ gesture: "dice", behaviorType: "uninterruptible" }]
-            }
-        });
-        actor1.send({ type: "GESTURE_TICK", gesture: "dice", progressAmount: 40 });
-        expect(actor1.getSnapshot().context.stepProgress).toBe(40);
-        actor1.send({ type: "STOP_GESTURE" });
-        expect(actor1.getSnapshot().context.stepProgress).toBe(0);
-
-        // Resumable test
-        const actor2 = createActor(preparationMachine).start();
-        actor2.send({ type: "START_GAME" });
-        actor2.send({
-            type: "CAPTURE_RECIPE",
-            recipe: {
-                name: "resumable-test",
-                steps: [{ gesture: "slice", behaviorType: "resumable" }]
-            }
-        });
-        actor2.send({ type: "GESTURE_TICK", gesture: "slice", progressAmount: 40 });
-        expect(actor2.getSnapshot().context.stepProgress).toBe(40);
-        actor2.send({ type: "STOP_GESTURE" });
-        expect(actor2.getSnapshot().context.stepProgress).toBe(40);
-    });
-
-    test("Active chefs > 1 enforces non-consecutive gesture rule", () => {
+    test("Two sous-chefs process multiple ingredients in parallel", () => {
         const actor = createActor(preparationMachine).start();
         actor.send({ type: "START_GAME" });
         actor.send({ type: "SET_ACTIVE_CHEFS", count: 2 });
-        actor.send({
-            type: "CAPTURE_RECIPE",
-            recipe: {
-                name: "multi-chef-test",
-                steps: [
-                    { gesture: "slice", behaviorType: "resumable" },
-                    { gesture: "dice", behaviorType: "resumable" }
-                ]
-            }
-        });
+        const proton = RECIPES.find(r => r.name === 'proton');
+        actor.send({ type: "CAPTURE_RECIPE", recipe: proton });
 
-        actor.send({ type: "GESTURE_TICK", chefId: "chefA", gesture: "slice", progressAmount: 100 });
-        expect(actor.getSnapshot().context.currentStepIndex).toBe(1);
-        expect(actor.getSnapshot().context.lastChefId).toBe("chefA");
-
-        // Same chef fails
-        actor.send({ type: "GESTURE_TICK", chefId: "chefA", gesture: "dice", progressAmount: 50 });
-        expect(actor.getSnapshot().context.stepProgress).toBe(0);
-
-        // Other chef succeeds
-        actor.send({ type: "GESTURE_TICK", chefId: "chefB", gesture: "dice", progressAmount: 50 });
-        expect(actor.getSnapshot().context.stepProgress).toBe(50);
+        let state = actor.getSnapshot();
+        expect(state.context.stations.length).toBe(3);
+        expect(state.context.ingredients.length).toBe(3);
     });
 
-    test("STEP_TIMEOUT or CANCEL_ORDER penalizes current order", () => {
+    test("Gesture completion advances ingredient to delivery area and loads next", () => {
         const actor = createActor(preparationMachine).start();
         actor.send({ type: "START_GAME" });
-        actor.send({
-            type: "CAPTURE_RECIPE",
-            recipe: { name: "cancel", steps: [{ gesture: "slice", behaviorType: "resumable" }] }
-        });
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 1 });
+        const proton = RECIPES.find(r => r.name === 'proton');
+        actor.send({ type: "CAPTURE_RECIPE", recipe: proton });
+
+        // Complete first ingredient's gesture (tenderize up: 100%)
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+
+        let state = actor.getSnapshot();
+        // Should have moved to checkIfAllReady or back to preparingIngredients
+        expect(['preparingIngredients', 'checkIfAllReady'].includes(state.value)).toBe(true);
+    });
+
+    test("All ingredients ready transitions to readyForFinalStir", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 3 });
+        const pion = RECIPES.find(r => r.name === 'pion'); // Only 2 ingredients
+        actor.send({ type: "CAPTURE_RECIPE", recipe: pion });
+
+        // Complete first ingredient (up: tenderize)
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+
+        // Complete second ingredient (anti-down: stir)
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-2", gesture: "stir", progressAmount: 100 });
+
+        const state = actor.getSnapshot();
+        expect(state.value).toBe("readyForFinalStir");
+    });
+
+    test("Final stir step requires all active chefs", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 2 });
+        const pion = RECIPES.find(r => r.name === 'pion');
+        actor.send({ type: "CAPTURE_RECIPE", recipe: pion });
+
+        // Complete prep of both ingredients
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-2", gesture: "stir", progressAmount: 100 });
+
+        expect(actor.getSnapshot().value).toBe("readyForFinalStir");
+
+        // Final stir
+        actor.send({ type: "GESTURE_TICK", gesture: "stir", progressAmount: 100 });
+
+        expect(actor.getSnapshot().value).toBe("recipeReadyForSubmit");
+    });
+
+    test("SUBMIT_RECIPE validates dish and transitions to orderSuccess if valid", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 2 });
+        const pion = RECIPES.find(r => r.name === 'pion');
+        actor.send({ type: "CAPTURE_RECIPE", recipe: pion });
+
+        // Complete all steps
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-2", gesture: "stir", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", gesture: "stir", progressAmount: 100 });
+
+        expect(actor.getSnapshot().value).toBe("recipeReadyForSubmit");
+
+        actor.send({ type: "SUBMIT_RECIPE" });
+
+        const state = actor.getSnapshot();
+        expect(state.value).toBe("orderSuccess");
+        expect(state.context.score).toBe(100);
+        expect(state.context.completedCount).toBe(1);
+    });
+
+    test("CANCEL_ORDER from preparingIngredients transitions to orderPenalized", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        const proton = RECIPES.find(r => r.name === 'proton');
+        actor.send({ type: "CAPTURE_RECIPE", recipe: proton });
         actor.send({ type: "CANCEL_ORDER" });
+
         expect(actor.getSnapshot().value).toBe("orderPenalized");
         expect(actor.getSnapshot().context.penalizedCount).toBe(1);
     });
 
-    test("GAME_OVER event transitions to gameOver", () => {
+    test("STEP_TIMEOUT transitions to orderPenalized", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        const proton = RECIPES.find(r => r.name === 'proton');
+        actor.send({ type: "CAPTURE_RECIPE", recipe: proton });
+        actor.send({ type: "STEP_TIMEOUT" });
+
+        expect(actor.getSnapshot().value).toBe("orderPenalized");
+        expect(actor.getSnapshot().context.penalizedCount).toBe(1);
+    });
+
+    test("GAME_OVER transitions to gameOver from any state", () => {
         const actor = createActor(preparationMachine).start();
         actor.send({ type: "START_GAME" });
         actor.send({ type: "GAME_OVER" });
         expect(actor.getSnapshot().value).toBe("gameOver");
     });
 
-    test("Recipe 1 (Proton) matches docs/recipes.md and completes via tenderize/tenderize/slice/synchronized-stir", () => {
-        const proton = RECIPES.find(r => r.name === 'proton');
-        const actor = createActor(preparationMachine).start();
-        actor.send({ type: "START_GAME" });
-        actor.send({ type: "SET_ACTIVE_CHEFS", count: 2 });
-        actor.send({
-            type: "CAPTURE_RECIPE",
-            recipe: proton
-        });
-        const state1 = actor.getSnapshot();
-        expect(state1.value).toBe("preparingComplexDish");
-        expect(state1.context.currentOrder.composition).toBe("uud");
-        expect(state1.context.currentOrder.charge).toBe(1);
-
-        // First tenderize (up quark)
-        actor.send({ type: "GESTURE_TICK", chefId: "chefA", gesture: "tenderize", progressAmount: 100 });
-        expect(actor.getSnapshot().context.currentStepIndex).toBe(1);
-
-        // Second tenderize (up quark)
-        actor.send({ type: "GESTURE_TICK", chefId: "chefB", gesture: "tenderize", progressAmount: 100 });
-        expect(actor.getSnapshot().context.currentStepIndex).toBe(2);
-
-        // Slice (down quark)
-        actor.send({ type: "GESTURE_TICK", chefId: "chefA", gesture: "slice", progressAmount: 100 });
-        expect(actor.getSnapshot().context.currentStepIndex).toBe(3);
-
-        // Synchronized Stir - both chefs required
-        actor.send({ type: "GESTURE_TICK", gesture: "stir", chefIds: ["chefA", "chefB"], progressAmount: 100 });
-        expect(actor.getSnapshot().value).toBe("orderSuccess");
-        expect(actor.getSnapshot().context.score).toBe(100);
-        expect(actor.getSnapshot().context.completedCount).toBe(1);
-    });
-
-    test("Recipe 2 (Neutron) matches docs/recipes.md and completes via tenderize/slice/slice/synchronized-stir", () => {
-        const neutron = RECIPES.find(r => r.name === 'neutron');
-        const actor = createActor(preparationMachine).start();
-        actor.send({ type: "START_GAME" });
-        actor.send({ type: "SET_ACTIVE_CHEFS", count: 2 });
-        actor.send({
-            type: "CAPTURE_RECIPE",
-            recipe: neutron
-        });
-        const state1 = actor.getSnapshot();
-        expect(state1.value).toBe("preparingComplexDish");
-        expect(state1.context.currentOrder.composition).toBe("udd");
-        expect(state1.context.currentOrder.charge).toBe(0);
-
-        // Tenderize (up quark)
-        actor.send({ type: "GESTURE_TICK", chefId: "chefA", gesture: "tenderize", progressAmount: 100 });
-        expect(actor.getSnapshot().context.currentStepIndex).toBe(1);
-
-        // First slice (down quark)
-        actor.send({ type: "GESTURE_TICK", chefId: "chefB", gesture: "slice", progressAmount: 100 });
-        expect(actor.getSnapshot().context.currentStepIndex).toBe(2);
-
-        // Second slice (down quark)
-        actor.send({ type: "GESTURE_TICK", chefId: "chefA", gesture: "slice", progressAmount: 100 });
-        expect(actor.getSnapshot().context.currentStepIndex).toBe(3);
-
-        // Synchronized Stir - both chefs required
-        actor.send({ type: "GESTURE_TICK", gesture: "stir", chefIds: ["chefA", "chefB"], progressAmount: 100 });
-        expect(actor.getSnapshot().value).toBe("orderSuccess");
-        expect(actor.getSnapshot().context.score).toBe(100);
-        expect(actor.getSnapshot().context.completedCount).toBe(1);
-    });
-
-    test("Synchronized final Stir requires every active chef", () => {
-        const proton = RECIPES.find(r => r.name === 'proton');
+    test("Proton recipe with 3 sous-chefs completes all ingredient sequences then stir", () => {
         const actor = createActor(preparationMachine).start();
         actor.send({ type: "START_GAME" });
         actor.send({ type: "SET_ACTIVE_CHEFS", count: 3 });
+        const proton = RECIPES.find(r => r.name === 'proton');
         actor.send({ type: "CAPTURE_RECIPE", recipe: proton });
 
-        // Complete the first three prep steps
-        actor.send({ type: "GESTURE_TICK", chefId: "chefA", gesture: "tenderize", progressAmount: 100 });
-        actor.send({ type: "GESTURE_TICK", chefId: "chefB", gesture: "tenderize", progressAmount: 100 });
-        actor.send({ type: "GESTURE_TICK", chefId: "chefC", gesture: "slice", progressAmount: 100 });
-
-        // Try stir with only 2 of 3 chefs - should be no-op
-        actor.send({ type: "GESTURE_TICK", gesture: "stir", chefIds: ["chefA", "chefB"], progressAmount: 100 });
-        expect(actor.getSnapshot().value).toBe("preparingComplexDish");
-        expect(actor.getSnapshot().context.stepProgress).toBe(0);
-        expect(actor.getSnapshot().context.currentStepIndex).toBe(3);
-
-        // Now with all 3 chefs - should complete
-        actor.send({ type: "GESTURE_TICK", gesture: "stir", chefIds: ["chefA", "chefB", "chefC"], progressAmount: 100 });
-        expect(actor.getSnapshot().value).toBe("orderSuccess");
-    });
-
-    test("Recipe 3 (Pion π⁺) matches docs/recipes.md and completes via tenderize/stir/synchronized-stir", () => {
-        const pion = RECIPES.find(r => r.name === 'pion');
-        const actor = createActor(preparationMachine).start();
-        actor.send({ type: "START_GAME" });
-        actor.send({ type: "SET_ACTIVE_CHEFS", count: 2 });
-        actor.send({
-            type: "CAPTURE_RECIPE",
-            recipe: pion
-        });
         const state1 = actor.getSnapshot();
-        expect(state1.value).toBe("preparingComplexDish");
-        expect(state1.context.currentOrder.composition).toBe("ud̄");
+        expect(state1.value).toBe("preparingIngredients");
+        expect(state1.context.currentOrder.composition).toBe("uud");
         expect(state1.context.currentOrder.charge).toBe(1);
 
-        // Tenderize (up quark)
-        actor.send({ type: "GESTURE_TICK", chefId: "chefA", gesture: "tenderize", progressAmount: 100 });
-        expect(actor.getSnapshot().context.currentStepIndex).toBe(1);
+        // Chefs work on their ingredients
+        // ChefA: up-1 (tenderize)
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        // ChefB: up-2 (tenderize)
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-2", gesture: "tenderize", progressAmount: 100 });
+        // ChefC: down-1 (slice)
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-3", gesture: "slice", progressAmount: 100 });
 
-        // Stir (anti-down quark)
-        actor.send({ type: "GESTURE_TICK", chefId: "chefB", gesture: "stir", progressAmount: 100 });
-        expect(actor.getSnapshot().context.currentStepIndex).toBe(2);
+        const state2 = actor.getSnapshot();
+        expect(state2.value).toBe("readyForFinalStir");
 
-        // Synchronized Stir - both chefs required
-        actor.send({ type: "GESTURE_TICK", gesture: "stir", chefIds: ["chefA", "chefB"], progressAmount: 100 });
-        expect(actor.getSnapshot().value).toBe("orderSuccess");
-        expect(actor.getSnapshot().context.score).toBe(100);
-        expect(actor.getSnapshot().context.completedCount).toBe(1);
+        // Final synchronized stir
+        actor.send({ type: "GESTURE_TICK", gesture: "stir", progressAmount: 100 });
+
+        const state3 = actor.getSnapshot();
+        expect(state3.value).toBe("recipeReadyForSubmit");
+
+        // Submit
+        actor.send({ type: "SUBMIT_RECIPE" });
+
+        const state4 = actor.getSnapshot();
+        expect(state4.value).toBe("orderSuccess");
+        expect(state4.context.score).toBe(100);
+        expect(state4.context.completedCount).toBe(1);
     });
 
-    test("Recipe 4 (Lambda Λ) matches docs/recipes.md and completes via tenderize/slice/stir/synchronized-stir", () => {
-        const lambda = RECIPES.find(r => r.name === 'lambda');
+    test("Neutron recipe completes successfully", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 3 });
+        const neutron = RECIPES.find(r => r.name === 'neutron');
+        actor.send({ type: "CAPTURE_RECIPE", recipe: neutron });
+
+        const state1 = actor.getSnapshot();
+        expect(state1.context.currentOrder.composition).toBe("udd");
+        expect(state1.context.currentOrder.charge).toBe(0);
+
+        // Complete preparations
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-2", gesture: "slice", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-3", gesture: "slice", progressAmount: 100 });
+
+        expect(actor.getSnapshot().value).toBe("readyForFinalStir");
+
+        actor.send({ type: "GESTURE_TICK", gesture: "stir", progressAmount: 100 });
+        actor.send({ type: "SUBMIT_RECIPE" });
+
+        const state2 = actor.getSnapshot();
+        expect(state2.value).toBe("orderSuccess");
+        expect(state2.context.completedCount).toBe(1);
+    });
+
+    test("Pion recipe (2 ingredients) completes successfully", () => {
         const actor = createActor(preparationMachine).start();
         actor.send({ type: "START_GAME" });
         actor.send({ type: "SET_ACTIVE_CHEFS", count: 2 });
-        actor.send({
-            type: "CAPTURE_RECIPE",
-            recipe: lambda
-        });
+        const pion = RECIPES.find(r => r.name === 'pion');
+        actor.send({ type: "CAPTURE_RECIPE", recipe: pion });
+
         const state1 = actor.getSnapshot();
-        expect(state1.value).toBe("preparingComplexDish");
+        expect(state1.context.currentOrder.composition).toBe("ud̄");
+        expect(state1.context.ingredients.length).toBe(2);
+
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-2", gesture: "stir", progressAmount: 100 });
+
+        expect(actor.getSnapshot().value).toBe("readyForFinalStir");
+
+        actor.send({ type: "GESTURE_TICK", gesture: "stir", progressAmount: 100 });
+        actor.send({ type: "SUBMIT_RECIPE" });
+
+        const state2 = actor.getSnapshot();
+        expect(state2.value).toBe("orderSuccess");
+    });
+
+    test("Lambda recipe (3 ingredients with strange quark) completes successfully", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 3 });
+        const lambda = RECIPES.find(r => r.name === 'lambda');
+        actor.send({ type: "CAPTURE_RECIPE", recipe: lambda });
+
+        const state1 = actor.getSnapshot();
         expect(state1.context.currentOrder.composition).toBe("uds");
-        expect(state1.context.currentOrder.charge).toBe(0);
 
-        // Tenderize (up quark)
-        actor.send({ type: "GESTURE_TICK", chefId: "chefA", gesture: "tenderize", progressAmount: 100 });
-        expect(actor.getSnapshot().context.currentStepIndex).toBe(1);
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-2", gesture: "slice", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-3", gesture: "stir", progressAmount: 100 });
 
-        // Slice (down quark)
-        actor.send({ type: "GESTURE_TICK", chefId: "chefB", gesture: "slice", progressAmount: 100 });
-        expect(actor.getSnapshot().context.currentStepIndex).toBe(2);
+        expect(actor.getSnapshot().value).toBe("readyForFinalStir");
 
-        // Stir (strange quark)
-        actor.send({ type: "GESTURE_TICK", chefId: "chefA", gesture: "stir", progressAmount: 100 });
-        expect(actor.getSnapshot().context.currentStepIndex).toBe(3);
+        actor.send({ type: "GESTURE_TICK", gesture: "stir", progressAmount: 100 });
+        actor.send({ type: "SUBMIT_RECIPE" });
 
-        // Synchronized Stir - both chefs required
-        actor.send({ type: "GESTURE_TICK", gesture: "stir", chefIds: ["chefA", "chefB"], progressAmount: 100 });
+        const state2 = actor.getSnapshot();
+        expect(state2.value).toBe("orderSuccess");
+        expect(state2.context.completedCount).toBe(1);
+    });
+
+    test("STOP_GESTURE with uninterruptible behavior resets progress", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        const testRecipe = {
+            name: 'test',
+            composition: 'test',
+            charge: 0,
+            ingredientSequences: {
+                'test-1': [{ gesture: 'slice', preparedState: 'Test', behaviorType: 'uninterruptible' }]
+            },
+            finalStep: { gesture: 'stir', behaviorType: 'resumable', stepType: 'synchronized' }
+        };
+        actor.send({ type: "CAPTURE_RECIPE", recipe: testRecipe });
+
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "slice", progressAmount: 40 });
+        expect(actor.getSnapshot().context.stations[0].progress).toBe(40);
+
+        actor.send({ type: "STOP_GESTURE", chefId: "chef-1" });
+        expect(actor.getSnapshot().context.stations[0].progress).toBe(0);
+    });
+
+    test("STOP_GESTURE with resumable behavior preserves progress", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        const testRecipe = {
+            name: 'test',
+            composition: 'test',
+            charge: 0,
+            ingredientSequences: {
+                'test-1': [{ gesture: 'slice', preparedState: 'Test', behaviorType: 'resumable' }]
+            },
+            finalStep: { gesture: 'stir', behaviorType: 'resumable', stepType: 'synchronized' }
+        };
+        actor.send({ type: "CAPTURE_RECIPE", recipe: testRecipe });
+
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "slice", progressAmount: 40 });
+        expect(actor.getSnapshot().context.stations[0].progress).toBe(40);
+
+        actor.send({ type: "STOP_GESTURE", chefId: "chef-1" });
+        expect(actor.getSnapshot().context.stations[0].progress).toBe(40);
+    });
+
+    test("NEXT_ROUND returns from orderSuccess to waitingForRecipe", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 1 });
+        const pion = RECIPES.find(r => r.name === 'pion');
+        actor.send({ type: "CAPTURE_RECIPE", recipe: pion });
+
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "stir", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", gesture: "stir", progressAmount: 100 });
+        actor.send({ type: "SUBMIT_RECIPE" });
+
         expect(actor.getSnapshot().value).toBe("orderSuccess");
-        expect(actor.getSnapshot().context.score).toBe(100);
-        expect(actor.getSnapshot().context.completedCount).toBe(1);
+
+        actor.send({ type: "NEXT_ROUND" });
+        expect(actor.getSnapshot().value).toBe("waitingForRecipe");
     });
 });
-

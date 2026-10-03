@@ -8,15 +8,17 @@
     <script src="vendor/bundle.js"></script>
 
     <script src="xstate/preparation-machine.js"></script>
-    <script src="aframe-components/animations/linear-animation.js"></script>
-    <script src="aframe-components/animations/tenderizing-animation.js"></script>
-    <script src="aframe-components/animations/stirring-animation.js"></script>
-    <script src="aframe-components/animations/slicing-animation.js"></script>
+    <script src="aframe-components/animations/anim-linear.js"></script>
+    <script src="aframe-components/animations/anim-tenderizing.js"></script>
+    <script src="aframe-components/animations/anim-stirring.js"></script>
+    <script src="aframe-components/animations/anim-slicing.js"></script>
     <script src="aframe-components/load-fragment.js"></script>
     <script src="aframe-components/ar-utils.js"></script>
     <script src="aframe-components/preparation-manager.js"></script>
+    <script src="aframe-components/galley-manager.js"></script>
     <script src="aframe-components/quantum-particle.js"></script>
-  
+    <script src="aframe-components/animations/anim-space-float.js"></script>
+    <script src="aframe-components/animations/anim-vacuum.js"></script>
 
 </head>
 <body>
@@ -84,7 +86,7 @@
             <a-entity id="hemisphere-light" position="0 50 0" light="color: #CEE4F0; groundColor: #553e35; intensity: 2.3; type: hemisphere"></a-entity>
 
 
-            <a-entity id="galley" position="0 0 0">
+            <a-entity id="galley" position="0 0 0" galley-manager>
                <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: red" rotation="-90 0 0" position="0 0.03 0"></a-entity>
                <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-1"></a-entity>
             </a-entity>
@@ -108,8 +110,8 @@
         <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .clickable"></a-entity>
 
         <!-- Camera Rig -->
-        <a-entity id="cameraRig">
-            <a-camera position="0 3.5 4"></a-camera>
+        <a-entity id="cameraRig" rotation="-10 180 0" position="0 0 -5.5">
+            <a-camera position="0 2.5 0"></a-camera>
         </a-entity>
       
     </a-scene>
@@ -119,9 +121,30 @@
         log.setLevel('debug');
 
         const scene = document.querySelector('a-scene');
-        
+
         scene.addEventListener('loaded', () => {
             log.debug('Scene loaded');
+
+            // TEST: Inject a recipe to test ingredient spawning
+            setTimeout(() => {
+                const prepMgr = scene.components['preparation-manager'];
+                if (prepMgr) {
+                    log.debug('Injecting test recipe...');
+                    prepMgr.sendEvent('CAPTURE_RECIPE', {
+                        recipe: {
+                            name: 'proton',
+                            composition: 'uud',
+                            charge: 1,
+                            ingredientSequences: {
+                                'up-1': [{ gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' }],
+                                'up-2': [{ gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' }],
+                                'down-1': [{ gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' }]
+                            },
+                            finalStep: { gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
+                        }
+                    });
+                }
+            }, 500);
         });
 
         scene.addEventListener('enter-vr', () => {
@@ -138,6 +161,98 @@
         scene.addEventListener('sessionend', () => {
             log.debug('XR session ended');
         });
+
+        // Console helpers for testing
+        window.testGesture = (gesture, progress = 100, chefId = null) => {
+            const prepMgr = scene.components['preparation-manager'];
+            if (prepMgr) {
+                const event = {
+                    gesture,
+                    progressAmount: progress
+                };
+                if (chefId) {
+                    event.chefId = chefId;
+                    log.info(`Sending GESTURE_TICK: ${gesture} +${progress}% (${chefId})`);
+                } else {
+                    log.info(`Sending GESTURE_TICK: ${gesture} +${progress}%`);
+                }
+                prepMgr.sendEvent('GESTURE_TICK', event);
+            }
+        };
+
+        window.testRecipe = (recipeName = 'proton') => {
+            const prepMgr = scene.components['preparation-manager'];
+            if (prepMgr && prepMgr.gameActor) {
+                const { RECIPES } = window;
+                const recipe = RECIPES.find(r => r.name === recipeName);
+                if (recipe) {
+                    // Check current state
+                    const snapshot = prepMgr.gameActor.getSnapshot();
+                    const currentState = snapshot.value;
+
+                    // If in orderSuccess or orderPenalized, go back to waitingForRecipe first
+                    if (currentState === 'orderSuccess' || currentState === 'orderPenalized') {
+                        log.info(`Transitioning from ${currentState} → waitingForRecipe with NEXT_ROUND`);
+                        prepMgr.sendEvent('NEXT_ROUND');
+                        // Small delay to let state update
+                        setTimeout(() => {
+                            log.info(`Sending CAPTURE_RECIPE: ${recipeName}`);
+                            prepMgr.sendEvent('CAPTURE_RECIPE', { recipe });
+                        }, 50);
+                    } else {
+                        log.info(`Sending CAPTURE_RECIPE: ${recipeName}`);
+                        prepMgr.sendEvent('CAPTURE_RECIPE', { recipe });
+                    }
+                } else {
+                    log.error(`Recipe ${recipeName} not found`);
+                }
+            }
+        };
+
+        window.testSubmit = () => {
+            const prepMgr = scene.components['preparation-manager'];
+            if (prepMgr) {
+                log.info('Sending SUBMIT_RECIPE');
+                prepMgr.sendEvent('SUBMIT_RECIPE');
+            }
+        };
+
+        window.testState = () => {
+            const prepMgr = scene.components['preparation-manager'];
+            if (prepMgr && prepMgr.gameActor) {
+                const snapshot = prepMgr.gameActor.getSnapshot();
+                log.info(`Current State: ${snapshot.value}`);
+                log.info(`Ingredients: ${snapshot.context.ingredients.length}`);
+                log.info(`Score: ${snapshot.context.score}`);
+                return snapshot.value;
+            }
+        };
+
+        window.getDeliveryAreaPosition = () => {
+            const galleyEl = document.querySelector('[galley-manager]');
+            if (!galleyEl) {
+                log.error('galley-manager element not found');
+                return undefined;
+            }
+            const galleyMgr = galleyEl.components['galley-manager'];
+            if (!galleyMgr) {
+                log.error('galley-manager component not initialized');
+                return undefined;
+            }
+            const pos = galleyMgr.data.deliveryAreaPosition;
+            log.info(`Delivery Area Position: x=${pos.x}, y=${pos.y}, z=${pos.z}`);
+            return pos;
+        };
+
+        log.info('Test helpers available:');
+        log.info('  testState() — show current state');
+        log.info('  testRecipe(name) — load a recipe (pion, proton, neutron, lambda)');
+        log.info('  testGesture(gesture, progress, chefId) — trigger gesture (chefId required)');
+        log.info('    Examples:');
+        log.info('      testGesture("tenderize", 100, "chef-1")   // 100% by chef-1');
+        log.info('      testGesture("slice", 50, "chef-2")        // 50% progress by chef-2');
+        log.info('      testGesture("stir", 100, "chef-3")        // final stir by chef-3');
+        log.info('  testSubmit() — submit the dish');
     </script>
 </body>
 </html>

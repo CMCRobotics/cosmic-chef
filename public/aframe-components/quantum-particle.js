@@ -124,6 +124,10 @@ AFRAME.registerComponent('quantum-particle', {
         const activeChanged = oldData.active !== this.data.active;
         const progressChanged = oldData.progress !== this.data.progress;
 
+        if (ingredientChanged || progressChanged || activeChanged) {
+            console.warn(`[${this.el.id}] update: active=${this.data.active} progress=${this.data.progress} gesture=${this.data.gesture}`);
+        }
+
         if (ingredientChanged) {
             this.updateIngredient();
         }
@@ -143,8 +147,11 @@ AFRAME.registerComponent('quantum-particle', {
         const meta = PARTICLE_METADATA[this.data.ingredient];
         const color = meta ? meta.color : this.data.inactiveColor;
 
+        console.warn(`[${this.el.id}] updateColors: active=${this.data.active} progress=${this.data.progress} color=${color}`);
+
         if (this.data.active && this.data.progress > 0) {
             const targetColor = this.data.progress >= 1.0 ? '#76ff03' : color;
+            console.warn(`  → Setting active color: ${targetColor}`);
             const emissiveIntensity = 0.5 + this.data.progress * 2.0;
             this.core.setAttribute('material', {
                 color: targetColor,
@@ -156,6 +163,7 @@ AFRAME.registerComponent('quantum-particle', {
                 opacity: 0.2 + this.data.progress * 0.4
             });
         } else {
+            console.warn(`  → Setting inactive color`);
             this.core.setAttribute('material', {
                 color: this.data.inactiveColor,
                 emissive: this.data.inactiveColor,

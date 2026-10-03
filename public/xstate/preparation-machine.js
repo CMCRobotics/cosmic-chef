@@ -17,12 +17,21 @@ const getLogger = () => {
 const _XState = typeof window !== 'undefined' && window.XState ? window.XState : require('xstate');
 const { createMachine, assign } = _XState;
 
-function isSynchronizedStep(step) {
-    return !!step && step.stepType === 'synchronized';
+function allIngredientsReady(ingredients) {
+    return ingredients.every(ing => ing.completed);
 }
 
-function synchronizedChefIds(event) {
-    return Array.isArray(event.chefIds) ? Array.from(new Set(event.chefIds)) : [];
+function findEmptyStation(stations) {
+    return stations.findIndex(s => !s.ingredientId && s.chefId);
+}
+
+function findStationByGesture(stations, gesture, chefId) {
+    return stations.findIndex(s => {
+        if (!s.ingredientId) return false;
+        if (s.chefId !== chefId) return false;
+        const currentGesture = s.gesturesRequired[s.currentGestureIndex];
+        return currentGesture && gesture === currentGesture.gesture;
+    });
 }
 
 const RECIPES = [
@@ -30,44 +39,44 @@ const RECIPES = [
         name: 'proton',
         composition: 'uud',
         charge: 1,
-        steps: [
-            { ingredient: 'up', gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' },
-            { ingredient: 'up', gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' },
-            { ingredient: 'down', gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' },
-            { ingredient: null, gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
-        ]
+        ingredientSequences: {
+            'up-1': [{ gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' }],
+            'up-2': [{ gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' }],
+            'down-1': [{ gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' }]
+        },
+        finalStep: { gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
     },
     {
         name: 'neutron',
         composition: 'udd',
         charge: 0,
-        steps: [
-            { ingredient: 'up', gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' },
-            { ingredient: 'down', gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' },
-            { ingredient: 'down', gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' },
-            { ingredient: null, gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
-        ]
+        ingredientSequences: {
+            'up-1': [{ gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' }],
+            'down-1': [{ gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' }],
+            'down-2': [{ gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' }]
+        },
+        finalStep: { gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
     },
     {
         name: 'pion',
         composition: 'ud̄',
         charge: 1,
-        steps: [
-            { ingredient: 'up', gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' },
-            { ingredient: 'anti-down', gesture: 'stir', preparedState: 'Stirred Anti-Down', behaviorType: 'resumable' },
-            { ingredient: null, gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
-        ]
+        ingredientSequences: {
+            'up-1': [{ gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' }],
+            'anti-down-1': [{ gesture: 'stir', preparedState: 'Stirred Anti-Down', behaviorType: 'resumable' }]
+        },
+        finalStep: { gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
     },
     {
         name: 'lambda',
         composition: 'uds',
         charge: 0,
-        steps: [
-            { ingredient: 'up', gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' },
-            { ingredient: 'down', gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' },
-            { ingredient: 'strange', gesture: 'stir', preparedState: 'Stirred Strange', behaviorType: 'resumable' },
-            { ingredient: null, gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
-        ]
+        ingredientSequences: {
+            'up-1': [{ gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' }],
+            'down-1': [{ gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' }],
+            'strange-1': [{ gesture: 'stir', preparedState: 'Stirred Strange', behaviorType: 'resumable' }]
+        },
+        finalStep: { gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
     }
 ];
 
@@ -76,10 +85,11 @@ const preparationMachine = createMachine({
     initial: 'idle',
     context: {
         currentOrder: null,
-        currentStepIndex: 0,
-        stepProgress: 0,
         activeChefsCount: 1,
-        lastChefId: null,
+        stations: [],
+        ingredientQueue: [],
+        ingredients: [],
+        stirProgress: 0,
         score: 0,
         completedCount: 0,
         penalizedCount: 0
@@ -90,16 +100,16 @@ const preparationMachine = createMachine({
         },
         waitingForRecipe: {
             on: {
-                CAPTURE_RECIPE: { target: 'preparingComplexDish', actions: 'selectNewComplexRecipe' },
+                CAPTURE_RECIPE: { target: 'preparingIngredients', actions: 'initializeRecipe' },
                 SET_ACTIVE_CHEFS: { actions: 'setActiveChefs' },
                 GAME_OVER: 'gameOver'
             }
         },
-        preparingComplexDish: {
+        preparingIngredients: {
             on: {
                 GESTURE_TICK: [
-                    { guard: 'isStepComplete', target: 'evaluatingStep', actions: 'incrementStepProgress' },
-                    { guard: 'isValidGestureAndChef', actions: 'incrementStepProgress' }
+                    { guard: 'isIngredientGestureComplete', actions: ['incrementIngredientProgress', 'moveToDeliveryArea', 'deliverNextIngredient'], target: 'checkIfAllReady' },
+                    { guard: 'isValidIngredientGesture', actions: 'incrementIngredientProgress' }
                 ],
                 STOP_GESTURE: { actions: 'handleStopGesture' },
                 STEP_TIMEOUT: 'orderPenalized',
@@ -108,11 +118,33 @@ const preparationMachine = createMachine({
                 GAME_OVER: 'gameOver'
             }
         },
-        evaluatingStep: {
+        checkIfAllReady: {
             always: [
-                { guard: 'hasMoreSteps', target: 'preparingComplexDish', actions: 'advanceStep' },
-                { target: 'orderSuccess' }
+                { guard: 'allIngredientsReady', target: 'readyForFinalStir' },
+                { target: 'preparingIngredients' }
             ]
+        },
+        readyForFinalStir: {
+            on: {
+                GESTURE_TICK: [
+                    { guard: 'isFinalStirComplete', actions: 'completeFinalStir', target: 'recipeReadyForSubmit' },
+                    { guard: 'isValidFinalStir', actions: 'incrementStirProgress' }
+                ],
+                CANCEL_ORDER: 'orderPenalized',
+                SET_ACTIVE_CHEFS: { actions: 'setActiveChefs' },
+                GAME_OVER: 'gameOver'
+            }
+        },
+        recipeReadyForSubmit: {
+            on: {
+                SUBMIT_RECIPE: [
+                    { guard: 'dishMatches', target: 'orderSuccess', actions: 'validateRecipe' },
+                    { target: 'orderPenalized', actions: 'validateRecipe' }
+                ],
+                CANCEL_ORDER: 'orderPenalized',
+                SET_ACTIVE_CHEFS: { actions: 'setActiveChefs' },
+                GAME_OVER: 'gameOver'
+            }
         },
         orderSuccess: {
             entry: ['incrementScore', 'incrementSuccessCount'],
@@ -137,30 +169,155 @@ const preparationMachine = createMachine({
         setActiveChefs: assign(({ event }) => ({
             activeChefsCount: typeof event.count === 'number' ? event.count : 1
         })),
-        selectNewComplexRecipe: assign(({ event }) => {
-            const selectedRecipe = (event.recipe && event.recipe.steps) ? event.recipe : RECIPES[Math.floor(Math.random() * RECIPES.length)];
-            getLogger().info('Recipe Captured:', selectedRecipe.name);
-            return { currentOrder: selectedRecipe, currentStepIndex: 0, stepProgress: 0, lastChefId: null };
+        initializeRecipe: assign(({ event, context }) => {
+            const recipe = (event.recipe && event.recipe.ingredientSequences) ? event.recipe : RECIPES[Math.floor(Math.random() * RECIPES.length)];
+            getLogger().info('Recipe Captured:', recipe.name);
+
+            const ingredientIds = Object.keys(recipe.ingredientSequences);
+            const stations = [];
+
+            // Create 3 stations, assign chefs to first N based on activeChefsCount
+            for (let i = 0; i < 3; i++) {
+                const chefId = i < context.activeChefsCount ? `chef-${i + 1}` : null;
+                stations.push({
+                    stationId: `S${i + 1}`,
+                    chefId,
+                    ingredientId: null,
+                    ingredientType: null,
+                    gesturesRequired: [],
+                    currentGestureIndex: 0,
+                    progress: 0
+                });
+            }
+
+            const ingredients = ingredientIds.map(id => ({
+                id,
+                type: id.split('-')[0],
+                gesturesRequired: recipe.ingredientSequences[id],
+                currentGestureIndex: 0,
+                progress: 0,
+                completed: false
+            }));
+
+            let ingredientQueue = ingredientIds.slice();
+
+            // Deliver initial batch of ingredients to stations with chefs assigned
+            for (let i = 0; i < stations.length && ingredientQueue.length > 0; i++) {
+                if (stations[i].chefId) {
+                    const ingredientId = ingredientQueue.shift();
+                    const gesturesRequired = recipe.ingredientSequences[ingredientId];
+                    stations[i] = {
+                        ...stations[i],
+                        ingredientId,
+                        ingredientType: ingredientId.split('-')[0],
+                        gesturesRequired,
+                        currentGestureIndex: 0,
+                        progress: 0
+                    };
+                }
+            }
+
+            return {
+                currentOrder: recipe,
+                stations,
+                ingredientQueue,
+                ingredients,
+                stirProgress: 0
+            };
         }),
-        incrementStepProgress: assign(({ context, event }) => {
+        deliverNextIngredient: assign(({ context }) => {
+            if (context.ingredientQueue.length === 0) return {};
+
+            const emptyStationIdx = findEmptyStation(context.stations);
+            if (emptyStationIdx === -1) return {};
+
+            const nextIngredientId = context.ingredientQueue.shift();
+            const recipe = context.currentOrder;
+            const gesturesRequired = recipe.ingredientSequences[nextIngredientId];
+
+            const updatedStations = [...context.stations];
+            updatedStations[emptyStationIdx] = {
+                ...updatedStations[emptyStationIdx],
+                ingredientId: nextIngredientId,
+                ingredientType: nextIngredientId.split('-')[0],
+                gesturesRequired,
+                currentGestureIndex: 0,
+                progress: 0
+            };
+
+            return { stations: updatedStations };
+        }),
+        incrementIngredientProgress: assign(({ context, event }) => {
+            const stationIdx = findStationByGesture(context.stations, event.gesture, event.chefId);
+            if (stationIdx === -1) return {};
+
             const amount = event.progressAmount !== undefined ? event.progressAmount : 10;
-            return { stepProgress: Math.min(100, context.stepProgress + amount) };
+            const updatedStations = [...context.stations];
+            updatedStations[stationIdx].progress = Math.min(100, updatedStations[stationIdx].progress + amount);
+
+            return { stations: updatedStations };
         }),
-        handleStopGesture: assign(({ context }) => {
-            if (!context.currentOrder) return {};
-            const currentStep = context.currentOrder.steps[context.currentStepIndex];
-            if (currentStep && currentStep.behaviorType === 'uninterruptible') {
-                return { stepProgress: 0 };
+        moveToDeliveryArea: assign(({ context, event }) => {
+            const stationIdx = findStationByGesture(context.stations, event.gesture, event.chefId);
+            if (stationIdx === -1) return {};
+
+            const station = context.stations[stationIdx];
+            const ingredientId = station.ingredientId;
+
+            const updatedIngredients = context.ingredients.map(i =>
+                i.id === ingredientId ? { ...i, completed: true } : i
+            );
+
+            const updatedStations = [...context.stations];
+            updatedStations[stationIdx] = {
+                ...updatedStations[stationIdx],
+                ingredientId: null,
+                gesturesRequired: [],
+                currentGestureIndex: 0,
+                progress: 0
+            };
+
+            return { stations: updatedStations, ingredients: updatedIngredients };
+        }),
+        handleStopGesture: assign(({ context, event }) => {
+            let stationIdx = -1;
+
+            // If gesture is specified, find station with that gesture
+            if (event.gesture) {
+                stationIdx = findStationByGesture(context.stations, event.gesture, event.chefId);
+            } else {
+                // Otherwise, find first station with this chef that has progress > 0
+                stationIdx = context.stations.findIndex(s => s.chefId === event.chefId && s.progress > 0);
+            }
+
+            if (stationIdx === -1) return {};
+
+            const station = context.stations[stationIdx];
+            const currentGesture = station.gesturesRequired[station.currentGestureIndex];
+
+            if (currentGesture && currentGesture.behaviorType === 'uninterruptible') {
+                const updatedStations = [...context.stations];
+                updatedStations[stationIdx] = { ...updatedStations[stationIdx], progress: 0 };
+                return { stations: updatedStations };
             }
             return {};
         }),
-        advanceStep: assign(({ context, event }) => {
-            const completedStep = context.currentOrder.steps[context.currentStepIndex];
-            return {
-                currentStepIndex: context.currentStepIndex + 1,
-                stepProgress: 0,
-                lastChefId: isSynchronizedStep(completedStep) ? null : (event.chefId || null)
-            };
+        incrementStirProgress: assign(({ context, event }) => {
+            const amount = event.progressAmount !== undefined ? event.progressAmount : 10;
+            return { stirProgress: Math.min(100, context.stirProgress + amount) };
+        }),
+        completeFinalStir: assign(() => ({
+            stirProgress: 0
+        })),
+        validateRecipe: assign(({ context }) => {
+            if (!context.currentOrder) return {};
+
+            const recipeIngredients = Object.keys(context.currentOrder.ingredientSequences);
+            const allPrepared = recipeIngredients.every(id =>
+                context.ingredients.find(i => i.id === id)?.completed
+            );
+
+            return { recipeValidationResult: allPrepared };
         }),
         incrementScore: assign(({ context }) => ({ score: context.score + 100 })),
         incrementSuccessCount: assign(({ context }) => ({ completedCount: context.completedCount + 1 })),
@@ -168,38 +325,43 @@ const preparationMachine = createMachine({
         incrementPenalizedCount: assign(({ context }) => ({ penalizedCount: context.penalizedCount + 1 }))
     },
     guards: {
-        isValidGestureAndChef: ({ context, event }) => {
-            if (!context.currentOrder) return false;
-            const step = context.currentOrder.steps[context.currentStepIndex];
-            if (!step || event.gesture !== step.gesture) return false;
-
-            if (isSynchronizedStep(step)) {
-                return synchronizedChefIds(event).length >= context.activeChefsCount;
-            }
-
-            if (context.activeChefsCount > 1 && context.lastChefId !== null && event.chefId === context.lastChefId) {
-                getLogger().warn(`Chef ${event.chefId} attempted consecutive step!`);
-                return false;
-            }
-            return true;
+        isValidIngredientGesture: ({ context, event }) => {
+            return findStationByGesture(context.stations, event.gesture, event.chefId) !== -1;
         },
-        isStepComplete: ({ context, event }) => {
-            if (!context.currentOrder) return false;
-            const step = context.currentOrder.steps[context.currentStepIndex];
-            if (!step || event.gesture !== step.gesture) return false;
+        isIngredientGestureComplete: ({ context, event }) => {
+            const stationIdx = findStationByGesture(context.stations, event.gesture, event.chefId);
+            if (stationIdx === -1) return false;
+
+            const station = context.stations[stationIdx];
+            const currentGesture = station.gesturesRequired[station.currentGestureIndex];
+            if (!currentGesture || event.gesture !== currentGesture.gesture) return false;
+
             const amount = event.progressAmount !== undefined ? event.progressAmount : 10;
+            const newProgress = station.progress + amount;
 
-            if (isSynchronizedStep(step)) {
-                if (synchronizedChefIds(event).length < context.activeChefsCount) return false;
-                return (context.stepProgress + amount) >= 100;
+            if (newProgress >= 100) {
+                const isLastGesture = station.currentGestureIndex === station.gesturesRequired.length - 1;
+                return isLastGesture;
             }
-
-            if (context.activeChefsCount > 1 && context.lastChefId !== null && event.chefId === context.lastChefId) return false;
-            return (context.stepProgress + amount) >= 100;
+            return false;
         },
-        hasMoreSteps: ({ context }) => {
+        allIngredientsReady: ({ context }) => {
+            return allIngredientsReady(context.ingredients);
+        },
+        isValidFinalStir: ({ context, event }) => {
+            return event.gesture === context.currentOrder.finalStep.gesture;
+        },
+        isFinalStirComplete: ({ context, event }) => {
+            if (event.gesture !== context.currentOrder.finalStep.gesture) return false;
+            const amount = event.progressAmount !== undefined ? event.progressAmount : 10;
+            return (context.stirProgress + amount) >= 100;
+        },
+        dishMatches: ({ context }) => {
             if (!context.currentOrder) return false;
-            return (context.currentStepIndex + 1) < context.currentOrder.steps.length;
+            const recipeIngredients = Object.keys(context.currentOrder.ingredientSequences);
+            return recipeIngredients.every(id =>
+                context.ingredients.find(i => i.id === id)?.completed
+            );
         }
     }
 });
@@ -208,4 +370,5 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = { preparationMachine, RECIPES };
 } else {
     window.preparationMachine = preparationMachine;
+    window.RECIPES = RECIPES;
 }

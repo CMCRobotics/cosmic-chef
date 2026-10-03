@@ -12,19 +12,20 @@
 - **Slice** = Down-type quarks (down, strange, bottom)
 - **Stir** = Exotic & antimatter (generation 2+, antiparticles)
 
-Each recipe assigns these gestures to ingredients. Sous-chefs work through them in sequence (or in parallel if multiple sous-chefs are available). Once all ingredients are prepared, the head chef triggers a final **Stir** to assemble the dish.
+Each recipe defines ingredient sequences: sous-chefs work at their stations, each preparing ingredients in their assigned gesture sequences. Ingredients move down the assembly line (S1 → S2 → S3) as they complete prep. When all ingredients are ready and positioned in the delivery area, all available sous-chefs perform a synchronized final **Stir** to assemble the dish.
 
 ---
 
 ## Recipe 1: The Proton (staple)
 
-| Ingredient | Gesture | Prepared State |
-|-----------|---------|-----------------|
-| Up | Tenderize | Tender Up |
-| Up | Tenderize | Tender Up |
-| Down | Slice | Sliced Down |
+**Ingredient Sequences**
+| Ingredient | Gestures |
+|-----------|----------|
+| Up₁ | Tenderize |
+| Up₂ | Tenderize |
+| Down₁ | Slice |
 
-**Head chef Stirs** → **Proton** (composition: `uud`, charge +1)
+**Assembly:** All sous-chefs perform synchronized **Stir** → **Proton** (composition: `uud`, charge +1)
 
 **Physics:** Three quarks bound by the strong force into a stable baryon. The most common hadron in ordinary matter. See [`physics.md`](physics.md) §4, reference dishes.
 
@@ -32,13 +33,14 @@ Each recipe assigns these gestures to ingredients. Sous-chefs work through them 
 
 ## Recipe 2: The Neutron (staple)
 
-| Ingredient | Gesture | Prepared State |
-|-----------|---------|-----------------|
-| Up | Tenderize | Tender Up |
-| Down | Slice | Sliced Down |
-| Down | Slice | Sliced Down |
+**Ingredient Sequences**
+| Ingredient | Gestures |
+|-----------|----------|
+| Up₁ | Tenderize |
+| Down₁ | Slice |
+| Down₂ | Slice |
 
-**Head chef Stirs** → **Neutron** (composition: `udd`, charge 0)
+**Assembly:** All sous-chefs perform synchronized **Stir** → **Neutron** (composition: `udd`, charge 0)
 
 **Physics:** A baryon with different quark mix; electrically neutral but still bound by the strong force. Stable when inside nuclei, free neutrons decay. See [`physics.md`](physics.md) §4, reference dishes.
 
@@ -46,12 +48,13 @@ Each recipe assigns these gestures to ingredients. Sous-chefs work through them 
 
 ## Recipe 3: The Pion π⁺ (quick bite — introduces antimatter)
 
-| Ingredient | Gesture | Prepared State |
-|-----------|---------|-----------------|
-| Up | Tenderize | Tender Up |
-| Anti-Down | Stir | Stirred Anti-Down |
+**Ingredient Sequences**
+| Ingredient | Gestures |
+|-----------|----------|
+| Up₁ | Tenderize |
+| Anti-Down₁ | Stir |
 
-**Head chef Stirs** → **Pion π⁺** (composition: `ud̄`, charge +1)
+**Assembly:** All sous-chefs perform synchronized **Stir** → **Pion π⁺** (composition: `ud̄`, charge +1)
 
 **Physics:** A meson (quark + antiquark bound state). Lighter and less stable than baryons; exotic gesture reflects the rarity of antimatter. See [`physics.md`](physics.md) §4, reference dishes, and §2.3 (antimatter).
 
@@ -59,13 +62,14 @@ Each recipe assigns these gestures to ingredients. Sous-chefs work through them 
 
 ## Recipe 4: The Lambda Λ (exotic — introduces strange quark)
 
-| Ingredient | Gesture | Prepared State |
-|-----------|---------|-----------------|
-| Up | Tenderize | Tender Up |
-| Down | Slice | Sliced Down |
-| Strange | Stir | Stirred Strange |
+**Ingredient Sequences**
+| Ingredient | Gestures |
+|-----------|----------|
+| Up₁ | Tenderize |
+| Down₁ | Slice |
+| Strange₁ | Stir |
 
-**Head chef Stirs** → **Lambda Λ** (composition: `uds`, charge 0)
+**Assembly:** All sous-chefs perform synchronized **Stir** → **Lambda Λ** (composition: `uds`, charge 0)
 
 **Physics:** A baryon with a generation-2 (exotic) quark. Generation-2 particles are unstable and decay; the Stir gesture reflects the need for careful handling of perishable ingredients. See [`physics.md`](physics.md) §3 (decay) and §4, reference dishes.
 

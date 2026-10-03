@@ -13,7 +13,7 @@
 
 ## 1. The pitch
 
-You are a **cosmic chef**. The universe is the kitchen, fundamental particles are the **ingredients**, and the laws of the Standard Model are the **rules of the kitchen**. Combining ingredients the way nature actually allows produces **bound states** — the **dishes** you serve to the never-ending appetite of the primordial chaos.
+You are a **cosmic chef**. The universe is the kitchen, fundamental particles are the **ingredients**, and the laws of the Standard Model are the **rules of the kitchen**. Combining ingredients the way nature actually allows produces **bound states** — the **dishes** you serve to the never-ending appetite of the **primordial chaos** (a fictional creature in the form of a black hole up in the sky).
 
 Core loop: **capture a recipe → direct the sous-chefs to prepare it → serve the dish.**
 
