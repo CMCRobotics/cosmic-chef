@@ -93,15 +93,14 @@ AFRAME.registerComponent('my-thing', {
 
 ## 6. Gotchas
 
-- **Two different A-Frame versions.** `package.json` pins **1.7.1** and the server can serve it at `/aframe.min.js`, but `public/index.html` currently loads **1.4.2 from cdnjs**. The Inspector served at `/aframe-inspector.min.js` comes from the local 1.7.1-era fork. Known inconsistency — do not "fix" it casually, and be aware the running version is 1.4.2.
+- **A-Frame is bundled locally.** `public/index.html` loads `vendor/bundle.js`, which includes A-Frame 1.7.1 (pinned in `package.json`) bundled with dependencies. There is no version inconsistency—the running version matches `package.json`.
 - **The Inspector rewrites your source.** `POST /save` writes changes back into the HTML files. Avoid hand-editing fragments while the Inspector is saving, or your edits may be clobbered.
-- **Missing asset declarations.** `public/scene.html` references `#cupcake` and `#candy-cane-red`, but `index.html` only declares `#table_low`. Those two models will not render until the assets are declared.
-- **`assets-furniture.html` is currently unused** — nothing loads it. It is a catalogue of available furniture GLBs (from a "winter" asset set), useful as a reference for asset URLs.
 - **Static files win over built-in routes.** A real file in `public/` shadows `/aframe.min.js` and `/aframe-inspector.min.js`, because the static lookup runs first.
 - **`@ts-ignore` in `server.ts` is intentional** — the `with { type: "text" }` imports of the A-Frame bundles have no type declarations. Leave them.
 - **`node:fs` / path work must stay Bun-compatible** (`Bun.file`, `Bun.serve`). Do not introduce Node-only server APIs or an Express-style framework.
 - **AR requires HTTPS** on real devices; `localhost` is exempt for desktop testing.
 - **`RECIPES` in `public/xstate/preparation-machine.js` is the in-code mirror of [`docs/recipes.md`](docs/recipes.md).** Keep the `gesture`/`ingredient`/`composition`/`charge` fields synchronized whenever a recipe there changes. A step's final assembly action (the head chef's "Stir") is modeled as `stepType: 'synchronized'`, requiring a `GESTURE_TICK` with a `chefIds` array covering every active sous-chef, per `docs/game.md`'s "Synchronized Steps (Mega-Fusions)" rule — distinct from the default single-`chefId` sequential steps, and distinct from the generic `slice/dice/stir/smash` mechanic vocabulary in `docs/game-loop.md`.
+- **Chef stations are discovered dynamically by `galley-manager.js`.** Each station in `public/galley.html` must have `class="chef-station"` and `data-station-id="SN"` (where N is 1, 2, or 3). The manager queries these attributes at runtime to look up station positions. **If you move a station's position in galley.html, no component code changes are needed** — the manager will discover the new position automatically. Stations are cached after first lookup for efficiency.
 
 ## 7. Verifying changes
 
