@@ -165,7 +165,9 @@
         // Console helpers for testing
         window.testGesture = (gesture, progress = 100, chefId = null) => {
             const prepMgr = scene.components['preparation-manager'];
-            if (prepMgr) {
+            if (prepMgr && prepMgr.gameActor) {
+                const beforeState = prepMgr.gameActor.getSnapshot();
+
                 const event = {
                     gesture,
                     progressAmount: progress
@@ -177,6 +179,26 @@
                     log.info(`Sending GESTURE_TICK: ${gesture} +${progress}%`);
                 }
                 prepMgr.sendEvent('GESTURE_TICK', event);
+
+                // Small delay to let state update
+                setTimeout(() => {
+                    const afterState = prepMgr.gameActor.getSnapshot();
+                    if (beforeState.value !== afterState.value) {
+                        log.info(`→ State changed to: ${afterState.value}`);
+                    } else {
+                        log.debug(`State remains: ${afterState.value}`);
+                        // Show context for debugging
+                        if (afterState.value === 'readyForFinalStir') {
+                            log.debug(`  Stir progress: ${afterState.context.stirProgress}/100`);
+                            log.debug(`  Final gesture required: ${afterState.context.currentOrder?.finalStep?.gesture}`);
+                        } else if (afterState.value === 'preparingIngredients') {
+                            const station = afterState.context.stations.find(s => s.ingredientId);
+                            if (station) {
+                                log.debug(`  Progress at ${station.stationId}: ${station.progress}/100`);
+                            }
+                        }
+                    }
+                }, 50);
             }
         };
 
@@ -211,9 +233,30 @@
 
         window.testSubmit = () => {
             const prepMgr = scene.components['preparation-manager'];
-            if (prepMgr) {
+            if (prepMgr && prepMgr.gameActor) {
+                const beforeState = prepMgr.gameActor.getSnapshot();
+
                 log.info('Sending SUBMIT_RECIPE');
                 prepMgr.sendEvent('SUBMIT_RECIPE');
+
+                // Small delay to let state update
+                setTimeout(() => {
+                    const afterState = prepMgr.gameActor.getSnapshot();
+                    const newState = afterState.value;
+
+                    if (newState === 'orderSuccess') {
+                        log.info('✓ Recipe matched! Order successful!');
+                        log.info(`Score: ${afterState.context.score}`);
+                        log.info('Next: testRecipe(name) to load another, or testState() to check current state');
+                    } else if (newState === 'orderPenalized') {
+                        log.info('✗ Recipe did not match. Order penalized.');
+                        log.info(`Score: ${afterState.context.score}`);
+                        log.info('Next: testRecipe(name) to load another, or testState() to check current state');
+                    } else {
+                        log.info(`State: ${newState}`);
+                        log.info('Next: check state or try submitting again');
+                    }
+                }, 50);
             }
         };
 
