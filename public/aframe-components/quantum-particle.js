@@ -281,7 +281,46 @@ AFRAME.registerComponent('quantum-particle', {
     applyAuraScale: function (t, distortion) {
         // Aura breathes regardless of progress
         const pulse = 1 + Math.sin(t / 200) * 0.15;
-        this.aura.setAttribute('scale', { x: pulse, y: pulse, z: pulse });
+
+        // Apply same distortion and position as core
+        if (distortion.type === 'tenderize') {
+            const squashFactor = 1.0 - distortion.amount;
+            const expandFactor = 1.0 + (distortion.amount * 0.3);
+            this.aura.setAttribute('scale', {
+                x: expandFactor * pulse,
+                y: squashFactor * pulse,
+                z: expandFactor * pulse
+            });
+            const dropAmount = 0.15 * distortion.amount;
+            this.aura.setAttribute('position', {
+                x: 0,
+                y: -dropAmount,
+                z: 0
+            });
+        } else if (distortion.type === 'slice') {
+            const squashFactor = 1.0 - (distortion.amount * 0.4);
+            const elongateFactor = 1.0 + (distortion.amount * 2.5);
+            const compressFactor = 1.0 - (distortion.amount * 0.5);
+            this.aura.setAttribute('scale', {
+                x: compressFactor * pulse,
+                y: squashFactor * pulse,
+                z: elongateFactor * pulse
+            });
+            const squashChange = 1.0 - squashFactor;
+            const dropAmount = 0.15 * squashChange;
+            const pullBackAmount = 0.15 * (elongateFactor - 1);
+            this.aura.setAttribute('position', {
+                x: 0,
+                y: -dropAmount,
+                z: -pullBackAmount
+            });
+        } else if (distortion.type === 'spin') {
+            this.aura.setAttribute('scale', { x: pulse, y: pulse, z: pulse });
+            this.aura.setAttribute('position', { x: 0, y: 0, z: 0 });
+        } else {
+            this.aura.setAttribute('scale', { x: pulse, y: pulse, z: pulse });
+            this.aura.setAttribute('position', { x: 0, y: 0, z: 0 });
+        }
     },
 
     applyEyeFlattening: function (distortion) {
