@@ -19,7 +19,7 @@ AFRAME.registerComponent('galley-manager', {
 
         // Track active ingredient entities
         this.ingredientEntities = new Map(); // ingredientId → { el, stationId, progress }
-        this.lastRecipeId = null;
+        this.lastRecipeName = null;
 
         // Listen for state changes from preparation-manager
         const scene = document.querySelector('a-scene');
@@ -84,12 +84,10 @@ AFRAME.registerComponent('galley-manager', {
     onStateChange: function (state, context) {
         this.log.debug(`State: ${state}, Ingredients: ${context.ingredients.length}, Stations: ${context.stations.length}`);
 
-        // Handle new recipe: clear old ingredient entities if count mismatch
-        if (state === 'preparingIngredients') {
-            const stationsWithIngredients = context.stations.filter(s => s.ingredientId).length;
-            if (stationsWithIngredients !== this.ingredientEntities.size) {
-                this.clearAllIngredients();
-            }
+        // Handle new recipe: clear old ingredient entities when recipe changes
+        if (context.currentOrder && context.currentOrder.name !== this.lastRecipeName) {
+            this.clearAllIngredients();
+            this.lastRecipeName = context.currentOrder.name;
         }
 
         // Sync ingredient entities with context.stations
@@ -341,6 +339,9 @@ AFRAME.registerComponent('galley-manager', {
         this.ingredientEntities.forEach((data, ingredientId) => {
             const el = data.el;
             if (el) {
+                // Stop floating animation before vacuum
+                el.removeAttribute('anim-space-float');
+
                 // Apply vacuum animation: stretch upwards and move 10 units up
                 el.setAttribute('anim-vacuum', {
                     distance: 10,
