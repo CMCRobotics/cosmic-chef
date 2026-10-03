@@ -1,4 +1,4 @@
-AFRAME.registerComponent('stirring-animation', {
+AFRAME.registerComponent('anim-stirring', {
     schema: {
         speed: {type: 'number', default: 1.5},
         radius: {type: 'number', default: 0.3},

@@ -1,4 +1,4 @@
-AFRAME.registerComponent('tenderizing-animation', {
+AFRAME.registerComponent('anim-tenderizing', {
     schema: {
         speed: {type: 'number', default: 0.6},
         depth: {type: 'number', default: 0.6},

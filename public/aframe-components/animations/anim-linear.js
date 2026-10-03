@@ -1,4 +1,4 @@
-AFRAME.registerComponent('linear-animation', {
+AFRAME.registerComponent('anim-linear', {
     schema: {
         startPosition: {type: 'vec3', default: {x: -20, y: 5, z: -10}},
         endPosition: {type: 'vec3', default: {x: 20, y: 5, z: -10}},

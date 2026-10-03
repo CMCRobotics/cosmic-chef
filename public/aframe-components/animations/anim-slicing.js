@@ -1,4 +1,4 @@
-AFRAME.registerComponent('slicing-animation', {
+AFRAME.registerComponent('anim-slicing', {
     schema: {
         speed: {type: 'number', default: 0.6},
         depth: {type: 'number', default: 0.6},
