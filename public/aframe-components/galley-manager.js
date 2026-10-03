@@ -89,11 +89,16 @@ AFRAME.registerComponent('galley-manager', {
         // Move ingredients to delivery area when completed
         this.ingredientEntities.forEach((data, ingredientId) => {
             if (!currentStationIngredients.has(ingredientId) && !data.inDeliveryArea) {
-                // Ingredient completed all gestures — animate to delivery area
+                // Ingredient completed all gestures — update to completion state
+                const el = data.el;
+                el.setAttribute('quantum-particle', {
+                    active: true,
+                    progress: 1.0
+                });
+
+                // Animate to delivery area
                 data.inDeliveryArea = true;
-                this.log.warn(`Calling animateToDeliveryArea for ${ingredientId}`);
                 this.animateToDeliveryArea(ingredientId);
-                this.log.debug(`Ingredient ${ingredientId} moved to delivery area`);
             }
         });
     },
