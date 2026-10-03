@@ -43,9 +43,61 @@ AFRAME.registerComponent('preparation-manager', {
     },
 
     sendEvent: function (eventName, eventData = {}) {
-        if (this.gameActor) {
-            this.gameActor.send({ type: eventName, ...eventData });
+        if (!this.gameActor) return;
+
+        // Check for invalid gestures before sending
+        if (eventName === 'GESTURE_TICK') {
+            const state = this.gameActor.getSnapshot();
+            const { gesture, chefId } = eventData;
+
+            // Check if this gesture is valid for the current state
+            const isValid = this.isValidGesture(state.value, state.context, gesture, chefId);
+            if (!isValid && chefId) {
+                // Emit invalid gesture event for UI feedback only if station has an ingredient
+                const stations = state.context.stations;
+                const station = stations.find(s => s.chefId === chefId);
+
+                if (station && station.ingredientId) {
+                    const stationId = station.stationId;
+                    this.log.warn(`Invalid gesture: ${gesture} from ${chefId} at station ${stationId}`);
+
+                    // Emit on scene so all components hear it
+                    const scene = document.querySelector('a-scene');
+                    if (scene) {
+                        scene.dispatchEvent(new CustomEvent('invalid-gesture', {
+                            detail: { stationId, chefId, gesture }
+                        }));
+                    }
+                }
+                return; // Don't send invalid gesture to state machine
+            }
         }
+
+        this.gameActor.send({ type: eventName, ...eventData });
+    },
+
+    isValidGesture: function (state, context, gesture, chefId) {
+        // Check ingredient gestures at stations
+        const stations = context.stations;
+        for (let i = 0; i < stations.length; i++) {
+            const station = stations[i];
+            if (!station.ingredientId) continue;
+            if (station.chefId !== chefId) continue;
+
+            const currentGesture = station.gesturesRequired[station.currentGestureIndex];
+            if (currentGesture && gesture === currentGesture.gesture) {
+                return true;
+            }
+        }
+
+        // Check final stir gesture (only valid in readyForFinalStir state)
+        if (state === 'readyForFinalStir' && context.currentOrder && context.currentOrder.finalStep) {
+            if (gesture === context.currentOrder.finalStep.gesture) {
+                return true;
+            }
+        }
+
+        return false;
     },
 
     remove: function () {
