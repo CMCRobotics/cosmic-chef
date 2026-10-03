@@ -11,7 +11,7 @@ AFRAME.registerComponent('galley-manager', {
 
     init: function () {
         this.log = window.log.getLogger('galley-manager');
-        this.log.setLevel('debug');
+        this.log.setLevel('info');
         this.log.debug('Initializing galley-manager');
 
         // Station definitions (assembly line positions)
@@ -58,19 +58,16 @@ AFRAME.registerComponent('galley-manager', {
     },
 
     syncIngredientsWithStations: function (context) {
-        console.warn(`[SYNC] Syncing ${context.stations.length} stations`);
         const currentStationIngredients = new Set();
 
         // Create or update ingredients at stations
         context.stations.forEach((station, stationIdx) => {
-            console.warn(`  Station ${stationIdx}: ingredientId=${station.ingredientId}, has entity=${this.ingredientEntities.has(station.ingredientId)}`);
 
             if (station.ingredientId) {
                 currentStationIngredients.add(station.ingredientId);
 
                 if (!this.ingredientEntities.has(station.ingredientId)) {
                     // Spawn new ingredient
-                    console.warn(`  → Spawning ${station.ingredientId}`);
                     this.spawnIngredient(
                         station.ingredientId,
                         stationIdx,
@@ -93,7 +90,7 @@ AFRAME.registerComponent('galley-manager', {
                 const el = data.el;
                 el.setAttribute('quantum-particle', {
                     active: true,
-                    progress: 1.0
+                    progress: Math.min(1.0, 1.0)  // cap at 1.0
                 });
 
                 // Animate to delivery area
@@ -104,7 +101,6 @@ AFRAME.registerComponent('galley-manager', {
     },
 
     spawnIngredient: function (ingredientId, stationIdx, gesturesRequired) {
-        console.warn(`[SPAWN] ${ingredientId} at station ${stationIdx}`);
 
         const station = this.stations[stationIdx];
         const el = document.createElement('a-entity');
@@ -122,7 +118,6 @@ AFRAME.registerComponent('galley-manager', {
         if (gesturesRequired && gesturesRequired.length > 0) {
             const firstGesture = gesturesRequired[0];
             const ingredientType = ingredientId.split('-')[0]; // 'up', 'down', 'strange', 'anti-down', etc.
-            console.warn(`  → Setting quantum-particle: ingredient=${ingredientType} gesture=${firstGesture.gesture}`);
             el.setAttribute('quantum-particle', {
                 ingredient: ingredientType,
                 active: true,
@@ -133,7 +128,6 @@ AFRAME.registerComponent('galley-manager', {
 
         // Add to scene
         this.el.appendChild(el);
-        console.warn(`  → Added to galley, element:`, el);
 
         // Track it
         this.ingredientEntities.set(ingredientId, {
@@ -158,7 +152,7 @@ AFRAME.registerComponent('galley-manager', {
                     el.setAttribute('quantum-particle', {
                         active: true,
                         gesture: currentGesture.gesture,
-                        progress: station.progress / 100
+                        progress: Math.min(1.0, station.progress / 100)
                     });
 
                     // Log progress for debugging
@@ -216,7 +210,6 @@ AFRAME.registerComponent('galley-manager', {
         const startPos = el.getAttribute('position');
         const startTime = Date.now();
 
-        console.warn(`[${ingredientId}] START: ${JSON.stringify(startPos)} → TARGET: ${JSON.stringify(deliveryPos)}`);
 
         // Manual interpolation using tick
         const animate = () => {
@@ -239,7 +232,6 @@ AFRAME.registerComponent('galley-manager', {
             if (progress < 1) {
                 requestAnimationFrame(animate);
             } else {
-                console.warn(`[${ingredientId}] END: ${JSON.stringify(el.getAttribute('position'))}`);
                 // Re-add floating animation after animation completes
                 el.setAttribute('anim-space-float', {
                     speed: 0.8,
