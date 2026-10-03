@@ -13,7 +13,7 @@ AFRAME.registerComponent('preparation-manager', {
 
     init: function () {
         this.log = window.log.getLogger('preparation-manager');
-        this.log.setLevel('debug');
+        this.log.setLevel('info');
         this.log.debug('Initializing preparation-manager');
 
         // Retrieve externalized state machine

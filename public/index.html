@@ -118,7 +118,7 @@
 
     <script>
         const log = window.log.getLogger('main');
-        log.setLevel('debug');
+        log.setLevel('info');
 
         const scene = document.querySelector('a-scene');
 
@@ -222,9 +222,18 @@
             if (prepMgr && prepMgr.gameActor) {
                 const snapshot = prepMgr.gameActor.getSnapshot();
                 log.info(`Current State: ${snapshot.value}`);
+                log.info(`Chefs: ${snapshot.context.activeChefsCount}`);
                 log.info(`Ingredients: ${snapshot.context.ingredients.length}`);
                 log.info(`Score: ${snapshot.context.score}`);
                 return snapshot.value;
+            }
+        };
+
+        window.setChefs = (count) => {
+            const prepMgr = scene.components['preparation-manager'];
+            if (prepMgr) {
+                console.log(`Setting active chefs to ${count}`);
+                prepMgr.sendEvent('SET_ACTIVE_CHEFS', { count });
             }
         };
 
@@ -244,7 +253,14 @@
             return pos;
         };
 
+        window.debug = (enable = true) => {
+            const level = enable ? 'debug' : 'info';
+            window.log.setLevel(level);
+            console.log(`Log level set to: ${level}`);
+        };
+
         log.info('Test helpers available:');
+        log.info('  debug(true/false) — toggle debug logging');
         log.info('  testState() — show current state');
         log.info('  testRecipe(name) — load a recipe (pion, proton, neutron, lambda)');
         log.info('  testGesture(gesture, progress, chefId) — trigger gesture (chefId required)');

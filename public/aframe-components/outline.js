@@ -7,7 +7,7 @@ AFRAME.registerComponent('outline', {
 
     init: function () {
         this.log = window.log.getLogger('outline');
-        this.log.setLevel('debug');
+        this.log.setLevel('info');
         this.outlineMeshes = [];
     },
 

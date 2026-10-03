@@ -1,7 +1,7 @@
 AFRAME.registerComponent('start-experience', {
     init: function() {
         const log = window.log.getLogger('start-experience');
-        log.setLevel('debug');
+        log.setLevel('info');
         
         this.el.addEventListener('enter-vr', () => {
             log.debug('Entered VR/AR mode');
@@ -23,7 +23,7 @@ AFRAME.registerComponent('start-experience', {
 AFRAME.registerComponent('interactive-object', {
     init: function() {
         const log = window.log.getLogger('interactive-object');
-        log.setLevel('debug');
+        log.setLevel('info');
 
         this.el.addEventListener('click', () => {
             log.debug('Object clicked');
@@ -37,7 +37,7 @@ AFRAME.registerComponent('interactive-object', {
 AFRAME.registerComponent('world-root', {
     init: function() {
         const log = window.log.getLogger('world-root');
-        log.setLevel('debug');
+        log.setLevel('info');
         
         // Initialize position
         this.el.setAttribute('position', '0 0 -1');

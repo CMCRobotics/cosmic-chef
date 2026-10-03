@@ -10,7 +10,6 @@ const getLogger = () => {
     return {
         debug: () => {},
         info: (...args) => console.log('[Test Info]', ...args),
-        warn: (...args) => console.warn('[Test Warn]', ...args)
     };
 };
 
