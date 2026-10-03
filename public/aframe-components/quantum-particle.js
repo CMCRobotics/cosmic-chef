@@ -37,7 +37,7 @@ AFRAME.registerComponent('quantum-particle', {
         active: { type: 'boolean', default: false },
         progress: { type: 'number', default: 0 },
         gesture: { type: 'string', default: '' },
-        inactiveColor: { type: 'color', default: '#37474f' }
+        inactiveColor: { type: 'color', default: '#f3ffe6' }
     },
 
     init: function () {
