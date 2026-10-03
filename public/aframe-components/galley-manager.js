@@ -14,12 +14,8 @@ AFRAME.registerComponent('galley-manager', {
         this.log.setLevel('info');
         this.log.debug('Initializing galley-manager');
 
-        // Station definitions (assembly line positions)
-        this.stations = [
-            { id: 'S1', position: { x: 2, y: 1.5, z: -1 } },
-            { id: 'S2', position: { x: 0, y: 1.5, z: -1 } },
-            { id: 'S3', position: { x: -2, y: 1.5, z: -1 } }
-        ];
+        // Cache of discovered station positions (lazy-loaded)
+        this.stationPositionCache = new Map();
 
         // Track active ingredient entities
         this.ingredientEntities = new Map(); // ingredientId → { el, stationId, progress }
@@ -31,7 +27,58 @@ AFRAME.registerComponent('galley-manager', {
             this.onStateChange(evt.detail.state, evt.detail.context);
         });
 
+        // Listen for invalid gestures
+        scene.addEventListener('invalid-gesture', (evt) => {
+            this.showInvalidGestureIndicator(evt.detail.stationId, evt.detail.chefId);
+        });
+
         this.log.debug(`Galley manager ready. Delivery area position: ${JSON.stringify(this.data.deliveryAreaPosition)}`);
+    },
+
+    getStationPosition: function (stationId) {
+        // Return cached position if available
+        if (this.stationPositionCache.has(stationId)) {
+            return this.stationPositionCache.get(stationId);
+        }
+
+        // Find station element by data-station-id
+        const stationEl = this.el.querySelector(`[data-station-id="${stationId}"]`);
+        if (!stationEl) {
+            this.log.warn(`Station ${stationId} not found in scene`);
+            return null;
+        }
+
+        const posStr = stationEl.getAttribute('position');
+        const pos = this.parsePosition(posStr);
+        if (!pos) {
+            this.log.warn(`Could not parse position for station ${stationId}: ${posStr}`);
+            return null;
+        }
+
+        // Adjust Y to position ingredients at desired height (between platform and board)
+        // Boards are at y=1.3, so place ingredients at y=1.5
+        const stationPos = { x: pos.x, y: 1.5, z: pos.z };
+        this.stationPositionCache.set(stationId, stationPos);
+        this.log.debug(`Discovered station ${stationId} at ${JSON.stringify(stationPos)}`);
+        return stationPos;
+    },
+
+    parsePosition: function (posData) {
+        if (!posData) return null;
+
+        // A-Frame returns position as an object, not a string
+        if (typeof posData === 'object' && posData.x !== undefined && posData.y !== undefined && posData.z !== undefined) {
+            return { x: posData.x, y: posData.y, z: posData.z };
+        }
+
+        // Fallback: parse string format (e.g., "2 0.9 -1")
+        if (typeof posData === 'string') {
+            const parts = posData.split(' ').map(p => parseFloat(p));
+            if (parts.length !== 3 || parts.some(isNaN)) return null;
+            return { x: parts[0], y: parts[1], z: parts[2] };
+        }
+
+        return null;
     },
 
     onStateChange: function (state, context) {
@@ -55,6 +102,11 @@ AFRAME.registerComponent('galley-manager', {
         if (state === 'readyForFinalStir') {
             this.convergeToDeliveryArea(context);
         }
+
+        // Handle submission - vacuum all ingredients
+        if (state === 'orderSuccess' || state === 'orderPenalized') {
+            this.vacuumAllIngredients();
+        }
     },
 
     syncIngredientsWithStations: function (context) {
@@ -70,14 +122,14 @@ AFRAME.registerComponent('galley-manager', {
                     // Spawn new ingredient
                     this.spawnIngredient(
                         station.ingredientId,
-                        stationIdx,
+                        station.stationId,
                         station.gesturesRequired
                     );
                 } else {
                     // Update existing ingredient position/state
                     const data = this.ingredientEntities.get(station.ingredientId);
-                    if (data.stationIdx !== stationIdx) {
-                        this.moveIngredientToStation(station.ingredientId, stationIdx);
+                    if (data.stationId !== station.stationId) {
+                        this.moveIngredientToStation(station.ingredientId, station.stationId);
                     }
                 }
             }
@@ -100,15 +152,19 @@ AFRAME.registerComponent('galley-manager', {
         });
     },
 
-    spawnIngredient: function (ingredientId, stationIdx, gesturesRequired) {
+    spawnIngredient: function (ingredientId, stationId, gesturesRequired) {
 
-        const station = this.stations[stationIdx];
+        const pos = this.getStationPosition(stationId);
+        if (!pos) {
+            this.log.error(`Cannot spawn ingredient ${ingredientId}: station ${stationId} not found`);
+            return;
+        }
+
         const el = document.createElement('a-entity');
         el.setAttribute('id', `ingredient_${ingredientId}`);
         el.setAttribute('class', 'ingredient-entity');
 
         // Position at station
-        const pos = station.position;
         el.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
 
         // Face toward sous-chefs (rotate 180 degrees)
@@ -132,7 +188,7 @@ AFRAME.registerComponent('galley-manager', {
         // Track it
         this.ingredientEntities.set(ingredientId, {
             el,
-            stationIdx,
+            stationId,
             progress: 0,
             gesturesRequired,
             currentGestureIndex: 0,
@@ -167,19 +223,23 @@ AFRAME.registerComponent('galley-manager', {
         });
     },
 
-    moveIngredientToStation: function (ingredientId, newStationIdx) {
+    moveIngredientToStation: function (ingredientId, newStationId) {
         const data = this.ingredientEntities.get(ingredientId);
         if (!data) return;
 
-        const newStation = this.stations[newStationIdx];
+        const toPos = this.getStationPosition(newStationId);
+        if (!toPos) {
+            this.log.error(`Cannot move ingredient ${ingredientId}: station ${newStationId} not found`);
+            return;
+        }
+
         const el = data.el;
 
         // Animate movement between stations
         const fromPos = el.getAttribute('position');
-        const toPos = newStation.position;
 
         this.log.debug(
-            `Moving ${ingredientId} from station ${data.stationIdx} to station ${newStationIdx}`
+            `Moving ${ingredientId} from station ${data.stationId} to station ${newStationId}`
         );
 
         // Use A-Frame animation
@@ -192,7 +252,7 @@ AFRAME.registerComponent('galley-manager', {
             easing: 'easeInOutQuad'
         });
 
-        data.stationIdx = newStationIdx;
+        data.stationId = newStationId;
     },
 
     animateToDeliveryArea: function (ingredientId) {
@@ -273,6 +333,62 @@ AFRAME.registerComponent('galley-manager', {
         });
         this.ingredientEntities.clear();
         this.log.debug('Cleared all ingredient entities');
+    },
+
+    vacuumAllIngredients: function () {
+        this.log.info('Vacuuming all ingredients');
+
+        this.ingredientEntities.forEach((data, ingredientId) => {
+            const el = data.el;
+            if (el) {
+                // Apply vacuum animation: stretch upwards and move 10 units up
+                el.setAttribute('anim-vacuum', {
+                    distance: 10,
+                    stretchAxis: 'y',
+                    stretchDirection: 1,  // positive = upward
+                    duration: 2000,
+                    resistance: 1.5,
+                    loop: false
+                });
+
+                this.log.debug(`Applied vacuum animation to ${ingredientId}`);
+            }
+        });
+    },
+
+    showInvalidGestureIndicator: function (stationId, chefId) {
+        const stationPos = this.getStationPosition(stationId);
+        if (!stationPos) {
+            this.log.warn(`Cannot show indicator: station ${stationId} not found`);
+            return;
+        }
+
+        // Create red sphere indicator above the station
+        const xEl = document.createElement('a-entity');
+        xEl.setAttribute('id', `invalid-gesture-${stationId}-${Date.now()}`);
+        xEl.setAttribute('geometry', {
+            primitive: 'sphere',
+            radius: 0.5
+        });
+        xEl.setAttribute('material', {
+            color: '#ff0000',
+            emissive: '#ff0000',
+            emissiveIntensity: 0.5,
+            transparent: true,
+            opacity: 0.4
+        });
+        xEl.setAttribute('position', `${stationPos.x} ${stationPos.y} ${stationPos.z}`);
+
+        this.el.appendChild(xEl);
+
+        this.log.info(`Invalid gesture from ${chefId} at ${stationId} — showing red indicator`);
+
+        // Remove after 500ms
+        setTimeout(() => {
+            if (xEl && xEl.parentNode) {
+                xEl.remove();
+            }
+        }, 800);
     },
 
     remove: function () {
