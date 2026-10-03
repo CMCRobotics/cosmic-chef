@@ -5,9 +5,9 @@
 
 AFRAME.registerComponent('anim-space-float', {
     schema: {
-        bounceHeight: { type: 'number', default: 0.3 },
-        gravity: { type: 'number', default: 1.0 },
-        swayWidth: { type: 'number', default: 0.2 },
+        bounceHeight: { type: 'number', default: 0.2 },
+        gravity: { type: 'number', default: 0.8 },
+        swayWidth: { type: 'number', default: 0.05 },
         bobSpeed: { type: 'number', default: 2000 },
         swaySpeed: { type: 'number', default: 3000 },
         speed: { type: 'number', default: 1.0 }
