@@ -148,11 +148,10 @@ AFRAME.registerComponent('quantum-particle', {
 
 
         if (this.data.active && this.data.progress > 0) {
-            const targetColor = this.data.progress >= 1.0 ? '#76ff03' : color;
             const emissiveIntensity = 0.5 + this.data.progress * 2.0;
             this.core.setAttribute('material', {
-                color: targetColor,
-                emissive: targetColor,
+                color: color,
+                emissive: color,
                 emissiveIntensity: emissiveIntensity
             });
             this.aura.setAttribute('material', {
