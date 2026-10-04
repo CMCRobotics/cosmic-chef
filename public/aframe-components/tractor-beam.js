@@ -23,10 +23,16 @@ AFRAME.registerComponent('tractor-beam', {
 
         // Track trigger state
         this.triggerPressed = false;
+        this.mouseDown = false;
 
-        // Listen for controller events
+        // Listen for VR controller events
         this.controller.addEventListener('triggerdown', () => this.onTriggerDown());
         this.controller.addEventListener('triggerup', () => this.onTriggerUp());
+
+        // Listen for mouse events (desktop testing)
+        document.addEventListener('mousedown', (e) => this.onMouseDown(e));
+        document.addEventListener('mouseup', () => this.onMouseUp());
+        document.addEventListener('mousemove', () => this.tick());
 
         // Update loop for pulling recipe toward hand
         this.tick = AFRAME.utils.throttleTick(this.tick.bind(this), 60); // 60fps cap
@@ -37,13 +43,35 @@ AFRAME.registerComponent('tractor-beam', {
     onTriggerDown: function () {
         this.log.debug('Trigger pressed');
         this.triggerPressed = true;
+        this.activateTractorBeam();
+    },
 
+    onMouseDown: function (e) {
+        // Only use mouse if clicking on a recipe
+        const intersected = this.getIntersectedRecipe(e);
+        if (intersected) {
+            this.log.debug('Mouse clicked on recipe');
+            this.mouseDown = true;
+            this.activateTractorBeam();
+        }
+    },
+
+    activateTractorBeam: function () {
         // Raycast for recipes
         const intersection = this.findClosestRecipe();
         if (intersection) {
             this.targetRecipe = intersection.el;
             this.isActive = true;
-            this.log.info(`Locked onto recipe: ${this.targetRecipe.id}`);
+
+            // Find intake hopper target position
+            this.intakeHopper = document.querySelector('.recipe-team-intake');
+            if (!this.intakeHopper) {
+                this.log.warn('Intake hopper not found');
+                this.isActive = false;
+                return;
+            }
+
+            this.log.info(`Locked onto recipe: ${this.targetRecipe.id}, pulling to intake`);
 
             // Create tractor beam visual
             this.createBeamVisual();
@@ -65,6 +93,36 @@ AFRAME.registerComponent('tractor-beam', {
         this.isActive = false;
         this.targetRecipe = null;
         this.removeBeamVisual();
+    },
+
+    onMouseUp: function () {
+        this.log.debug('Mouse released');
+        this.mouseDown = false;
+
+        if (this.targetRecipe && this.isActive) {
+            // Place recipe on intake hopper
+            this.placeRecipeOnIntake(this.targetRecipe);
+        }
+
+        // Clean up
+        this.isActive = false;
+        this.targetRecipe = null;
+        this.removeBeamVisual();
+    },
+
+    getIntersectedRecipe: function (e) {
+        // Simple raycast from mouse position
+        const canvas = document.querySelector('a-scene').canvas;
+        const x = (e.clientX / canvas.clientWidth) * 2 - 1;
+        const y = -(e.clientY / canvas.clientHeight) * 2 + 1;
+
+        // Get recipes in scene
+        const recipes = document.querySelectorAll('.fallable-recipe');
+        if (recipes.length === 0) return null;
+
+        // For simplicity, find closest recipe to mouse
+        // In full VR, this would be a proper raycast
+        return recipes[0]; // Click any recipe to activate (closest found during findClosestRecipe)
     },
 
     findClosestRecipe: function () {
@@ -137,28 +195,37 @@ AFRAME.registerComponent('tractor-beam', {
     },
 
     tick: function () {
-        if (!this.isActive || !this.targetRecipe) return;
+        if (!this.isActive || !this.targetRecipe || !this.intakeHopper) return;
 
-        // Lerp recipe position toward controller hand
+        // Lerp recipe position toward intake hopper
         const recipePos = this.targetRecipe.getAttribute('position');
-        const controllerPos = this.controller.getAttribute('position');
+        const intakePos = this.intakeHopper.getAttribute('position');
 
+        // Pull recipe upward and toward intake
         const newPos = {
-            x: recipePos.x + (controllerPos.x - recipePos.x) * this.data.pullSpeed,
-            y: recipePos.y + (controllerPos.y - recipePos.y) * this.data.pullSpeed,
-            z: recipePos.z + (controllerPos.z - recipePos.z) * this.data.pullSpeed
+            x: recipePos.x + (intakePos.x - recipePos.x) * this.data.pullSpeed,
+            y: recipePos.y + (intakePos.y - recipePos.y) * this.data.pullSpeed,
+            z: recipePos.z + (intakePos.z - recipePos.z) * this.data.pullSpeed
         };
 
         this.targetRecipe.setAttribute('position', `${newPos.x} ${newPos.y} ${newPos.z}`);
 
         // Scale up recipe as it gets closer (visual effect)
-        const distance = this.distance(newPos, controllerPos);
+        const distance = this.distance(newPos, intakePos);
         const scaleFactor = Math.max(0.6, 1.5 - (distance / this.data.maxDistance));
         this.targetRecipe.setAttribute('scale', `${scaleFactor} ${scaleFactor} ${scaleFactor}`);
 
-        // Update beam height to follow recipe
+        // Update beam to point from recipe to intake
         if (this.beamVisual) {
             this.beamVisual.setAttribute('scale', `1 ${distance / 10} 1`);
+        }
+
+        // Check if recipe reached intake (close enough to place)
+        if (distance < 1.0) {
+            this.placeRecipeOnIntake(this.targetRecipe);
+            this.isActive = false;
+            this.targetRecipe = null;
+            this.removeBeamVisual();
         }
     },
 

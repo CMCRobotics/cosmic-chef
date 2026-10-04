@@ -28,10 +28,15 @@ AFRAME.registerComponent('recipe-spawner', {
             this.onGameStateChange(evt.detail.state, evt.detail.context);
         });
 
-        // Start spawning when scene is loaded
-        this.el.sceneEl.addEventListener('loaded', () => {
+        // Start spawning when scene is loaded, or immediately if already loaded
+        const scene = this.el.sceneEl;
+        if (scene.hasLoaded) {
             this.startSpawning();
-        });
+        } else {
+            scene.addEventListener('loaded', () => {
+                this.startSpawning();
+            });
+        }
 
         this.log.debug(`Recipe spawner configured: interval=${this.data.spawnInterval}ms, fallSpeed=${this.data.fallSpeed}u/s`);
     },
@@ -71,15 +76,36 @@ AFRAME.registerComponent('recipe-spawner', {
         recipeEl.setAttribute('class', 'fallable-recipe');
         recipeEl.setAttribute('data-recipe-id', recipeId);
 
-        // Visual: use small hopper or sphere as placeholder
-        recipeEl.setAttribute('gltf-model', this.data.recipeModel);
-        recipeEl.setAttribute('scale', '0.6 0.6 0.6');
+        // Visual: box with text
+        recipeEl.setAttribute('geometry', {
+            primitive: 'box',
+            width: 0.8,
+            height: 0.8,
+            depth: 0.8
+        });
+        recipeEl.setAttribute('material', {
+            color: '#ff6600',
+            emissive: '#ff6600',
+            emissiveIntensity: 0.3,
+            transparent: true,
+            opacity: 0.9
+        });
+
+        // Recipe name text
+        const textEl = document.createElement('a-entity');
+        textEl.setAttribute('text', {
+            value: 'RECIPE',
+            align: 'center',
+            anchor: 'center',
+            baseline: 'center',
+            color: '#ffffff',
+            fontSize: 40
+        });
+        textEl.setAttribute('position', '0 0 0.41'); // In front of box
+        recipeEl.appendChild(textEl);
 
         // Position at spawn point
         recipeEl.setAttribute('position', `${spawnPos.x} ${spawnPos.y} ${spawnPos.z}`);
-
-        // Slight rotation for visual interest
-        recipeEl.setAttribute('rotation', '0 45 0');
 
         // Add to scene (parent of recipe-spawner or world-root)
         this.el.parentNode.appendChild(recipeEl);
