@@ -2,6 +2,15 @@
 
 Reference for the Homie v4-compliant MQTT topic hierarchy that tracks real-time game state, player participation, and performance metrics. This bridges the game engine (running in the browser) to external systems (viz dashboards, physical displays, coaching apps, analytics).
 
+## Why Homie for Cosmic Chef?
+
+Modeling the entire game state, events, and team states using the **Homie IoT Convention** over MQTT is ideal for a physical installation or multi-display party setup:
+
+- **Physical Lighting & Props Integration:** Because game states are published to MQTT topics like `cosmic-chef/team-1/game-session-001/score/current`, you can hook up ESP8266/ESP32 LED strips around physical kitchen counters to react to scoring events, successes, or penalties automatically.
+- **Decoupled Dashboards:** AR headsets, wall leaderboards, coaching tools, and analytics dashboards don't need direct access to the game server; they subscribe to MQTT topics and react to state changes in real time.
+- **Unified Standard:** Both your input controllers (gesture sensors, micro:bits) and output game states share the exact same clean IoT convention (namespace/node/property).
+- **Extensibility:** New observers (lighting systems, sound effects, external scoring displays) can be added without modifying the game engine—just subscribe to the relevant topics.
+
 ## Overview
 
 **Device Structure:** single MQTT topic namespace (`cosmic-chef`) organized by teams, games, and players.

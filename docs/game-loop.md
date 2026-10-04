@@ -1,5 +1,15 @@
 # Cosmic Chef — Core Game Loop Summary
 
+## Game Loop State Diagram
+
+```puml
+!include ./diagrams/game-loop.puml
+```
+
+See also: [game-loop.puml](diagrams/game-loop.puml) (raw PlantUML source)
+
+---
+
 ## Phase 1: Lobby & Setup
 1. **Team Registration:** Players connect. The system registers the team with a randomly generated name (e.g., combining fun adjectives and names) and associates it with an active in-game color (`red`, `blue`, or `white`). The **Head Chef** (AR Headset) and active **Sous-Chefs** (Motion sensors via MQTT/Homie) are registered under this team.
 2. **Game Start:** The session timer initializes (e.g., 5-minute arcade countdown).
