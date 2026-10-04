@@ -528,33 +528,10 @@
       </div>
     </div>
 
-    <script src="/adapters/headChefAdapter.js"></script>
+    <!-- Shared recipes (window.RECIPES) — same definitions the game uses -->
+    <script src="/xstate/preparation-machine.js"></script>
     <script>
-      // Recipes (hardcoded for test interface)
-      window.RECIPES = [
-        {
-          name: 'proton',
-          composition: 'uud',
-          charge: 1,
-          ingredientSequences: {
-            'up-1': [{ gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' }],
-            'up-2': [{ gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' }],
-            'down-1': [{ gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' }]
-          },
-          finalStep: { gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
-        },
-        {
-          name: 'neutron',
-          composition: 'udd',
-          charge: 0,
-          ingredientSequences: {
-            'up-1': [{ gesture: 'slice', preparedState: 'Sliced Up', behaviorType: 'resumable' }],
-            'down-1': [{ gesture: 'tenderize', preparedState: 'Tender Down', behaviorType: 'resumable' }],
-            'down-2': [{ gesture: 'tenderize', preparedState: 'Tender Down', behaviorType: 'resumable' }]
-          },
-          finalStep: { gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
-        }
-      ];
+      const { sousChefGestureTopic, headChefSubmitTopic, recipeTopic } = window.CosmicChef;
 
       let client = null;
       let connected = false;
@@ -645,8 +622,6 @@
           client.on("connect", () => {
             updateStatus(true);
             log(`Team: ${teamId} | Game: ${gameId}`, "success");
-            // Initialize adapter subjects for MQTT messaging
-            window.headChefAdapterModule?.initializeHeadChefActionSubject();
           });
 
           client.on("error", (err) => {
@@ -675,7 +650,7 @@
         }
 
         const teamId = document.getElementById("teamId").value;
-        const topic = `cosmic-chef/team-${teamId}/game-${gameId}/sous-chef-${sous}/gesture/current`;
+        const topic = sousChefGestureTopic(teamId, gameId, sous);
 
         client.publish(topic, gesture, { retain: false, qos: 1 }, (err) => {
           if (!err) {
@@ -695,21 +670,9 @@
 
         const teamId = document.getElementById("teamId").value;
 
-        if (action === "cancel") {
-          // Publish to MQTT for external listeners
-          const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
-          client.publish(topic, "idle", { retain: false, qos: 1 });
-          // Also publish to local adapter subject for game machine
-          window.headChefAdapterModule?.publishHeadChefAction("cancel");
-          log("Head Chef: Cancel recipe", "success");
-        } else if (action === "submit") {
-          // Publish to MQTT for external listeners
-          const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
-          client.publish(topic, "submitting", { retain: false, qos: 1 });
-          // Also publish to local adapter subject for game machine
-          window.headChefAdapterModule?.publishHeadChefAction("submit");
-          log("Head Chef: Submit recipe", "success");
-        }
+        const payloads = { cancel: "idle", submit: "submitting" };
+        client.publish(headChefSubmitTopic(teamId, gameId), payloads[action], { retain: false, qos: 1 });
+        log(`Head Chef: ${action === "cancel" ? "Cancel" : "Submit"} recipe`, "success");
       }
 
       function captureRecipe(recipeNum) {
@@ -719,7 +682,7 @@
         }
 
         const teamId = document.getElementById("teamId").value;
-        const topic = `cosmic-chef/team-${teamId}/game-${gameId}/round/recipe`;
+        const topic = recipeTopic(teamId, gameId);
 
         // Get the recipe object from RECIPES (1-indexed: 1→RECIPES[0], 2→RECIPES[1], etc.)
         if (!window.RECIPES || window.RECIPES.length === 0) {
@@ -849,122 +812,6 @@
           setTimeout(() => btn.classList.remove("active"), 200);
         });
       });
-
-      // Recipe management
-      let currentRecipe = null;
-
-      function initializeRecipeSelector() {
-        const recipeSelect = document.getElementById("recipeSelect");
-        const { RECIPES } = window;
-
-        if (!recipeSelect) {
-          // recipeSelect element not present in UI; recipe buttons are used instead
-          return;
-        }
-
-        if (RECIPES && RECIPES.length > 0) {
-          RECIPES.forEach((recipe, index) => {
-            const option = document.createElement("option");
-            option.value = index;
-            option.textContent = `${recipe.name} (${recipe.composition})`;
-            recipeSelect.appendChild(option);
-          });
-        }
-      }
-
-      function captureRecipeFromUI() {
-        const recipeSelect = document.getElementById("recipeSelect");
-
-        if (!recipeSelect) {
-          log("Recipe selector not available", "error");
-          return;
-        }
-
-        const recipeIndex = parseInt(recipeSelect.value);
-
-        if (isNaN(recipeIndex)) {
-          log("Please select a recipe first", "error");
-          return;
-        }
-
-        const { RECIPES } = window;
-        const recipe = RECIPES[recipeIndex];
-
-        if (!connected || !gameId) {
-          log("Not connected or game ID missing", "error");
-          return;
-        }
-
-        const teamId = document.getElementById("teamId").value;
-        const topic = `cosmic-chef/team-${teamId}/game-${gameId}/round/recipe`;
-        const recipeData = {
-          name: recipe.name,
-          composition: recipe.composition,
-          charge: recipe.charge,
-          ingredientSequences: recipe.ingredientSequences,
-          finalStep: recipe.finalStep
-        };
-
-        client.publish(topic, JSON.stringify(recipeData), { qos: 1 }, (err) => {
-          if (!err) {
-            log(`Captured recipe: ${recipe.name}`, "success");
-            updateRecipeDisplay(recipe);
-            currentRecipe = recipe;
-          }
-        });
-      }
-
-      function updateRecipeDisplay(recipe) {
-        const nameEl = document.getElementById("currentRecipeName");
-        const compEl = document.getElementById("currentRecipeComposition");
-
-        if (!nameEl || !compEl) {
-          // Display elements not present in UI
-          return;
-        }
-
-        if (recipe) {
-          nameEl.textContent = recipe.name;
-          compEl.textContent = recipe.composition;
-        } else {
-          nameEl.textContent = "None";
-          compEl.textContent = "-";
-        }
-      }
-
-      // Subscribe to recipe updates via MQTT
-      function subscribeToRecipeUpdates() {
-        if (!client) return;
-
-        const teamId = document.getElementById("teamId").value;
-        const recipeTopics = [
-          `cosmic-chef/team-${teamId}/game-+/round/recipe`
-        ];
-
-        recipeTopics.forEach(topic => {
-          client.subscribe(topic, (err) => {
-            if (!err) {
-              log(`Subscribed to recipes: ${topic}`, "info");
-            }
-          });
-        });
-
-        client.on("message", (topic, message) => {
-          if (topic.includes("round/recipe")) {
-            try {
-              const recipe = JSON.parse(message.toString());
-              log(`Recipe updated: ${recipe.name}`, "info");
-              updateRecipeDisplay(recipe);
-              currentRecipe = recipe;
-            } catch (err) {
-              log(`Failed to parse recipe message: ${err.message}`, "error");
-            }
-          }
-        });
-      }
-
-      // Initialize when page loads
-      initializeRecipeSelector();
 
       log("Ready. Configure broker and team settings, then connect.", "info");
     </script>

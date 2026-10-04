@@ -12,20 +12,6 @@
 
     <script src="xstate/preparation-machine.js"></script>
 
-    <!-- Adapters -->
-    <script src="adapters/headChefAdapter.js"></script>
-
-    <!-- Sous-Chef Integration (compiled from TypeScript, loaded as modules for proper imports) -->
-    <script type="module">
-      import('./adapters/sousChefGestureAdapter.js');
-      import('./modules/sousChefIntegration.js');
-    </script>
-
-    <!-- Game Management -->
-    <script src="components/game-manager.js"></script>
-    <script src="components/sous-chef-gesture-feedback.js"></script>
-    <script src="components/head-chef-mqtt-listener.js"></script>
-
     <script src="aframe-components/animations/anim-linear.js"></script>
     <script src="aframe-components/animations/anim-tenderizing.js"></script>
     <script src="aframe-components/animations/anim-stirring.js"></script>
@@ -34,6 +20,8 @@
     <script src="aframe-components/load-fragment.js"></script>
     <script src="aframe-components/ar-utils.js"></script>
     <script src="aframe-components/preparation-manager.js"></script>
+    <script src="aframe-components/mqtt-bridge.js"></script>
+    <script src="aframe-components/sous-chef-gesture-feedback.js"></script>
     <script src="aframe-components/galley-manager.js"></script>
     <script src="aframe-components/quantum-particle.js"></script>
     <script src="aframe-components/animations/anim-space-float.js"></script>
@@ -47,8 +35,7 @@
     <a-scene
         start-experience
         preparation-manager
-        head-chef-mqtt-listener="teamId: team-1; gameId: default"
-        game-manager="teamId: team-1; numSousChefs: 3"
+        mqtt-bridge="teamId: team-1; gameId: default; numSousChefs: 3"
         webxr="optionalFeatures: hit-test, local-floor, hand-tracking; requiredFeatures: local-floor;"
         renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
         cursor="rayOrigin: mouse"
@@ -108,28 +95,9 @@
             </a-entity>
 
             <!-- Sous-Chef Gesture Feedback Indicators (Dynamic Utensils) -->
-            <a-entity id="sous-chef-3-feedback" position="-1 1.5 -2">
-              <a-entity id="sous-chef-3-knife" gltf-model="#asset_cooking_knife" scale="0.5 0.5 0.5" position="0 0 0" rotation="-90 -90 0" visible="false"></a-entity>
-              <a-entity id="sous-chef-3-hammer" gltf-model="#asset_meat_tenderizer" scale="1 1 1" position="0 0 0" rotation="0 0 90" visible="false"></a-entity>
-              <a-entity id="sous-chef-3-spoon" gltf-model="#asset_cooking_spoon" scale="0.5 0.5 0.5" position="0 0 0" rotation="0 0 90" visible="false"></a-entity>
-              <a-entity sous-chef-gesture-feedback="sousChefId: 3; feedbackType: visual"></a-entity>
-            </a-entity>
-
-            <a-entity id="sous-chef-2-feedback" position="0 1.5 -2">
-              <a-entity id="sous-chef-2-knife" gltf-model="#asset_cooking_knife" scale="0.5 0.5 0.5" position="0 0 0" rotation="-90 -90 0" visible="false"></a-entity>
-              <a-entity id="sous-chef-2-hammer" gltf-model="#asset_meat_tenderizer" scale="1 1 1" position="0 0 0" rotation="0 0 90" visible="false"></a-entity>
-              <a-entity id="sous-chef-2-spoon" gltf-model="#asset_cooking_spoon" scale="0.5 0.5 0.5" position="0 0 0" rotation="0 0 90" visible="false"></a-entity>
-              <a-entity sous-chef-gesture-feedback="sousChefId: 2; feedbackType: visual"></a-entity>
-            </a-entity>
-
-            <a-entity id="sous-chef-1-feedback" position="1 1.5 -2">
-              <a-entity id="sous-chef-1-knife" gltf-model="#asset_cooking_knife" scale="0.5 0.5 0.5" position="0 0 0" rotation="-90 -90 0" visible="false"></a-entity>
-              <a-entity id="sous-chef-1-hammer" gltf-model="#asset_meat_tenderizer" scale="1 1 1" position="0 0 0" rotation="0 0 90" visible="false"></a-entity>
-              <a-entity id="sous-chef-1-spoon" gltf-model="#asset_cooking_spoon" scale="0.5 0.5 0.5" position="0 0 0" rotation="0 0 90" visible="false"></a-entity>
-              <a-entity sous-chef-gesture-feedback="sousChefId: 1; feedbackType: visual"></a-entity>
-            </a-entity>
-
-
+            <a-entity sous-chef-gesture-feedback="chefId: chef-3" position="-1 1.5 -2"></a-entity>
+            <a-entity sous-chef-gesture-feedback="chefId: chef-2" position="0 1.5 -2"></a-entity>
+            <a-entity sous-chef-gesture-feedback="chefId: chef-1" position="1 1.5 -2"></a-entity>
 
         </a-entity>
       
@@ -144,184 +112,7 @@
       
     </a-scene>
 
-    <script>
-        const mainLog = window.log.getLogger('main');
-        mainLog.setLevel('info');
-
-        const scene = document.querySelector('a-scene');
-
-        scene.addEventListener('loaded', () => {
-            mainLog.debug('Scene loaded');
-            mainLog.info('Use testRecipe("proton") or test interface to capture a recipe');
-        });
-
-        scene.addEventListener('enter-vr', () => {
-            if (scene.is('vr-mode')) {
-                mainLog.debug('Entered VR mode');
-            }
-        });
-
-        // XR session management
-        scene.addEventListener('sessionstart', () => {
-            mainLog.debug('XR session started');
-        });
-
-        scene.addEventListener('sessionend', () => {
-            mainLog.debug('XR session ended');
-        });
-
-        // Console helpers for testing
-        window.testGesture = (gesture, progress = 100, chefId = null) => {
-            const prepMgr = scene.components['preparation-manager'];
-            if (prepMgr && prepMgr.gameActor) {
-                const beforeState = prepMgr.gameActor.getSnapshot();
-
-                const event = {
-                    gesture,
-                    progressAmount: progress
-                };
-                if (chefId) {
-                    event.chefId = chefId;
-                    mainLog.info(`Sending GESTURE_TICK: ${gesture} +${progress}% (${chefId})`);
-                } else {
-                    mainLog.info(`Sending GESTURE_TICK: ${gesture} +${progress}%`);
-                }
-                prepMgr.sendEvent('GESTURE_TICK', event);
-
-                // Small delay to let state update
-                setTimeout(() => {
-                    const afterState = prepMgr.gameActor.getSnapshot();
-                    if (beforeState.value !== afterState.value) {
-                        mainLog.info(`→ State changed to: ${afterState.value}`);
-                    } else {
-                        mainLog.debug(`State remains: ${afterState.value}`);
-                        // Show context for debugging
-                        if (afterState.value === 'readyForFinalStir') {
-                            mainLog.debug(`  Stir progress: ${afterState.context.stirProgress}/100`);
-                            mainLog.debug(`  Final gesture required: ${afterState.context.currentOrder?.finalStep?.gesture}`);
-                        } else if (afterState.value === 'preparingIngredients') {
-                            const station = afterState.context.stations.find(s => s.ingredientId);
-                            if (station) {
-                                mainLog.debug(`  Progress at ${station.stationId}: ${station.progress}/100`);
-                            }
-                        }
-                    }
-                }, 50);
-            }
-        };
-
-        window.testRecipe = (recipeName = 'proton') => {
-            if (!window.gameActor) {
-                mainLog.error('Game actor not initialized');
-                return;
-            }
-
-            const { RECIPES } = window;
-            const recipe = RECIPES.find(r => r.name === recipeName);
-            if (recipe) {
-                // Track globally for replay if actor is recreated
-                window.lastCapturedRecipe = recipe;
-
-                const snapshot = window.gameActor.getSnapshot();
-                const currentState = snapshot.value;
-
-                if (currentState === 'orderSuccess' || currentState === 'orderPenalized') {
-                    mainLog.info(`Transitioning from ${currentState} → waitingForRecipe with NEXT_ROUND`);
-                    window.gameActor.send({ type: 'NEXT_ROUND' });
-                    setTimeout(() => {
-                        mainLog.info(`Sending CAPTURE_RECIPE: ${recipeName}`);
-                        window.gameActor.send({ type: 'CAPTURE_RECIPE', recipe });
-                    }, 50);
-                } else {
-                    mainLog.info(`Sending CAPTURE_RECIPE: ${recipeName}`);
-                    window.gameActor.send({ type: 'CAPTURE_RECIPE', recipe });
-                }
-            } else {
-                mainLog.error(`Recipe ${recipeName} not found`);
-            }
-        };
-
-        window.testSubmit = () => {
-            const prepMgr = scene.components['preparation-manager'];
-            if (prepMgr && prepMgr.gameActor) {
-                const beforeState = prepMgr.gameActor.getSnapshot();
-
-                mainLog.info('Sending SUBMIT_RECIPE');
-                prepMgr.sendEvent('SUBMIT_RECIPE');
-
-                // Small delay to let state update
-                setTimeout(() => {
-                    const afterState = prepMgr.gameActor.getSnapshot();
-                    const newState = afterState.value;
-
-                    if (newState === 'orderSuccess') {
-                        mainLog.info('✓ Recipe matched! Order successful!');
-                        mainLog.info(`Score: ${afterState.context.score}`);
-                        mainLog.info('Next: testRecipe(name) to load another, or testState() to check current state');
-                    } else if (newState === 'orderPenalized') {
-                        mainLog.info('✗ Recipe did not match. Order penalized.');
-                        mainLog.info(`Score: ${afterState.context.score}`);
-                        mainLog.info('Next: testRecipe(name) to load another, or testState() to check current state');
-                    } else {
-                        mainLog.info(`State: ${newState}`);
-                        mainLog.info('Next: check state or try submitting again');
-                    }
-                }, 50);
-            }
-        };
-
-        window.testState = () => {
-            const prepMgr = scene.components['preparation-manager'];
-            if (prepMgr && prepMgr.gameActor) {
-                const snapshot = prepMgr.gameActor.getSnapshot();
-                mainLog.info(`Current State: ${snapshot.value}`);
-                mainLog.info(`Chefs: ${snapshot.context.activeChefsCount}`);
-                mainLog.info(`Ingredients: ${snapshot.context.ingredients.length}`);
-                mainLog.info(`Score: ${snapshot.context.score}`);
-                return snapshot.value;
-            }
-        };
-
-        window.setChefs = (count) => {
-            const prepMgr = scene.components['preparation-manager'];
-            if (prepMgr) {
-                console.log(`Setting active chefs to ${count}`);
-                prepMgr.sendEvent('SET_ACTIVE_CHEFS', { count });
-            }
-        };
-
-        window.getDeliveryAreaPosition = () => {
-            const galleyEl = document.querySelector('[galley-manager]');
-            if (!galleyEl) {
-                mainLog.error('galley-manager element not found');
-                return undefined;
-            }
-            const galleyMgr = galleyEl.components['galley-manager'];
-            if (!galleyMgr) {
-                mainLog.error('galley-manager component not initialized');
-                return undefined;
-            }
-            const pos = galleyMgr.data.deliveryAreaPosition;
-            mainLog.info(`Delivery Area Position: x=${pos.x}, y=${pos.y}, z=${pos.z}`);
-            return pos;
-        };
-
-        window.debug = (enable = true) => {
-            const level = enable ? 'debug' : 'info';
-            window.log.setLevel(level);
-            console.log(`Log level set to: ${level}`);
-        };
-
-        mainLog.info('Test helpers available:');
-        mainLog.info('  debug(true/false) — toggle debug logging');
-        mainLog.info('  testState() — show current state');
-        mainLog.info('  testRecipe(name) — load a recipe (pion, proton, neutron, lambda)');
-        mainLog.info('  testGesture(gesture, progress, chefId) — trigger gesture (chefId required)');
-        mainLog.info('    Examples:');
-        mainLog.info('      testGesture("tenderize", 100, "chef-1")   // 100% by chef-1');
-        mainLog.info('      testGesture("slice", 50, "chef-2")        // 50% progress by chef-2');
-        mainLog.info('      testGesture("stir", 100, "chef-3")        // final stir by chef-3');
-        mainLog.info('  testSubmit() — submit the dish');
-    </script>
+    <!-- Developer console helpers (testRecipe, testGesture, ...) -->
+    <script src="dev/console-helpers.js"></script>
 </body>
 </html>

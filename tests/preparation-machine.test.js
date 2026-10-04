@@ -276,7 +276,7 @@ describe("preparation-machine — parallel ingredient processing", () => {
         expect(state2.context.completedCount).toBe(1);
     });
 
-    test("STOP_GESTURE with uninterruptible behavior resets progress", () => {
+    test("GESTURE_STOP with uninterruptible behavior resets progress", () => {
         const actor = createActor(preparationMachine).start();
         actor.send({ type: "START_GAME" });
         const testRecipe = {
@@ -293,11 +293,11 @@ describe("preparation-machine — parallel ingredient processing", () => {
         actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "slice", progressAmount: 40 });
         expect(actor.getSnapshot().context.stations[0].progress).toBe(40);
 
-        actor.send({ type: "STOP_GESTURE", chefId: "chef-1" });
+        actor.send({ type: "GESTURE_STOP", chefId: "chef-1" });
         expect(actor.getSnapshot().context.stations[0].progress).toBe(0);
     });
 
-    test("STOP_GESTURE with resumable behavior preserves progress", () => {
+    test("GESTURE_STOP with resumable behavior preserves progress", () => {
         const actor = createActor(preparationMachine).start();
         actor.send({ type: "START_GAME" });
         const testRecipe = {
@@ -314,7 +314,7 @@ describe("preparation-machine — parallel ingredient processing", () => {
         actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "slice", progressAmount: 40 });
         expect(actor.getSnapshot().context.stations[0].progress).toBe(40);
 
-        actor.send({ type: "STOP_GESTURE", chefId: "chef-1" });
+        actor.send({ type: "GESTURE_STOP", chefId: "chef-1" });
         expect(actor.getSnapshot().context.stations[0].progress).toBe(40);
     });
 
@@ -488,18 +488,15 @@ describe("preparation-machine — concurrent sous-chef gestures", () => {
         actor.send({ type: "CAPTURE_RECIPE", recipe: proton });
 
         // All three sous-chefs gesture simultaneously
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 1, gesture: "tenderize" });
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 2, gesture: "tenderize" });
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 3, gesture: "slice" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-1", gesture: "tenderize" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-2", gesture: "tenderize" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-3", gesture: "slice" });
 
         const state = actor.getSnapshot();
         // Each sous-chef should have their gesture tracked independently
-        expect(state.context.sousChefs[1].gesture).toBe("tenderize");
-        expect(state.context.sousChefs[2].gesture).toBe("tenderize");
-        expect(state.context.sousChefs[3].gesture).toBe("slice");
-        expect(state.context.sousChefs[1].isHolding).toBe(true);
-        expect(state.context.sousChefs[2].isHolding).toBe(true);
-        expect(state.context.sousChefs[3].isHolding).toBe(true);
+        expect(state.context.chefGestures["chef-1"]).toBe("tenderize");
+        expect(state.context.chefGestures["chef-2"]).toBe("tenderize");
+        expect(state.context.chefGestures["chef-3"]).toBe("slice");
     });
 
     test("Stopping one sous-chef does not affect others", () => {
@@ -510,22 +507,19 @@ describe("preparation-machine — concurrent sous-chef gestures", () => {
         actor.send({ type: "CAPTURE_RECIPE", recipe: proton });
 
         // All three start gesturing
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 1, gesture: "tenderize" });
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 2, gesture: "tenderize" });
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 3, gesture: "slice" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-1", gesture: "tenderize" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-2", gesture: "tenderize" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-3", gesture: "slice" });
 
         // SC1 stops
-        actor.send({ type: "SOUS_CHEF_GESTURE_STOP", sousChef: 1 });
+        actor.send({ type: "GESTURE_STOP", chefId: "chef-1" });
 
         const state = actor.getSnapshot();
         // SC1 should be idle
-        expect(state.context.sousChefs[1].gesture).toBe("idle");
-        expect(state.context.sousChefs[1].isHolding).toBe(false);
+        expect(state.context.chefGestures["chef-1"]).toBe("idle");
         // SC2 and SC3 should still be active
-        expect(state.context.sousChefs[2].gesture).toBe("tenderize");
-        expect(state.context.sousChefs[2].isHolding).toBe(true);
-        expect(state.context.sousChefs[3].gesture).toBe("slice");
-        expect(state.context.sousChefs[3].isHolding).toBe(true);
+        expect(state.context.chefGestures["chef-2"]).toBe("tenderize");
+        expect(state.context.chefGestures["chef-3"]).toBe("slice");
     });
 
     test("Concurrent TICKS from multiple sous-chefs progress independently", () => {
@@ -536,20 +530,20 @@ describe("preparation-machine — concurrent sous-chef gestures", () => {
         actor.send({ type: "CAPTURE_RECIPE", recipe: proton });
 
         // All start
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 1, gesture: "tenderize" });
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 2, gesture: "tenderize" });
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 3, gesture: "slice" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-1", gesture: "tenderize" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-2", gesture: "tenderize" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-3", gesture: "slice" });
 
         // Concurrent ticks - each should progress independently
-        actor.send({ type: "SOUS_CHEF_GESTURE_TICK", sousChef: 1, gesture: "tenderize", progressAmount: 30 });
-        actor.send({ type: "SOUS_CHEF_GESTURE_TICK", sousChef: 2, gesture: "tenderize", progressAmount: 40 });
-        actor.send({ type: "SOUS_CHEF_GESTURE_TICK", sousChef: 3, gesture: "slice", progressAmount: 50 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 30 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-2", gesture: "tenderize", progressAmount: 40 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-3", gesture: "slice", progressAmount: 50 });
 
         // Verify all are still active
         const state = actor.getSnapshot();
-        expect(state.context.sousChefs[1].gesture).toBe("tenderize");
-        expect(state.context.sousChefs[2].gesture).toBe("tenderize");
-        expect(state.context.sousChefs[3].gesture).toBe("slice");
+        expect(state.context.chefGestures["chef-1"]).toBe("tenderize");
+        expect(state.context.chefGestures["chef-2"]).toBe("tenderize");
+        expect(state.context.chefGestures["chef-3"]).toBe("slice");
     });
 
     test("Changing gesture for one sous-chef doesn't affect others", () => {
@@ -560,19 +554,19 @@ describe("preparation-machine — concurrent sous-chef gestures", () => {
         actor.send({ type: "CAPTURE_RECIPE", recipe: proton });
 
         // All start with initial gestures
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 1, gesture: "tenderize" });
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 2, gesture: "tenderize" });
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 3, gesture: "slice" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-1", gesture: "tenderize" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-2", gesture: "tenderize" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-3", gesture: "slice" });
 
         // SC1 changes gesture (should be replaced by new one)
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 1, gesture: "slice" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-1", gesture: "slice" });
 
         const state = actor.getSnapshot();
         // SC1 should have new gesture
-        expect(state.context.sousChefs[1].gesture).toBe("slice");
+        expect(state.context.chefGestures["chef-1"]).toBe("slice");
         // SC2 and SC3 should be unchanged
-        expect(state.context.sousChefs[2].gesture).toBe("tenderize");
-        expect(state.context.sousChefs[3].gesture).toBe("slice");
+        expect(state.context.chefGestures["chef-2"]).toBe("tenderize");
+        expect(state.context.chefGestures["chef-3"]).toBe("slice");
     });
 
     test("No activeGestureChef field interferes with concurrent gestures", () => {
@@ -583,16 +577,16 @@ describe("preparation-machine — concurrent sous-chef gestures", () => {
         actor.send({ type: "CAPTURE_RECIPE", recipe: pion });
 
         // Both start simultaneously
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 1, gesture: "tenderize" });
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 2, gesture: "stir" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-1", gesture: "tenderize" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-2", gesture: "stir" });
 
         // Verify context doesn't have activeGestureChef field
         const state = actor.getSnapshot();
         expect(state.context.activeGestureChef).toBeUndefined();
 
-        // Both should be tracked in sousChefs
-        expect(state.context.sousChefs[1].gesture).toBe("tenderize");
-        expect(state.context.sousChefs[2].gesture).toBe("stir");
+        // Both should be tracked in chefGestures
+        expect(state.context.chefGestures["chef-1"]).toBe("tenderize");
+        expect(state.context.chefGestures["chef-2"]).toBe("stir");
     });
 
     test("Complete recipe with concurrent sous-chef gestures", () => {
@@ -603,20 +597,20 @@ describe("preparation-machine — concurrent sous-chef gestures", () => {
         actor.send({ type: "CAPTURE_RECIPE", recipe: proton });
 
         // All three start simultaneously and complete
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 1, gesture: "tenderize" });
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 2, gesture: "tenderize" });
-        actor.send({ type: "SOUS_CHEF_GESTURE_START", sousChef: 3, gesture: "slice" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-1", gesture: "tenderize" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-2", gesture: "tenderize" });
+        actor.send({ type: "GESTURE_START", chefId: "chef-3", gesture: "slice" });
 
         // Complete all with concurrent ticks
-        actor.send({ type: "SOUS_CHEF_GESTURE_TICK", sousChef: 1, gesture: "tenderize", progressAmount: 100 });
-        actor.send({ type: "SOUS_CHEF_GESTURE_TICK", sousChef: 2, gesture: "tenderize", progressAmount: 100 });
-        actor.send({ type: "SOUS_CHEF_GESTURE_TICK", sousChef: 3, gesture: "slice", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-2", gesture: "tenderize", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-3", gesture: "slice", progressAmount: 100 });
 
         // Should be ready for final stir
         expect(actor.getSnapshot().value).toBe("readyForFinalStir");
 
         // Do final stir
-        actor.send({ type: "SOUS_CHEF_GESTURE_TICK", sousChef: 1, gesture: "stir", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "stir", progressAmount: 100 });
 
         expect(actor.getSnapshot().value).toBe("recipeReadyForSubmit");
 
@@ -694,5 +688,97 @@ describe("preparation-machine — cancellation", () => {
         expect(value).toBe("preparingIngredients");
         expect(context.currentOrder.name).toBe("neutron");
         expect(context.stations.filter(s => s.chefId).length).toBe(3);
+    });
+});
+
+describe("preparation-machine — gesture validation and sequences", () => {
+    test("Wrong gesture from a chef holding an ingredient emits invalid-gesture", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 3 });
+        actor.send({ type: "CAPTURE_RECIPE", recipe: RECIPES.find(r => r.name === 'proton') });
+
+        const emitted = [];
+        actor.on('invalid-gesture', (e) => emitted.push(e));
+
+        // S1 holds up-1 (tenderize); slice is wrong
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "slice", progressAmount: 10 });
+        expect(emitted).toEqual([{ type: 'invalid-gesture', stationId: 'S1', chefId: 'chef-1', gesture: 'slice' }]);
+        expect(actor.getSnapshot().context.stations[0].progress).toBe(0);
+
+        // Correct gesture emits nothing
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 10 });
+        expect(emitted.length).toBe(1);
+    });
+
+    test("Gesture from a chef without an ingredient is ignored silently", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 3 });
+        actor.send({ type: "CAPTURE_RECIPE", recipe: RECIPES.find(r => r.name === 'pion') });
+
+        const emitted = [];
+        actor.on('invalid-gesture', (e) => emitted.push(e));
+
+        // pion has 2 ingredients: S3 (chef-3) is empty
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-3", gesture: "slice", progressAmount: 10 });
+        expect(emitted.length).toBe(0);
+    });
+
+    test("Multi-gesture ingredient advances through its sequence", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 1 });
+        actor.send({ type: "CAPTURE_RECIPE", recipe: {
+            name: 'test',
+            ingredientSequences: {
+                'up-1': [
+                    { gesture: 'slice', behaviorType: 'resumable' },
+                    { gesture: 'tenderize', behaviorType: 'resumable' }
+                ]
+            },
+            finalStep: { gesture: 'stir', behaviorType: 'resumable', stepType: 'synchronized' }
+        } });
+
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "slice", progressAmount: 100 });
+        let state = actor.getSnapshot();
+        expect(state.value).toBe("preparingIngredients");
+        expect(state.context.stations[0].currentGestureIndex).toBe(1);
+        expect(state.context.stations[0].progress).toBe(0);
+
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        expect(actor.getSnapshot().value).toBe("readyForFinalStir");
+    });
+
+    test("Antimatter ingredients keep their full type", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 2 });
+        actor.send({ type: "CAPTURE_RECIPE", recipe: RECIPES.find(r => r.name === 'pion') });
+
+        const { stations, ingredients } = actor.getSnapshot().context;
+        expect(stations[1].ingredientType).toBe('anti-down');
+        expect(ingredients.find(i => i.id === 'anti-down-1').type).toBe('anti-down');
+    });
+
+    test("Ingredient queue drains without mutating previous snapshots", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 1 });
+        actor.send({ type: "CAPTURE_RECIPE", recipe: RECIPES.find(r => r.name === 'proton') });
+
+        const before = actor.getSnapshot().context;
+        expect(before.ingredientQueue).toEqual(['up-2', 'down-1']);
+
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        const after = actor.getSnapshot().context;
+        expect(after.ingredientQueue).toEqual(['down-1']);
+        expect(after.stations[0].ingredientId).toBe('up-2');
+        // previous snapshot untouched
+        expect(before.ingredientQueue).toEqual(['up-2', 'down-1']);
+        expect(before.stations[0].ingredientId).toBe('up-1');
+    });
+
+    test("GESTURE_STOP clears the chef gesture outside cooking states", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "GESTURE_START", chefId: "chef-2", gesture: "stir" });
+        expect(actor.getSnapshot().context.chefGestures["chef-2"]).toBe("stir");
+        actor.send({ type: "GESTURE_STOP", chefId: "chef-2" });
+        expect(actor.getSnapshot().context.chefGestures["chef-2"]).toBe("idle");
     });
 });

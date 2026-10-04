@@ -5,9 +5,11 @@ import * as TWEEN from "@tweenjs/tween.js";
 import "aframe-environment-component";
 import * as XState from "xstate";
 import * as RxJS from "rxjs";
+import * as CosmicChef from "./client/index.ts";
 
 // Expose globals for custom A-Frame components
 window.log = log;
 window.TWEEN = TWEEN;
 window.XState = XState;
 window.RxJS = RxJS;
+window.CosmicChef = CosmicChef;

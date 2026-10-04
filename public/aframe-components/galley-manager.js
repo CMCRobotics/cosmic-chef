@@ -23,6 +23,7 @@ AFRAME.registerComponent('galley-manager', {
         this.ingredientEntities = new Map(); // ingredientId → { el, stationId, progress }
         this.lastRecipeName = null;
         this.vacuumInProgress = false;
+        this.invalidIndicators = {}; // stationId → { el, timeout }
 
         // Listen for state changes from preparation-manager
         const scene = document.querySelector('a-scene');
@@ -121,11 +122,7 @@ AFRAME.registerComponent('galley-manager', {
 
                 if (!this.ingredientEntities.has(station.ingredientId)) {
                     // Spawn new ingredient
-                    this.spawnIngredient(
-                        station.ingredientId,
-                        station.stationId,
-                        station.gesturesRequired
-                    );
+                    this.spawnIngredient(station);
                 } else {
                     // Update existing ingredient position/state
                     const data = this.ingredientEntities.get(station.ingredientId);
@@ -153,7 +150,8 @@ AFRAME.registerComponent('galley-manager', {
         });
     },
 
-    spawnIngredient: function (ingredientId, stationId, gesturesRequired) {
+    spawnIngredient: function (station) {
+        const { ingredientId, ingredientType, stationId, gesturesRequired } = station;
 
         const pos = this.getStationPosition(stationId);
         if (!pos) {
@@ -174,7 +172,6 @@ AFRAME.registerComponent('galley-manager', {
         // Initial quantum-particle: first gesture in sequence
         if (gesturesRequired && gesturesRequired.length > 0) {
             const firstGesture = gesturesRequired[0];
-            const ingredientType = ingredientId.split('-')[0]; // 'up', 'down', 'strange', 'anti-down', etc.
             el.setAttribute('quantum-particle', {
                 ingredient: ingredientType,
                 active: true,
@@ -382,15 +379,24 @@ AFRAME.registerComponent('galley-manager', {
 
     sendNextRound: function () {
         const prepMgr = this.el.sceneEl.components['preparation-manager'];
-        if (prepMgr && prepMgr.gameActor) {
+        if (prepMgr) {
             this.log.info('Sending NEXT_ROUND to state machine');
-            prepMgr.gameActor.send({ type: 'NEXT_ROUND' });
+            prepMgr.send({ type: 'NEXT_ROUND' });
         } else {
             this.log.error('Could not find preparation-manager to send NEXT_ROUND');
         }
     },
 
     showInvalidGestureIndicator: function (stationId, chefId) {
+        // Gesture streams tick every 100ms: keep one indicator per station alive
+        // while invalid ticks keep coming, instead of spawning one per tick.
+        const existing = this.invalidIndicators[stationId];
+        if (existing) {
+            clearTimeout(existing.timeout);
+            existing.timeout = this.scheduleIndicatorRemoval(stationId);
+            return;
+        }
+
         const stationPos = this.getStationPosition(stationId);
         if (!stationPos) {
             this.log.warn(`Cannot show indicator: station ${stationId} not found`);
@@ -399,7 +405,7 @@ AFRAME.registerComponent('galley-manager', {
 
         // Create red sphere indicator above the station
         const xEl = document.createElement('a-entity');
-        xEl.setAttribute('id', `invalid-gesture-${stationId}-${Date.now()}`);
+        xEl.setAttribute('id', `invalid-gesture-${stationId}`);
         xEl.setAttribute('geometry', {
             primitive: 'sphere',
             radius: 0.5
@@ -417,11 +423,19 @@ AFRAME.registerComponent('galley-manager', {
 
         this.log.info(`Invalid gesture from ${chefId} at ${stationId} — showing red indicator`);
 
-        // Remove after 500ms
-        setTimeout(() => {
-            if (xEl && xEl.parentNode) {
-                xEl.remove();
+        this.invalidIndicators[stationId] = {
+            el: xEl,
+            timeout: this.scheduleIndicatorRemoval(stationId)
+        };
+    },
+
+    scheduleIndicatorRemoval: function (stationId) {
+        return setTimeout(() => {
+            const indicator = this.invalidIndicators[stationId];
+            if (indicator && indicator.el.parentNode) {
+                indicator.el.remove();
             }
+            delete this.invalidIndicators[stationId];
         }, 800);
     },
 
