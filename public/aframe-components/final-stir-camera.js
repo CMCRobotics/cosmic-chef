@@ -15,41 +15,66 @@ AFRAME.registerComponent('final-stir-camera', {
     init: function () {
         this.log = window.log.getLogger('final-stir-camera');
         this.cameraRig = this.el;
-        this.normalPosition = null;
-        this.normalRotation = null;
+
+        // Use hardcoded normal position (from HTML: position="0 0 -5.5" rotation="-10 180 0")
+        this.normalPosition = { x: 0, y: 0, z: -5.5 };
+        this.normalRotation = { x: -10, y: 180, z: 0 };
+        this.log.info('INIT: normalPosition set to (0, 0, -5.5)');
+
         this.isInFinalStir = false;
 
+        this.trySubscribe();
+    },
+
+    trySubscribe: function () {
         const scene = document.querySelector('a-scene');
-        scene.addEventListener('game-state-changed', (evt) => {
-            this.onStateChange(evt.detail.state, evt.detail.context);
+        if (!scene) {
+            setTimeout(() => this.trySubscribe(), 100);
+            return;
+        }
+
+        const prepMgr = scene.components['preparation-manager'];
+
+        if (!prepMgr) {
+            this.log.warn('Waiting for preparation-manager...');
+            setTimeout(() => this.trySubscribe(), 100);
+            return;
+        }
+
+        if (!prepMgr.gameActor) {
+            this.log.warn('Waiting for gameActor...');
+            setTimeout(() => this.trySubscribe(), 100);
+            return;
+        }
+
+        // Subscribe to ALL state changes including transient ones
+        const unsubscribe = prepMgr.gameActor.subscribe((state) => {
+            this.log.info(`[ActorSub] State: ${state.value}`);
+            this.onStateChange(state.value, state.context);
         });
 
-        this.log.debug('Final-stir-camera initialized');
+        this.log.info('SUCCESS: Camera subscribed to actor');
     },
 
     onStateChange: function (state) {
-        this.log.debug(`onStateChange: state=${state}, isInFinalStir=${this.isInFinalStir}`);
+        this.log.debug(`[Camera] state=${state}, isInFinalStir=${this.isInFinalStir}`);
 
-        if (state === 'readyForFinalStir' && !this.isInFinalStir) {
-            this.log.info('Entering final stir — moving camera to overhead');
+        // readyForFinalStir is transient, so we catch recipeReadyForSubmit (which means stir is done)
+        // as the signal to move camera overhead to show the result
+        if ((state === 'readyForFinalStir' || state === 'recipeReadyForSubmit') && !this.isInFinalStir) {
+            this.log.info(`📷 ENTER overhead view (${state})`);
             this.transitionToOverheadView();
             this.isInFinalStir = true;
-        } else if (state !== 'readyForFinalStir' && this.isInFinalStir) {
-            this.log.info(`Final stir complete (${state}) — returning camera to normal view`);
+        } else if (state !== 'readyForFinalStir' && state !== 'recipeReadyForSubmit' && this.isInFinalStir) {
+            this.log.info(`📷 RETURN to normal (was in final stir, now: ${state})`);
             this.transitionToNormalView();
             this.isInFinalStir = false;
+        } else {
+            this.log.debug(`📷 Ignoring ${state}`);
         }
     },
 
     transitionToOverheadView: function () {
-        // Capture current position as "normal" if not already set
-        if (!this.normalPosition) {
-            this.normalPosition = this.cameraRig.getAttribute('position');
-            this.normalRotation = this.cameraRig.getAttribute('rotation');
-            this.log.info(`Captured normal position: ${JSON.stringify(this.normalPosition)}`);
-            this.log.info(`Captured normal rotation: ${JSON.stringify(this.normalRotation)}`);
-        }
-
         const data = this.data;
         const delivery = data.deliveryAreaPosition;
 

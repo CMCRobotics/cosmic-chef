@@ -87,7 +87,18 @@ AFRAME.registerComponent('mqtt-bridge', {
                     return;
                 }
                 this.log.info(`Head-chef: ${event.type}`);
+
+                // Debug: log current state before sending event
+                const beforeState = this.prepMgr.getSnapshot();
+                this.log.info(`📊 Before ${event.type}: state=${beforeState.value}`);
+
                 this.prepMgr.send(event);
+
+                // Debug: log state after sending event
+                setTimeout(() => {
+                    const afterState = this.prepMgr.getSnapshot();
+                    this.log.info(`📊 After ${event.type}: state=${afterState.value}`);
+                }, 50);
                 break;
             }
 

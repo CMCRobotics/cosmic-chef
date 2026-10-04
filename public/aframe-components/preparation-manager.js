@@ -21,7 +21,7 @@ AFRAME.registerComponent('preparation-manager', {
         // 'game-state-changed' events and send events through send().
         this.gameActor = createActor(window.preparationMachine);
         this.gameActor.subscribe((state) => {
-            this.log.debug(`Game State changed: ${state.value}`);
+            this.log.info(`🎮 State: ${state.value}`);
             this.el.emit('game-state-changed', {
                 state: state.value,
                 context: state.context
