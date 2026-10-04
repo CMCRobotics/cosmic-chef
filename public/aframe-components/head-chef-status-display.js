@@ -31,43 +31,45 @@ AFRAME.registerComponent('head-chef-status-display', {
     },
 
     createStatusDisplay: function () {
-        // Create a text entity for displaying status
+        // Create a text entity for displaying status on the large screen
         const textEl = document.createElement('a-entity');
         textEl.setAttribute('id', 'head-chef-status-text');
         textEl.setAttribute('text', {
             value: 'Waiting for game state...',
-            align: 'left',
-            anchor: 'left',
-            baseline: 'top',
-            width: 4,
+            align: 'center',
+            anchor: 'center',
+            baseline: 'center',
+            width: 15,
             color: '#00ff00',
-            wrapCount: 60
+            wrapCount: 100,
+            fontSize: 120
         });
 
-        // Position as a billboard in front of the head chef
-        textEl.setAttribute('position', '0 0.5 0.5');
-        textEl.setAttribute('rotation', '0 0 0');
-        textEl.setAttribute('scale', '0.5 0.5 0.5');
+        // Position centered on the screen (screen is at 0 2.7 -5.2)
+        // Offset slightly forward from screen surface
+        textEl.setAttribute('position', '0 0 0.1');
+        textEl.setAttribute('rotation', '0 0 0'); // Face the screen directly
+        textEl.setAttribute('scale', '0.64 0.64 0.64'); // 8x larger (0.08 * 8)
 
-        // Add semi-transparent background panel
+        // Add semi-transparent background panel behind text
         const panelEl = document.createElement('a-entity');
         panelEl.setAttribute('geometry', {
             primitive: 'plane',
-            width: 4,
-            height: 3
+            width: 20,
+            height: 15
         });
         panelEl.setAttribute('material', {
             color: '#000000',
-            opacity: 0.7,
+            opacity: 0.85,
             transparent: true
         });
-        panelEl.setAttribute('position', '0 0 -0.01'); // Behind text
+        panelEl.setAttribute('position', '0 0 -0.05'); // Behind text
 
         textEl.appendChild(panelEl);
         this.el.appendChild(textEl);
         this.statusText = textEl;
 
-        this.log.debug('Status display created');
+        this.log.debug('Status display created on large screen');
     },
 
     onStateChange: function (state, context) {

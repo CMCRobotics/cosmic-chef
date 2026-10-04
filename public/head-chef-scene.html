@@ -1,30 +1,31 @@
 <!-- Head Chef VR Scene Fragment -->
 
-<!-- Recipe spawn and intake area -->
-<a-entity id="head-chef-workspace" head-chef-controls position="0 0 -3">
+<!-- Galley (where sous-chefs work) -->
+<a-entity id="galley" position="0 0 0" galley-manager>
+    <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: red" rotation="-90 0 0" position="0 0.03 0"></a-entity>
+    <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-1"></a-entity>
+</a-entity>
 
-    <!-- Recipe Intake Hopper (where recipes are placed) -->
-    <a-entity
-        id="head-chef-recipe-intake"
-        class="recipe-team-intake"
-        data-recipe-team-intake="true"
-        gltf-model="#asset_hopper_high_round"
-        position="0 1 0"
-        scale="1.5 1 1.5">
-    </a-entity>
+<!-- Sous-Chef Gesture Feedback Indicators (Dynamic Utensils) -->
+<a-entity sous-chef-gesture-feedback="chefId: chef-3" position="-1 1.5 -2"></a-entity>
+<a-entity sous-chef-gesture-feedback="chefId: chef-2" position="0 1.5 -2"></a-entity>
+<a-entity sous-chef-gesture-feedback="chefId: chef-1" position="1 1.5 -2"></a-entity>
 
-    <!-- Recipe Spawn Point (recipes fall from here) -->
+<!-- Recipe spawn area (positioned above galley) -->
+<a-entity id="head-chef-workspace" position="0 6 0">
+
+    <!-- Recipe Spawn Point (recipes fall from here at galley center) -->
     <a-entity
         id="recipe-spawn-zone"
         recipe-spawner
-        position="0 5 0">
+        position="0 0 0">
     </a-entity>
 
-    <!-- Sous-chef state display -->
-    <a-entity
-        id="head-chef-status-display"
-        head-chef-status-display
-        position="0 2.5 0.5">
-    </a-entity>
+</a-entity>
 
+<!-- Status Display on the large screen -->
+<a-entity
+    id="head-chef-status-display"
+    head-chef-status-display
+    position="0 2.7 -5.2">
 </a-entity>

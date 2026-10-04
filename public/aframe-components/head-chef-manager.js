@@ -109,30 +109,10 @@ AFRAME.registerComponent('head-chef-manager', {
         }
     },
 
-    sendRecipeCapture: function (recipeId) {
-        const prepMgr = this.el.sceneEl.components['preparation-manager'];
-        if (prepMgr) {
-            this.log.info(`Capturing recipe: ${recipeId}`);
-            prepMgr.send({ type: 'CAPTURE_RECIPE' });
-            this.capturedRecipe = recipeId;
-        }
-    },
-
-    sendRecipeSubmit: function () {
-        const prepMgr = this.el.sceneEl.components['preparation-manager'];
-        if (prepMgr) {
-            this.log.info('Submitting recipe');
-            prepMgr.send({ type: 'SUBMIT_RECIPE' });
-        }
-    },
-
-    sendRecipeCancel: function (reason = 'manual') {
-        const prepMgr = this.el.sceneEl.components['preparation-manager'];
-        if (prepMgr) {
-            this.log.info(`Cancelling recipe: ${reason}`);
-            prepMgr.send({ type: 'CANCEL_ORDER', reason });
-        }
-    },
+    // Note: All state changes now go through MQTT only
+    // The tractor-beam publishes CAPTURE_RECIPE via MQTT
+    // The recipe-status-button publishes SUBMIT_RECIPE and CANCEL_ORDER via MQTT
+    // This ensures all clients stay synchronized
 
     remove: function () {
         this.log.debug('Head Chef manager removed');

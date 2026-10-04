@@ -33,11 +33,13 @@ export function chefIdFor(sousChef: number): string {
   return `chef-${sousChef}`;
 }
 
-/** Head-chef submit-state payload → CANCEL_ORDER / SUBMIT_RECIPE. */
+/** Head-chef submit-state payload → CANCEL_ORDER / CAPTURE_RECIPE / SUBMIT_RECIPE. */
 export function headChefMessageToEvent(payload: string): GameEvent | null {
   switch (payload.trim().toLowerCase()) {
     case "idle":
       return { type: "CANCEL_ORDER" };
+    case "captured":
+      return { type: "CAPTURE_RECIPE" };
     case "submitting":
       return { type: "SUBMIT_RECIPE" };
     default:
