@@ -7,20 +7,20 @@
  * Pattern: MQTT → RxJS (with smoothing) → XState events
  */
 
-import {
+// Use RxJS from global scope (exposed in vendor bundle)
+const RxJS = (window as any).RxJS || {};
+const {
   Observable,
-  map,
-  filter,
-  debounceTime,
-  distinctUntilChanged,
-  throttleTime,
   Subject,
+  map,
   merge,
   interval,
   switchMap,
-  takeUntil,
-  EMPTY,
-} from "rxjs";
+  mergeMap,
+  groupBy,
+  timeout,
+  distinctUntilChanged,
+} = RxJS;
 
 const log = window.log?.getLogger("sous-chef-adapter") || {
   debug: console.debug,
@@ -74,78 +74,68 @@ export function createSousChefGestureStream(
       );
     }
   }).pipe(
-    // Debounce rapid toggles (gesture chatter from test interface or noisy sensors)
-    // 50ms threshold allows fast intentional gestures but filters noise
-    debounceTime(50),
-
     // Skip duplicate consecutive values (same sous-chef, same gesture)
+    // Don't debounce: simultaneous gestures from different sous-chefs must all pass through
     distinctUntilChanged(
       (a, b) =>
         a.sousChef === b.sousChef && a.gesture === b.gesture
-    ),
-
-    // Optional: throttle to reduce update frequency for performance
-    // throttleTime(16) // ~60Hz (16ms between updates)
+    )
   );
 }
 
 /**
  * Converts smoothed gesture stream into XState event stream.
- * Tracks gesture state per sous-chef to emit START/STOP/TICK events.
- * TICK events are emitted every 100ms while a gesture is active.
+ * Groups by sous-chef so each has independent switchMap.
+ * No shared state, no interference between chefs.
  */
 export function createSousChefEventStream(
   gestureStream: Observable<SousChefGesture>,
   numSousChefs: number = 3
 ): Observable<SousChefGestureEvent> {
-  // Stop signals per sous-chef to kill intervals immediately
-  const stopSignals = new Map<number, Subject<void>>();
-
   return gestureStream.pipe(
-    switchMap((gesture) => {
-      const sousChefId = gesture.sousChef;
-      const currentGesture = gesture.gesture;
+    // Each sous-chef gets their own independent stream
+    groupBy((g) => g.sousChef),
+    mergeMap((chefStream$) => {
+      const sousChefId = chefStream$.key;
 
-      // Complete and recreate stop signal for this sous-chef
-      const oldStop = stopSignals.get(sousChefId);
-      if (oldStop) {
-        oldStop.complete();
-      }
-      const newStop = new Subject<void>();
-      stopSignals.set(sousChefId, newStop);
+      return chefStream$.pipe(
+        // For THIS chef only, new gestures replace old ones
+        switchMap((gesture) => {
+          const currentGesture = gesture.gesture;
 
-      if (currentGesture === "idle") {
-        log.debug(`Sous-Chef ${sousChefId}: STOP`);
-        return new Observable((observer) => {
-          observer.next({
-            type: "SOUS_CHEF_GESTURE_STOP" as const,
-            sousChef: sousChefId,
-          });
-          observer.complete();
-        });
-      }
+          if (currentGesture === "idle") {
+            log.debug(`Sous-Chef ${sousChefId}: STOP`);
+            return new Observable<SousChefGestureEvent>((observer) => {
+              observer.next({
+                type: "SOUS_CHEF_GESTURE_STOP" as const,
+                sousChef: sousChefId,
+              });
+              observer.complete();
+            });
+          }
 
-      log.debug(`Sous-Chef ${sousChefId}: START (${currentGesture})`);
+          log.debug(`Sous-Chef ${sousChefId}: START (${currentGesture})`);
 
-      // Emit START immediately
-      return merge(
-        new Observable<SousChefGestureEvent>((observer) => {
-          observer.next({
-            type: "SOUS_CHEF_GESTURE_START" as const,
-            sousChef: sousChefId,
-            gesture: currentGesture,
-          });
-          observer.complete();
-        }),
-        // TICK every 100ms, unsubscribe when newStop fires
-        interval(100).pipe(
-          takeUntil(newStop),
-          map(() => ({
-            type: "SOUS_CHEF_GESTURE_TICK" as const,
-            sousChef: sousChefId,
-            gesture: currentGesture,
-          }))
-        )
+          // Emit START, then TICK every 100ms until idle
+          return merge(
+            new Observable<SousChefGestureEvent>((observer) => {
+              observer.next({
+                type: "SOUS_CHEF_GESTURE_START" as const,
+                sousChef: sousChefId,
+                gesture: currentGesture,
+              });
+              observer.complete();
+            }),
+            interval(100).pipe(
+              timeout(15000), // Safety: never tick longer than 15s
+              map(() => ({
+                type: "SOUS_CHEF_GESTURE_TICK" as const,
+                sousChef: sousChefId,
+                gesture: currentGesture,
+              }))
+            )
+          );
+        })
       );
     })
   );

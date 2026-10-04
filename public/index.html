@@ -12,9 +12,11 @@
 
     <script src="xstate/preparation-machine.js"></script>
 
-    <!-- Sous-Chef Integration (compiled from TypeScript) -->
-    <script src="adapters/sousChefGestureAdapter.js"></script>
-    <script src="modules/sousChefIntegration.js"></script>
+    <!-- Sous-Chef Integration (compiled from TypeScript, loaded as modules for proper imports) -->
+    <script type="module">
+      import('./adapters/sousChefGestureAdapter.js');
+      import('./modules/sousChefIntegration.js');
+    </script>
 
     <!-- Game Management -->
     <script src="components/game-manager.js"></script>

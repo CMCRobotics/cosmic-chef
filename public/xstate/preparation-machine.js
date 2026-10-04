@@ -97,8 +97,7 @@ const preparationMachine = createMachine({
             1: { gesture: 'idle', confidence: 0, isHolding: false },
             2: { gesture: 'idle', confidence: 0, isHolding: false },
             3: { gesture: 'idle', confidence: 0, isHolding: false }
-        },
-        activeGestureChef: null
+        }
     },
     states: {
         idle: {
@@ -358,8 +357,7 @@ const preparationMachine = createMachine({
                     gesture: event.gesture,
                     isHolding: true
                 }
-            },
-            activeGestureChef: event.sousChef
+            }
         })),
         updateSousChefGesture: assign(({ context, event }) => ({
             sousChefs: {
@@ -379,8 +377,7 @@ const preparationMachine = createMachine({
                     gesture: 'idle',
                     isHolding: false
                 }
-            },
-            activeGestureChef: null
+            }
         }))
     },
     guards: {
