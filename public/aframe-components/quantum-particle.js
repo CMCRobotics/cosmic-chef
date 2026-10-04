@@ -37,7 +37,8 @@ AFRAME.registerComponent('quantum-particle', {
         active: { type: 'boolean', default: false },
         progress: { type: 'number', default: 0 },
         gesture: { type: 'string', default: '' },
-        inactiveColor: { type: 'color', default: '#f3ffe6' }
+        inactiveColor: { type: 'color', default: '#f3ffe6' },
+        isFinalStir: { type: 'boolean', default: false }
     },
 
     init: function () {
@@ -267,7 +268,24 @@ AFRAME.registerComponent('quantum-particle', {
             // Vertical spin (stir) - rotation around Y axis
             this.core.object3D.rotation.y -= rotationSpeed * 2.5;
             this.core.setAttribute('scale', { x: 1, y: 1, z: 1 });
-            this.core.setAttribute('position', { x: 0, y: 0, z: 0 });
+
+            // During final stir, add circular motion around delivery area (like stirring in a bowl)
+            if (this.data.isFinalStir) {
+                const stirRadius = 0.4;
+                const stirSpeed = 0.003;
+                const angle = (t % (2 * Math.PI / stirSpeed)) * stirSpeed;
+                const circleX = Math.cos(angle) * stirRadius;
+                const circleZ = Math.sin(angle) * stirRadius;
+                const bobY = Math.sin(angle * 2) * 0.1;  // Slight up/down bobbing
+
+                this.core.setAttribute('position', {
+                    x: circleX,
+                    y: bobY,
+                    z: circleZ
+                });
+            } else {
+                this.core.setAttribute('position', { x: 0, y: 0, z: 0 });
+            }
 
             if (this.isAntimatter) {
                 this.wireframe.object3D.rotation.y -= rotationSpeed * 3.75;
@@ -318,7 +336,24 @@ AFRAME.registerComponent('quantum-particle', {
             });
         } else if (distortion.type === 'spin') {
             this.aura.setAttribute('scale', { x: pulse, y: pulse, z: pulse });
-            this.aura.setAttribute('position', { x: 0, y: 0, z: 0 });
+
+            // Follow the same circular motion as core during final stir
+            if (this.data.isFinalStir) {
+                const stirRadius = 0.4;
+                const stirSpeed = 0.003;
+                const angle = (t % (2 * Math.PI / stirSpeed)) * stirSpeed;
+                const circleX = Math.cos(angle) * stirRadius;
+                const circleZ = Math.sin(angle) * stirRadius;
+                const bobY = Math.sin(angle * 2) * 0.1;
+
+                this.aura.setAttribute('position', {
+                    x: circleX,
+                    y: bobY,
+                    z: circleZ
+                });
+            } else {
+                this.aura.setAttribute('position', { x: 0, y: 0, z: 0 });
+            }
         } else {
             this.aura.setAttribute('scale', { x: pulse, y: pulse, z: pulse });
             this.aura.setAttribute('position', { x: 0, y: 0, z: 0 });

@@ -21,6 +21,7 @@ AFRAME.registerComponent('galley-manager', {
         // Track active ingredient entities
         this.ingredientEntities = new Map(); // ingredientId → { el, stationId, progress }
         this.lastRecipeName = null;
+        this.lastState = null;
         this.vacuumInProgress = false;
         this.invalidIndicators = {}; // stationId → { el, timeout }
 
@@ -102,7 +103,12 @@ AFRAME.registerComponent('galley-manager', {
         // Handle state-specific transitions
         if (state === 'readyForFinalStir') {
             this.convergeToDeliveryArea(context);
+            this.enableFinalStirAnimation();
+        } else if (state !== 'readyForFinalStir' && this.lastState === 'readyForFinalStir') {
+            this.disableFinalStirAnimation();
         }
+
+        this.lastState = state;
 
         // Handle cancellation or submission - vacuum and reset
         if (state === 'orderSuccess' || state === 'orderPenalized') {
@@ -298,6 +304,26 @@ AFRAME.registerComponent('galley-manager', {
                     dur: duration,
                     easing: 'easeInOutQuad'
                 });
+            }
+        });
+    },
+
+    enableFinalStirAnimation: function () {
+        this.log.debug('Enabling final stir animation on all ingredients');
+        this.ingredientEntities.forEach((data, ingredientId) => {
+            const el = data.el;
+            if (el && el.getAttribute('quantum-particle')) {
+                el.setAttribute('quantum-particle', { isFinalStir: true });
+            }
+        });
+    },
+
+    disableFinalStirAnimation: function () {
+        this.log.debug('Disabling final stir animation on all ingredients');
+        this.ingredientEntities.forEach((data, ingredientId) => {
+            const el = data.el;
+            if (el && el.getAttribute('quantum-particle')) {
+                el.setAttribute('quantum-particle', { isFinalStir: false });
             }
         });
     },
