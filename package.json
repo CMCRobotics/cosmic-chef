@@ -15,8 +15,10 @@
     "aframe-extras": "^7.7.0",
     "aframe-inspector": "github:CMCRobotics/aframe-inspector",
     "aframe-watcher-bun": "github:CMCRobotics/aframe-watcher-bun",
+    "homie-lit": "github:CMCRobotics/homie-lit",
     "dotenv": "^17.4.2",
     "loglevel": "^1.9.2",
+    "mqtt": "^5.0.0",
     "xstate": "^5.32.6"
   },
   "devDependencies": {

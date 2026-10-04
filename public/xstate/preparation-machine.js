@@ -81,17 +81,24 @@ const RECIPES = [
 
 const preparationMachine = createMachine({
     id: 'cosmic-chef',
-    initial: 'idle',
+    initial: 'waitingForRecipe',
     context: {
         currentOrder: null,
-        activeChefsCount: 1,
+        activeChefsCount: 3,
         stations: [],
         ingredientQueue: [],
         ingredients: [],
         stirProgress: 0,
         score: 0,
         completedCount: 0,
-        penalizedCount: 0
+        penalizedCount: 0,
+        // Sous-chef gesture tracking
+        sousChefs: {
+            1: { gesture: 'idle', confidence: 0, isHolding: false },
+            2: { gesture: 'idle', confidence: 0, isHolding: false },
+            3: { gesture: 'idle', confidence: 0, isHolding: false }
+        },
+        activeGestureChef: null
     },
     states: {
         idle: {
@@ -111,6 +118,13 @@ const preparationMachine = createMachine({
                     { guard: 'isValidIngredientGesture', actions: 'incrementIngredientProgress' }
                 ],
                 STOP_GESTURE: { actions: 'handleStopGesture' },
+                // Sous-chef gesture events (from MQTT adapter)
+                SOUS_CHEF_GESTURE_START: { actions: 'handleSousChefGestureStart' },
+                SOUS_CHEF_GESTURE_TICK: [
+                    { guard: 'isIngredientGestureComplete', actions: ['incrementIngredientProgress', 'updateSousChefGesture', 'moveToDeliveryArea', 'deliverNextIngredient'], target: 'checkIfAllReady' },
+                    { guard: 'isValidIngredientGesture', actions: ['incrementIngredientProgress', 'updateSousChefGesture'] }
+                ],
+                SOUS_CHEF_GESTURE_STOP: { actions: ['handleStopGesture', 'clearSousChefGesture'] },
                 STEP_TIMEOUT: 'orderPenalized',
                 CANCEL_ORDER: 'orderPenalized',
                 SET_ACTIVE_CHEFS: { actions: 'setActiveChefs' },
@@ -129,6 +143,13 @@ const preparationMachine = createMachine({
                     { guard: 'isFinalStirComplete', actions: 'completeFinalStir', target: 'recipeReadyForSubmit' },
                     { guard: 'isValidFinalStir', actions: 'incrementStirProgress' }
                 ],
+                // Sous-chef gesture events (synchronized stir)
+                SOUS_CHEF_GESTURE_START: { actions: ['handleSousChefGestureStart', 'updateSousChefGesture'] },
+                SOUS_CHEF_GESTURE_TICK: [
+                    { guard: 'isFinalStirComplete', actions: ['incrementStirProgress', 'updateSousChefGesture'], target: 'recipeReadyForSubmit' },
+                    { guard: 'isValidFinalStir', actions: ['incrementStirProgress', 'updateSousChefGesture'] }
+                ],
+                SOUS_CHEF_GESTURE_STOP: { actions: 'clearSousChefGesture' },
                 CANCEL_ORDER: 'orderPenalized',
                 SET_ACTIVE_CHEFS: { actions: 'setActiveChefs' },
                 GAME_OVER: 'gameOver'
@@ -247,7 +268,9 @@ const preparationMachine = createMachine({
             return { stations: updatedStations };
         }),
         incrementIngredientProgress: assign(({ context, event }) => {
-            const stationIdx = findStationByGesture(context.stations, event.gesture, event.chefId);
+            // Map sous-chef ID to chef ID for lookup
+            const chefId = event.chefId || `chef-${event.sousChef}`;
+            const stationIdx = findStationByGesture(context.stations, event.gesture, chefId);
             if (stationIdx === -1) return {};
 
             const amount = event.progressAmount !== undefined ? event.progressAmount : 10;
@@ -257,7 +280,9 @@ const preparationMachine = createMachine({
             return { stations: updatedStations };
         }),
         moveToDeliveryArea: assign(({ context, event }) => {
-            const stationIdx = findStationByGesture(context.stations, event.gesture, event.chefId);
+            // Map sous-chef ID to chef ID for lookup
+            const chefId = event.chefId || `chef-${event.sousChef}`;
+            const stationIdx = findStationByGesture(context.stations, event.gesture, chefId);
             if (stationIdx === -1) return {};
 
             const station = context.stations[stationIdx];
@@ -280,13 +305,15 @@ const preparationMachine = createMachine({
         }),
         handleStopGesture: assign(({ context, event }) => {
             let stationIdx = -1;
+            // Map sous-chef ID to chef ID for lookup
+            const chefId = event.chefId || `chef-${event.sousChef}`;
 
             // If gesture is specified, find station with that gesture
             if (event.gesture) {
-                stationIdx = findStationByGesture(context.stations, event.gesture, event.chefId);
+                stationIdx = findStationByGesture(context.stations, event.gesture, chefId);
             } else {
                 // Otherwise, find first station with this chef that has progress > 0
-                stationIdx = context.stations.findIndex(s => s.chefId === event.chefId && s.progress > 0);
+                stationIdx = context.stations.findIndex(s => s.chefId === chefId && s.progress > 0);
             }
 
             if (stationIdx === -1) return {};
@@ -321,14 +348,51 @@ const preparationMachine = createMachine({
         incrementScore: assign(({ context }) => ({ score: context.score + 100 })),
         incrementSuccessCount: assign(({ context }) => ({ completedCount: context.completedCount + 1 })),
         applyPenalty: assign(({ context }) => ({ score: Math.max(0, context.score - 50) })),
-        incrementPenalizedCount: assign(({ context }) => ({ penalizedCount: context.penalizedCount + 1 }))
+        incrementPenalizedCount: assign(({ context }) => ({ penalizedCount: context.penalizedCount + 1 })),
+        // Sous-chef gesture actions
+        handleSousChefGestureStart: assign(({ context, event }) => ({
+            sousChefs: {
+                ...context.sousChefs,
+                [event.sousChef]: {
+                    ...context.sousChefs[event.sousChef],
+                    gesture: event.gesture,
+                    isHolding: true
+                }
+            },
+            activeGestureChef: event.sousChef
+        })),
+        updateSousChefGesture: assign(({ context, event }) => ({
+            sousChefs: {
+                ...context.sousChefs,
+                [event.sousChef]: {
+                    ...context.sousChefs[event.sousChef],
+                    gesture: event.gesture,
+                    confidence: event.confidence || 0.8
+                }
+            }
+        })),
+        clearSousChefGesture: assign(({ context, event }) => ({
+            sousChefs: {
+                ...context.sousChefs,
+                [event.sousChef]: {
+                    ...context.sousChefs[event.sousChef],
+                    gesture: 'idle',
+                    isHolding: false
+                }
+            },
+            activeGestureChef: null
+        }))
     },
     guards: {
         isValidIngredientGesture: ({ context, event }) => {
-            return findStationByGesture(context.stations, event.gesture, event.chefId) !== -1;
+            // Map sous-chef ID to chef ID for lookup
+            const chefId = event.chefId || `chef-${event.sousChef}`;
+            return findStationByGesture(context.stations, event.gesture, chefId) !== -1;
         },
         isIngredientGestureComplete: ({ context, event }) => {
-            const stationIdx = findStationByGesture(context.stations, event.gesture, event.chefId);
+            // Map sous-chef ID to chef ID for lookup
+            const chefId = event.chefId || `chef-${event.sousChef}`;
+            const stationIdx = findStationByGesture(context.stations, event.gesture, chefId);
             if (stationIdx === -1) return false;
 
             const station = context.stations[stationIdx];

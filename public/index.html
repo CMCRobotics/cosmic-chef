@@ -7,7 +7,19 @@
     <!-- Vendor Dependencies Bundle (Offline / Local) -->
     <script src="vendor/bundle.js"></script>
 
+    <!-- MQTT Client -->
+    <script src="https://cdn.jsdelivr.net/npm/mqtt@5.0.0/dist/mqtt.min.js"></script>
+
     <script src="xstate/preparation-machine.js"></script>
+
+    <!-- Sous-Chef Integration (compiled from TypeScript) -->
+    <script src="adapters/sousChefGestureAdapter.js"></script>
+    <script src="modules/sousChefIntegration.js"></script>
+
+    <!-- Game Management -->
+    <script src="components/game-manager.js"></script>
+    <script src="components/sous-chef-gesture-feedback.js"></script>
+
     <script src="aframe-components/animations/anim-linear.js"></script>
     <script src="aframe-components/animations/anim-tenderizing.js"></script>
     <script src="aframe-components/animations/anim-stirring.js"></script>
@@ -29,6 +41,7 @@
     <a-scene
         start-experience
         preparation-manager
+        game-manager="teamId: team-1; numSousChefs: 3"
         webxr="optionalFeatures: hit-test, local-floor, hand-tracking; requiredFeatures: local-floor;"
         renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
         cursor="rayOrigin: mouse"
@@ -91,6 +104,28 @@
                <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-1"></a-entity>
             </a-entity>
 
+            <!-- Sous-Chef Gesture Feedback Indicators (Dynamic Utensils) -->
+            <a-entity id="sous-chef-3-feedback" position="-1 1.5 -2">
+              <a-entity id="sous-chef-3-knife" gltf-model="#asset_cooking_knife" scale="0.5 0.5 0.5" position="0 0 0" rotation="-90 -90 0" visible="false"></a-entity>
+              <a-entity id="sous-chef-3-hammer" gltf-model="#asset_meat_tenderizer" scale="1 1 1" position="0 0 0" rotation="0 0 90" visible="false"></a-entity>
+              <a-entity id="sous-chef-3-spoon" gltf-model="#asset_cooking_spoon" scale="0.5 0.5 0.5" position="0 0 0" rotation="0 0 90" visible="false"></a-entity>
+              <a-entity sous-chef-gesture-feedback="sousChefId: 3; feedbackType: visual"></a-entity>
+            </a-entity>
+
+            <a-entity id="sous-chef-2-feedback" position="0 1.5 -2">
+              <a-entity id="sous-chef-2-knife" gltf-model="#asset_cooking_knife" scale="0.5 0.5 0.5" position="0 0 0" rotation="-90 -90 0" visible="false"></a-entity>
+              <a-entity id="sous-chef-2-hammer" gltf-model="#asset_meat_tenderizer" scale="1 1 1" position="0 0 0" rotation="0 0 90" visible="false"></a-entity>
+              <a-entity id="sous-chef-2-spoon" gltf-model="#asset_cooking_spoon" scale="0.5 0.5 0.5" position="0 0 0" rotation="0 0 90" visible="false"></a-entity>
+              <a-entity sous-chef-gesture-feedback="sousChefId: 2; feedbackType: visual"></a-entity>
+            </a-entity>
+
+            <a-entity id="sous-chef-1-feedback" position="1 1.5 -2">
+              <a-entity id="sous-chef-1-knife" gltf-model="#asset_cooking_knife" scale="0.5 0.5 0.5" position="0 0 0" rotation="-90 -90 0" visible="false"></a-entity>
+              <a-entity id="sous-chef-1-hammer" gltf-model="#asset_meat_tenderizer" scale="1 1 1" position="0 0 0" rotation="0 0 90" visible="false"></a-entity>
+              <a-entity id="sous-chef-1-spoon" gltf-model="#asset_cooking_spoon" scale="0.5 0.5 0.5" position="0 0 0" rotation="0 0 90" visible="false"></a-entity>
+              <a-entity sous-chef-gesture-feedback="sousChefId: 1; feedbackType: visual"></a-entity>
+            </a-entity>
+
             <!-- <a-entity id="galley" position="20 0 30" rotation="0 -120 0">
                <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: blue" rotation="-90 0 0" position="0 0.03 0"></a-entity>
                <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-2"></a-entity>
@@ -117,49 +152,29 @@
     </a-scene>
 
     <script>
-        const log = window.log.getLogger('main');
-        log.setLevel('info');
+        const mainLog = window.log.getLogger('main');
+        mainLog.setLevel('info');
 
         const scene = document.querySelector('a-scene');
 
         scene.addEventListener('loaded', () => {
-            log.debug('Scene loaded');
-
-            // TEST: Inject a recipe to test ingredient spawning
-            setTimeout(() => {
-                const prepMgr = scene.components['preparation-manager'];
-                if (prepMgr) {
-                    log.debug('Injecting test recipe...');
-                    prepMgr.sendEvent('CAPTURE_RECIPE', {
-                        recipe: {
-                            name: 'proton',
-                            composition: 'uud',
-                            charge: 1,
-                            ingredientSequences: {
-                                'up-1': [{ gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' }],
-                                'up-2': [{ gesture: 'tenderize', preparedState: 'Tender Up', behaviorType: 'resumable' }],
-                                'down-1': [{ gesture: 'slice', preparedState: 'Sliced Down', behaviorType: 'resumable' }]
-                            },
-                            finalStep: { gesture: 'stir', preparedState: null, behaviorType: 'resumable', stepType: 'synchronized' }
-                        }
-                    });
-                }
-            }, 500);
+            mainLog.debug('Scene loaded');
+            mainLog.info('Use testRecipe("proton") or test interface to capture a recipe');
         });
 
         scene.addEventListener('enter-vr', () => {
             if (scene.is('vr-mode')) {
-                log.debug('Entered VR mode');
+                mainLog.debug('Entered VR mode');
             }
         });
 
         // XR session management
         scene.addEventListener('sessionstart', () => {
-            log.debug('XR session started');
+            mainLog.debug('XR session started');
         });
 
         scene.addEventListener('sessionend', () => {
-            log.debug('XR session ended');
+            mainLog.debug('XR session ended');
         });
 
         // Console helpers for testing
@@ -174,9 +189,9 @@
                 };
                 if (chefId) {
                     event.chefId = chefId;
-                    log.info(`Sending GESTURE_TICK: ${gesture} +${progress}% (${chefId})`);
+                    mainLog.info(`Sending GESTURE_TICK: ${gesture} +${progress}% (${chefId})`);
                 } else {
-                    log.info(`Sending GESTURE_TICK: ${gesture} +${progress}%`);
+                    mainLog.info(`Sending GESTURE_TICK: ${gesture} +${progress}%`);
                 }
                 prepMgr.sendEvent('GESTURE_TICK', event);
 
@@ -184,17 +199,17 @@
                 setTimeout(() => {
                     const afterState = prepMgr.gameActor.getSnapshot();
                     if (beforeState.value !== afterState.value) {
-                        log.info(`→ State changed to: ${afterState.value}`);
+                        mainLog.info(`→ State changed to: ${afterState.value}`);
                     } else {
-                        log.debug(`State remains: ${afterState.value}`);
+                        mainLog.debug(`State remains: ${afterState.value}`);
                         // Show context for debugging
                         if (afterState.value === 'readyForFinalStir') {
-                            log.debug(`  Stir progress: ${afterState.context.stirProgress}/100`);
-                            log.debug(`  Final gesture required: ${afterState.context.currentOrder?.finalStep?.gesture}`);
+                            mainLog.debug(`  Stir progress: ${afterState.context.stirProgress}/100`);
+                            mainLog.debug(`  Final gesture required: ${afterState.context.currentOrder?.finalStep?.gesture}`);
                         } else if (afterState.value === 'preparingIngredients') {
                             const station = afterState.context.stations.find(s => s.ingredientId);
                             if (station) {
-                                log.debug(`  Progress at ${station.stationId}: ${station.progress}/100`);
+                                mainLog.debug(`  Progress at ${station.stationId}: ${station.progress}/100`);
                             }
                         }
                     }
@@ -203,31 +218,33 @@
         };
 
         window.testRecipe = (recipeName = 'proton') => {
-            const prepMgr = scene.components['preparation-manager'];
-            if (prepMgr && prepMgr.gameActor) {
-                const { RECIPES } = window;
-                const recipe = RECIPES.find(r => r.name === recipeName);
-                if (recipe) {
-                    // Check current state
-                    const snapshot = prepMgr.gameActor.getSnapshot();
-                    const currentState = snapshot.value;
+            if (!window.gameActor) {
+                mainLog.error('Game actor not initialized');
+                return;
+            }
 
-                    // If in orderSuccess or orderPenalized, go back to waitingForRecipe first
-                    if (currentState === 'orderSuccess' || currentState === 'orderPenalized') {
-                        log.info(`Transitioning from ${currentState} → waitingForRecipe with NEXT_ROUND`);
-                        prepMgr.sendEvent('NEXT_ROUND');
-                        // Small delay to let state update
-                        setTimeout(() => {
-                            log.info(`Sending CAPTURE_RECIPE: ${recipeName}`);
-                            prepMgr.sendEvent('CAPTURE_RECIPE', { recipe });
-                        }, 50);
-                    } else {
-                        log.info(`Sending CAPTURE_RECIPE: ${recipeName}`);
-                        prepMgr.sendEvent('CAPTURE_RECIPE', { recipe });
-                    }
+            const { RECIPES } = window;
+            const recipe = RECIPES.find(r => r.name === recipeName);
+            if (recipe) {
+                // Track globally for replay if actor is recreated
+                window.lastCapturedRecipe = recipe;
+
+                const snapshot = window.gameActor.getSnapshot();
+                const currentState = snapshot.value;
+
+                if (currentState === 'orderSuccess' || currentState === 'orderPenalized') {
+                    mainLog.info(`Transitioning from ${currentState} → waitingForRecipe with NEXT_ROUND`);
+                    window.gameActor.send({ type: 'NEXT_ROUND' });
+                    setTimeout(() => {
+                        mainLog.info(`Sending CAPTURE_RECIPE: ${recipeName}`);
+                        window.gameActor.send({ type: 'CAPTURE_RECIPE', recipe });
+                    }, 50);
                 } else {
-                    log.error(`Recipe ${recipeName} not found`);
+                    mainLog.info(`Sending CAPTURE_RECIPE: ${recipeName}`);
+                    window.gameActor.send({ type: 'CAPTURE_RECIPE', recipe });
                 }
+            } else {
+                mainLog.error(`Recipe ${recipeName} not found`);
             }
         };
 
@@ -236,7 +253,7 @@
             if (prepMgr && prepMgr.gameActor) {
                 const beforeState = prepMgr.gameActor.getSnapshot();
 
-                log.info('Sending SUBMIT_RECIPE');
+                mainLog.info('Sending SUBMIT_RECIPE');
                 prepMgr.sendEvent('SUBMIT_RECIPE');
 
                 // Small delay to let state update
@@ -245,16 +262,16 @@
                     const newState = afterState.value;
 
                     if (newState === 'orderSuccess') {
-                        log.info('✓ Recipe matched! Order successful!');
-                        log.info(`Score: ${afterState.context.score}`);
-                        log.info('Next: testRecipe(name) to load another, or testState() to check current state');
+                        mainLog.info('✓ Recipe matched! Order successful!');
+                        mainLog.info(`Score: ${afterState.context.score}`);
+                        mainLog.info('Next: testRecipe(name) to load another, or testState() to check current state');
                     } else if (newState === 'orderPenalized') {
-                        log.info('✗ Recipe did not match. Order penalized.');
-                        log.info(`Score: ${afterState.context.score}`);
-                        log.info('Next: testRecipe(name) to load another, or testState() to check current state');
+                        mainLog.info('✗ Recipe did not match. Order penalized.');
+                        mainLog.info(`Score: ${afterState.context.score}`);
+                        mainLog.info('Next: testRecipe(name) to load another, or testState() to check current state');
                     } else {
-                        log.info(`State: ${newState}`);
-                        log.info('Next: check state or try submitting again');
+                        mainLog.info(`State: ${newState}`);
+                        mainLog.info('Next: check state or try submitting again');
                     }
                 }, 50);
             }
@@ -264,10 +281,10 @@
             const prepMgr = scene.components['preparation-manager'];
             if (prepMgr && prepMgr.gameActor) {
                 const snapshot = prepMgr.gameActor.getSnapshot();
-                log.info(`Current State: ${snapshot.value}`);
-                log.info(`Chefs: ${snapshot.context.activeChefsCount}`);
-                log.info(`Ingredients: ${snapshot.context.ingredients.length}`);
-                log.info(`Score: ${snapshot.context.score}`);
+                mainLog.info(`Current State: ${snapshot.value}`);
+                mainLog.info(`Chefs: ${snapshot.context.activeChefsCount}`);
+                mainLog.info(`Ingredients: ${snapshot.context.ingredients.length}`);
+                mainLog.info(`Score: ${snapshot.context.score}`);
                 return snapshot.value;
             }
         };
@@ -283,16 +300,16 @@
         window.getDeliveryAreaPosition = () => {
             const galleyEl = document.querySelector('[galley-manager]');
             if (!galleyEl) {
-                log.error('galley-manager element not found');
+                mainLog.error('galley-manager element not found');
                 return undefined;
             }
             const galleyMgr = galleyEl.components['galley-manager'];
             if (!galleyMgr) {
-                log.error('galley-manager component not initialized');
+                mainLog.error('galley-manager component not initialized');
                 return undefined;
             }
             const pos = galleyMgr.data.deliveryAreaPosition;
-            log.info(`Delivery Area Position: x=${pos.x}, y=${pos.y}, z=${pos.z}`);
+            mainLog.info(`Delivery Area Position: x=${pos.x}, y=${pos.y}, z=${pos.z}`);
             return pos;
         };
 
@@ -302,16 +319,16 @@
             console.log(`Log level set to: ${level}`);
         };
 
-        log.info('Test helpers available:');
-        log.info('  debug(true/false) — toggle debug logging');
-        log.info('  testState() — show current state');
-        log.info('  testRecipe(name) — load a recipe (pion, proton, neutron, lambda)');
-        log.info('  testGesture(gesture, progress, chefId) — trigger gesture (chefId required)');
-        log.info('    Examples:');
-        log.info('      testGesture("tenderize", 100, "chef-1")   // 100% by chef-1');
-        log.info('      testGesture("slice", 50, "chef-2")        // 50% progress by chef-2');
-        log.info('      testGesture("stir", 100, "chef-3")        // final stir by chef-3');
-        log.info('  testSubmit() — submit the dish');
+        mainLog.info('Test helpers available:');
+        mainLog.info('  debug(true/false) — toggle debug logging');
+        mainLog.info('  testState() — show current state');
+        mainLog.info('  testRecipe(name) — load a recipe (pion, proton, neutron, lambda)');
+        mainLog.info('  testGesture(gesture, progress, chefId) — trigger gesture (chefId required)');
+        mainLog.info('    Examples:');
+        mainLog.info('      testGesture("tenderize", 100, "chef-1")   // 100% by chef-1');
+        mainLog.info('      testGesture("slice", 50, "chef-2")        // 50% progress by chef-2');
+        mainLog.info('      testGesture("stir", 100, "chef-3")        // final stir by chef-3');
+        mainLog.info('  testSubmit() — submit the dish');
     </script>
 </body>
 </html>
