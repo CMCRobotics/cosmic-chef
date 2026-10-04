@@ -1,0 +1,146 @@
+/**
+ * head-chef-status-display.js
+ * Displays real-time sous-chef states, ingredient counts, and recipe phase.
+ * Shows as a text-based HUD in world space.
+ */
+
+AFRAME.registerComponent('head-chef-status-display', {
+    schema: {
+        updateInterval: { type: 'number', default: 500 } // ms between display updates
+    },
+
+    init: function () {
+        this.log = window.log.getLogger('head-chef-status-display');
+        this.log.debug('Initializing head-chef-status-display');
+
+        this.statusText = null;
+        this.lastState = null;
+        this.lastContext = null;
+        this.updateHandle = null;
+
+        // Listen for state changes
+        const scene = document.querySelector('a-scene');
+        scene.addEventListener('game-state-changed', (evt) => {
+            this.onStateChange(evt.detail.state, evt.detail.context);
+        });
+
+        // Create status text display
+        this.createStatusDisplay();
+
+        this.log.debug('Head Chef status display ready');
+    },
+
+    createStatusDisplay: function () {
+        // Create a text entity for displaying status
+        const textEl = document.createElement('a-entity');
+        textEl.setAttribute('id', 'head-chef-status-text');
+        textEl.setAttribute('text', {
+            value: 'Waiting for game state...',
+            align: 'left',
+            anchor: 'left',
+            baseline: 'top',
+            width: 4,
+            color: '#00ff00',
+            wrapCount: 60
+        });
+
+        // Position as a billboard in front of the head chef
+        textEl.setAttribute('position', '0 0.5 0.5');
+        textEl.setAttribute('rotation', '0 0 0');
+        textEl.setAttribute('scale', '0.5 0.5 0.5');
+
+        // Add semi-transparent background panel
+        const panelEl = document.createElement('a-entity');
+        panelEl.setAttribute('geometry', {
+            primitive: 'plane',
+            width: 4,
+            height: 3
+        });
+        panelEl.setAttribute('material', {
+            color: '#000000',
+            opacity: 0.7,
+            transparent: true
+        });
+        panelEl.setAttribute('position', '0 0 -0.01'); // Behind text
+
+        textEl.appendChild(panelEl);
+        this.el.appendChild(textEl);
+        this.statusText = textEl;
+
+        this.log.debug('Status display created');
+    },
+
+    onStateChange: function (state, context) {
+        this.lastState = state;
+        this.lastContext = context;
+        this.updateDisplay();
+    },
+
+    updateDisplay: function () {
+        if (!this.statusText || !this.lastContext) return;
+
+        const lines = [];
+
+        // Recipe info
+        if (this.lastContext.currentOrder) {
+            lines.push(`📖 Recipe: ${this.lastContext.currentOrder.name}`);
+        } else {
+            lines.push('📖 Recipe: None');
+        }
+
+        // Game state
+        lines.push(`State: ${this.lastState}`);
+
+        // Sous-chef status
+        lines.push('');
+        lines.push('Sous-Chefs:');
+        this.lastContext.stations?.forEach((station) => {
+            const gesture = station.gesturesRequired?.[0]?.gesture || 'idle';
+            const progress = Math.round(station.progress || 0);
+            const ingredientId = station.ingredientId?.split('-')[0] || 'empty';
+            lines.push(`  ${station.stationId}: ${gesture} (${progress}%) [${ingredientId}]`);
+        });
+
+        // Ingredient counts
+        lines.push('');
+        lines.push('Ingredients at Stations:');
+        const ingredientCounts = {};
+        this.lastContext.stations?.forEach((station) => {
+            if (station.ingredientId) {
+                const type = station.ingredientType || 'unknown';
+                ingredientCounts[type] = (ingredientCounts[type] || 0) + 1;
+            }
+        });
+        if (Object.keys(ingredientCounts).length === 0) {
+            lines.push('  (none)');
+        } else {
+            Object.entries(ingredientCounts).forEach(([type, count]) => {
+                lines.push(`  ${type}: ${count}`);
+            });
+        }
+
+        // Captured recipe status
+        lines.push('');
+        const headChefMgr = document.querySelector('#head-chef-root')?.components['head-chef-manager'];
+        if (headChefMgr?.capturedRecipe) {
+            lines.push(`✓ Captured Recipe: ${headChefMgr.capturedRecipe}`);
+        } else {
+            lines.push('✗ No recipe captured yet');
+        }
+
+        // Update text
+        const textAttr = this.statusText.getAttribute('text');
+        textAttr.value = lines.join('\n');
+        this.statusText.setAttribute('text', textAttr);
+    },
+
+    remove: function () {
+        if (this.statusText && this.statusText.parentNode) {
+            this.statusText.remove();
+        }
+        if (this.updateHandle) {
+            clearInterval(this.updateHandle);
+        }
+        this.log.debug('Head Chef status display removed');
+    }
+});

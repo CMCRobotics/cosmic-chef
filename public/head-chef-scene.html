@@ -1,0 +1,30 @@
+<!-- Head Chef VR Scene Fragment -->
+
+<!-- Recipe spawn and intake area -->
+<a-entity id="head-chef-workspace" head-chef-controls position="0 0 -3">
+
+    <!-- Recipe Intake Hopper (where recipes are placed) -->
+    <a-entity
+        id="head-chef-recipe-intake"
+        class="recipe-team-intake"
+        data-recipe-team-intake="true"
+        gltf-model="#asset_hopper_high_round"
+        position="0 1 0"
+        scale="1.5 1 1.5">
+    </a-entity>
+
+    <!-- Recipe Spawn Point (recipes fall from here) -->
+    <a-entity
+        id="recipe-spawn-zone"
+        recipe-spawner
+        position="0 5 0">
+    </a-entity>
+
+    <!-- Sous-chef state display -->
+    <a-entity
+        id="head-chef-status-display"
+        head-chef-status-display
+        position="0 2.5 0.5">
+    </a-entity>
+
+</a-entity>
