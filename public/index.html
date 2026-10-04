@@ -12,6 +12,9 @@
 
     <script src="xstate/preparation-machine.js"></script>
 
+    <!-- Adapters -->
+    <script src="adapters/headChefAdapter.js"></script>
+
     <!-- Sous-Chef Integration (compiled from TypeScript, loaded as modules for proper imports) -->
     <script type="module">
       import('./adapters/sousChefGestureAdapter.js');
@@ -21,18 +24,19 @@
     <!-- Game Management -->
     <script src="components/game-manager.js"></script>
     <script src="components/sous-chef-gesture-feedback.js"></script>
+    <script src="components/head-chef-mqtt-listener.js"></script>
 
     <script src="aframe-components/animations/anim-linear.js"></script>
     <script src="aframe-components/animations/anim-tenderizing.js"></script>
     <script src="aframe-components/animations/anim-stirring.js"></script>
     <script src="aframe-components/animations/anim-slicing.js"></script>
+    <script src="aframe-components/animations/anim-vacuum.js"></script>
     <script src="aframe-components/load-fragment.js"></script>
     <script src="aframe-components/ar-utils.js"></script>
     <script src="aframe-components/preparation-manager.js"></script>
     <script src="aframe-components/galley-manager.js"></script>
     <script src="aframe-components/quantum-particle.js"></script>
     <script src="aframe-components/animations/anim-space-float.js"></script>
-    <script src="aframe-components/animations/anim-vacuum.js"></script>
 
 </head>
 <body>
@@ -43,6 +47,7 @@
     <a-scene
         start-experience
         preparation-manager
+        head-chef-mqtt-listener="teamId: team-1; gameId: default"
         game-manager="teamId: team-1; numSousChefs: 3"
         webxr="optionalFeatures: hit-test, local-floor, hand-tracking; requiredFeatures: local-floor;"
         renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"

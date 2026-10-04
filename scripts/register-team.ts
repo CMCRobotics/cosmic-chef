@@ -112,6 +112,12 @@ async function registerTeam() {
           "idle",
           "Capture animation"
         );
+        await publish(
+          client,
+          `${teamTopic}/head-chef/animation/submit-state`,
+          "idle",
+          "Head chef submit/cancel state"
+        );
 
         // Head chef player profile
         await publish(

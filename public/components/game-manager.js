@@ -77,6 +77,27 @@ AFRAME.registerComponent('game-manager', {
       });
     }
 
+    // Initialize head-chef action adapter
+    if (!window.headChefAdapterModule) {
+      log.warn(
+        '⚠ headChefAdapterModule not found. Head-chef cancel/submit will not work.'
+      );
+      log.warn('Add headChefAdapter.js to index.html');
+    } else {
+      const gameId = window.currentGameId || 'default';
+      window.headChefAdapterModule.initializeHeadChefActionSubject();
+      const cleanup = window.headChefAdapterModule.connectHeadChefActions(
+        self.data.teamId,
+        gameId,
+        gameActor
+      );
+      window.headChefCleanup = cleanup;
+      log.info('✓ Head-chef adapter initialized', {
+        gameId,
+        teamId: self.data.teamId,
+      });
+    }
+
     // Subscribe to game state changes for logging and recipe publishing
     gameActor.subscribe((state) => {
       if (state.value !== self.lastState) {
@@ -173,6 +194,19 @@ AFRAME.registerComponent('game-manager', {
       window.currentGameId = gameId;
       log.info('✓ Sous-chef integration initialized');
     }
+
+    // Initialize head-chef action adapter
+    if (window.headChefAdapterModule) {
+      const gameId = window.currentGameId || 'session-' + Date.now();
+      window.headChefAdapterModule.initializeHeadChefActionSubject();
+      const cleanup = window.headChefAdapterModule.connectHeadChefActions(
+        self.data.teamId,
+        gameId,
+        gameActor
+      );
+      window.headChefCleanup = cleanup;
+      log.info('✓ Head-chef adapter initialized');
+    }
   },
 
   setupMqttClient: function (log, teamId) {
@@ -219,6 +253,10 @@ AFRAME.registerComponent('game-manager', {
     if (window.sousChefCleanup) {
       window.sousChefCleanup();
     }
+
+    if (window.headChefCleanup) {
+      window.headChefCleanup();
+    }
   },
 });
 
@@ -237,19 +275,19 @@ window.sendGameEvent = function (eventType, data = {}) {
     return;
   }
   window.gameActor.send({ type: eventType, ...data });
-  const log = window.log?.getLogger('game-manager') || console;
-  log.info(`Sent event: ${eventType}`, data);
+  const logger = window.log?.getLogger('game-manager') || console;
+  logger.info(`Sent event: ${eventType}`, data);
 };
 
 window.testSousChefGesture = function (sousChefId, gesture, duration = 1000) {
-  const log = window.log?.getLogger('game-manager') || console;
+  const logger = window.log?.getLogger('game-manager') || console;
 
   if (!window.publishSousChefGesture) {
-    log.error('publishSousChefGesture not available');
+    logger.error('publishSousChefGesture not available');
     return;
   }
 
-  log.info(`Testing gesture: Sous-Chef ${sousChefId} ${gesture} for ${duration}ms`);
+  logger.info(`Testing gesture: Sous-Chef ${sousChefId} ${gesture} for ${duration}ms`);
 
   // Start gesture
   window.publishSousChefGesture(sousChefId, gesture);
@@ -257,13 +295,16 @@ window.testSousChefGesture = function (sousChefId, gesture, duration = 1000) {
   // Stop gesture after duration
   setTimeout(() => {
     window.publishSousChefGesture(sousChefId, 'idle');
-    log.info(`Gesture ended`);
+    logger.info(`Gesture ended`);
   }, duration);
 };
 
-const log = window.log?.getLogger('game-manager') || console;
-log.info('Game Manager component registered');
-log.info('Test helpers available:');
-log.info('  getGameState() — view current game state');
-log.info('  sendGameEvent(type, data) — send XState event');
-log.info('  testSousChefGesture(id, gesture, ms) — test a gesture');
+// Log initialization info
+if (window.log && window.log.getLogger) {
+  const logger = window.log.getLogger('game-manager');
+  logger.info('Game Manager component registered');
+  logger.info('Test helpers available:');
+  logger.info('  getGameState() — view current game state');
+  logger.info('  sendGameEvent(type, data) — send XState event');
+  logger.info('  testSousChefGesture(id, gesture, ms) — test a gesture');
+}

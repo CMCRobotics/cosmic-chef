@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sous-Chef Gesture Test Interface</title>
+    <!-- Vendor Dependencies Bundle (includes RxJS, XState, loglevel, etc.) -->
+    <script src="vendor/bundle.js"></script>
+    <!-- MQTT Client -->
     <script src="https://cdn.jsdelivr.net/npm/mqtt@5.0.0/dist/mqtt.min.js"></script>
     <style>
       * {
@@ -525,6 +528,7 @@
       </div>
     </div>
 
+    <script src="/adapters/headChefAdapter.js"></script>
     <script>
       // Recipes (hardcoded for test interface)
       window.RECIPES = [
@@ -641,6 +645,8 @@
           client.on("connect", () => {
             updateStatus(true);
             log(`Team: ${teamId} | Game: ${gameId}`, "success");
+            // Initialize adapter subjects for MQTT messaging
+            window.headChefAdapterModule?.initializeHeadChefActionSubject();
           });
 
           client.on("error", (err) => {
@@ -690,12 +696,18 @@
         const teamId = document.getElementById("teamId").value;
 
         if (action === "cancel") {
+          // Publish to MQTT for external listeners
           const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
           client.publish(topic, "idle", { retain: false, qos: 1 });
+          // Also publish to local adapter subject for game machine
+          window.headChefAdapterModule?.publishHeadChefAction("cancel");
           log("Head Chef: Cancel recipe", "success");
         } else if (action === "submit") {
+          // Publish to MQTT for external listeners
           const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
           client.publish(topic, "submitting", { retain: false, qos: 1 });
+          // Also publish to local adapter subject for game machine
+          window.headChefAdapterModule?.publishHeadChefAction("submit");
           log("Head Chef: Submit recipe", "success");
         }
       }
@@ -845,6 +857,11 @@
         const recipeSelect = document.getElementById("recipeSelect");
         const { RECIPES } = window;
 
+        if (!recipeSelect) {
+          // recipeSelect element not present in UI; recipe buttons are used instead
+          return;
+        }
+
         if (RECIPES && RECIPES.length > 0) {
           RECIPES.forEach((recipe, index) => {
             const option = document.createElement("option");
@@ -857,6 +874,12 @@
 
       function captureRecipeFromUI() {
         const recipeSelect = document.getElementById("recipeSelect");
+
+        if (!recipeSelect) {
+          log("Recipe selector not available", "error");
+          return;
+        }
+
         const recipeIndex = parseInt(recipeSelect.value);
 
         if (isNaN(recipeIndex)) {
@@ -892,12 +915,20 @@
       }
 
       function updateRecipeDisplay(recipe) {
+        const nameEl = document.getElementById("currentRecipeName");
+        const compEl = document.getElementById("currentRecipeComposition");
+
+        if (!nameEl || !compEl) {
+          // Display elements not present in UI
+          return;
+        }
+
         if (recipe) {
-          document.getElementById("currentRecipeName").textContent = recipe.name;
-          document.getElementById("currentRecipeComposition").textContent = recipe.composition;
+          nameEl.textContent = recipe.name;
+          compEl.textContent = recipe.composition;
         } else {
-          document.getElementById("currentRecipeName").textContent = "None";
-          document.getElementById("currentRecipeComposition").textContent = "-";
+          nameEl.textContent = "None";
+          compEl.textContent = "-";
         }
       }
 

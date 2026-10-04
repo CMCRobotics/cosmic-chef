@@ -6,7 +6,9 @@
 
 AFRAME.registerComponent('galley-manager', {
     schema: {
-        deliveryAreaPosition: { type: 'vec3', default: { x: -2, y: 1.7, z: 3 } }
+        deliveryAreaPosition: { type: 'vec3', default: { x: -2, y: 1.7, z: 3 } },
+        vacuumDuration: { type: 'number', default: 2000 },
+        vacuumResetDelay: { type: 'number', default: 2500 }
     },
 
     init: function () {
@@ -20,6 +22,7 @@ AFRAME.registerComponent('galley-manager', {
         // Track active ingredient entities
         this.ingredientEntities = new Map(); // ingredientId → { el, stationId, progress }
         this.lastRecipeName = null;
+        this.vacuumInProgress = false;
 
         // Listen for state changes from preparation-manager
         const scene = document.querySelector('a-scene');
@@ -101,9 +104,9 @@ AFRAME.registerComponent('galley-manager', {
             this.convergeToDeliveryArea(context);
         }
 
-        // Handle submission - vacuum all ingredients
+        // Handle cancellation or submission - vacuum and reset
         if (state === 'orderSuccess' || state === 'orderPenalized') {
-            this.vacuumAllIngredients();
+            this.vacuumAllIngredientsAndReset(state === 'orderPenalized');
         }
     },
 
@@ -333,9 +336,16 @@ AFRAME.registerComponent('galley-manager', {
         this.log.debug('Cleared all ingredient entities');
     },
 
-    vacuumAllIngredients: function () {
-        this.log.info('Vacuuming all ingredients');
+    vacuumAllIngredientsAndReset: function (isCancellation) {
+        if (this.vacuumInProgress) {
+            this.log.warn('Vacuum already in progress, skipping');
+            return;
+        }
 
+        this.vacuumInProgress = true;
+        this.log.info(`Vacuuming all ingredients${isCancellation ? ' (cancellation)' : ' (submission)'}`);
+
+        let vacuumedCount = 0;
         this.ingredientEntities.forEach((data, ingredientId) => {
             const el = data.el;
             if (el) {
@@ -347,14 +357,37 @@ AFRAME.registerComponent('galley-manager', {
                     distance: 10,
                     stretchAxis: 'y',
                     stretchDirection: 1,  // positive = upward
-                    duration: 2000,
+                    duration: this.data.vacuumDuration,
                     resistance: 1.5,
                     loop: false
                 });
 
+                vacuumedCount++;
                 this.log.debug(`Applied vacuum animation to ${ingredientId}`);
             }
         });
+
+        this.log.info(`Vacuumed ${vacuumedCount} ingredients`);
+
+        // If cancellation, schedule state reset after vacuum completes
+        if (isCancellation) {
+            setTimeout(() => {
+                this.sendNextRound();
+                this.vacuumInProgress = false;
+            }, this.data.vacuumResetDelay);
+        } else {
+            this.vacuumInProgress = false;
+        }
+    },
+
+    sendNextRound: function () {
+        const prepMgr = this.el.sceneEl.components['preparation-manager'];
+        if (prepMgr && prepMgr.gameActor) {
+            this.log.info('Sending NEXT_ROUND to state machine');
+            prepMgr.gameActor.send({ type: 'NEXT_ROUND' });
+        } else {
+            this.log.error('Could not find preparation-manager to send NEXT_ROUND');
+        }
     },
 
     showInvalidGestureIndicator: function (stationId, chefId) {
