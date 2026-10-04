@@ -345,15 +345,11 @@ AFRAME.registerComponent('galley-manager', {
 
         this.log.info(`Vacuumed ${vacuumedCount} ingredients`);
 
-        // If cancellation, schedule state reset after vacuum completes
-        if (isCancellation) {
-            setTimeout(() => {
-                this.sendNextRound();
-                this.vacuumInProgress = false;
-            }, this.data.vacuumResetDelay);
-        } else {
+        // Schedule state reset after vacuum completes (for both cancellation and submission)
+        setTimeout(() => {
+            this.sendNextRound();
             this.vacuumInProgress = false;
-        }
+        }, this.data.vacuumResetDelay);
     },
 
     sendNextRound: function () {
