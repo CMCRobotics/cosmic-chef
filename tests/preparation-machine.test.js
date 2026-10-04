@@ -624,3 +624,75 @@ describe("preparation-machine — concurrent sous-chef gestures", () => {
         expect(actor.getSnapshot().value).toBe("orderSuccess");
     });
 });
+
+describe("preparation-machine — cancellation", () => {
+    function startWith(recipeName, chefs) {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: chefs });
+        actor.send({ type: "CAPTURE_RECIPE", recipe: RECIPES.find(r => r.name === recipeName) });
+        return actor;
+    }
+
+    test("CANCEL_ORDER from every cooking state transitions to orderPenalized", () => {
+        const actor = startWith('pion', 2);
+        const pion = RECIPES.find(r => r.name === 'pion');
+
+        actor.send({ type: "CANCEL_ORDER" });
+        expect(actor.getSnapshot().value).toBe("orderPenalized");
+        actor.send({ type: "NEXT_ROUND" });
+
+        actor.send({ type: "CAPTURE_RECIPE", recipe: pion });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-2", gesture: "stir", progressAmount: 100 });
+        expect(actor.getSnapshot().value).toBe("readyForFinalStir");
+        actor.send({ type: "CANCEL_ORDER" });
+        expect(actor.getSnapshot().value).toBe("orderPenalized");
+        actor.send({ type: "NEXT_ROUND" });
+
+        actor.send({ type: "CAPTURE_RECIPE", recipe: pion });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-2", gesture: "stir", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", gesture: "stir", progressAmount: 100 });
+        expect(actor.getSnapshot().value).toBe("recipeReadyForSubmit");
+        actor.send({ type: "CANCEL_ORDER" });
+        expect(actor.getSnapshot().value).toBe("orderPenalized");
+        expect(actor.getSnapshot().context.penalizedCount).toBe(3);
+    });
+
+    test("Penalty never drives score below zero", () => {
+        const actor = startWith('proton', 3);
+        actor.send({ type: "CANCEL_ORDER" });
+        expect(actor.getSnapshot().context.score).toBe(0);
+        expect(actor.getSnapshot().context.penalizedCount).toBe(1);
+    });
+
+    test("Success after a cancel counts independently", () => {
+        const actor = startWith('pion', 2);
+        actor.send({ type: "CANCEL_ORDER" });
+        actor.send({ type: "NEXT_ROUND" });
+
+        actor.send({ type: "CAPTURE_RECIPE", recipe: RECIPES.find(r => r.name === 'pion') });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-2", gesture: "stir", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", gesture: "stir", progressAmount: 100 });
+        actor.send({ type: "SUBMIT_RECIPE" });
+
+        const { value, context } = actor.getSnapshot();
+        expect(value).toBe("orderSuccess");
+        expect(context.completedCount).toBe(1);
+        expect(context.penalizedCount).toBe(1);
+    });
+
+    test("activeChefsCount persists across cancel and NEXT_ROUND", () => {
+        const actor = startWith('proton', 3);
+        actor.send({ type: "CANCEL_ORDER" });
+        actor.send({ type: "NEXT_ROUND" });
+        actor.send({ type: "CAPTURE_RECIPE", recipe: RECIPES.find(r => r.name === 'neutron') });
+
+        const { value, context } = actor.getSnapshot();
+        expect(value).toBe("preparingIngredients");
+        expect(context.currentOrder.name).toBe("neutron");
+        expect(context.stations.filter(s => s.chefId).length).toBe(3);
+    });
+});

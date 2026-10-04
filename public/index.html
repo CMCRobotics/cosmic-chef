@@ -94,13 +94,9 @@
             <!-- The light position determines how bright the sun is in the Environment component -->
             <a-entity environment="preset: starry; stageSize: 100; lightPosition: 0 -0.01 -0.2; ground: none; groundTexture: none;"></a-entity>
             
-            <!-- <a-light id="light-floor" type="directional" target="#floor" color="#ffffff" 
-                     intensity="1.2" position="-1 10 -5" castshadow="true" 
-                     shadow="mapSize: 2048x2048; bias: -0.001; near: 0.3; far: 50"></a-light>-->
 
             <a-circle position="0 -30 0" scale="100 100 100" rotation="-90 0 0" color="black"> </a-circle> 
           
-            <!-- <a-entity load-fragment="src: /scene.html; templateId: cosmic-chef-scene"></a-entity> -->
 
 
             <a-entity id="hemisphere-light" position="0 50 0" light="color: #CEE4F0; groundColor: #553e35; intensity: 2.3; type: hemisphere"></a-entity>
@@ -133,16 +129,6 @@
               <a-entity sous-chef-gesture-feedback="sousChefId: 1; feedbackType: visual"></a-entity>
             </a-entity>
 
-            <!-- <a-entity id="galley" position="20 0 30" rotation="0 -120 0">
-               <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: blue" rotation="-90 0 0" position="0 0.03 0"></a-entity>
-               <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-2"></a-entity>
-            </a-entity>
-
-
-            <a-entity id="galley" position="-20 0 30" rotation="0 120 0">
-               <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: #fffff" rotation="-90 0 0" position="0 0.03 0"></a-entity>
-               <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-3"></a-entity>
-            </a-entity> -->
 
 
         </a-entity>

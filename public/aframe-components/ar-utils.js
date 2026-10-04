@@ -5,11 +5,7 @@ AFRAME.registerComponent('start-experience', {
         
         this.el.addEventListener('enter-vr', () => {
             log.debug('Entered VR/AR mode');
-            const overlay = document.getElementById('startOverlay');
-            if (overlay) overlay.classList.add('hidden');
-
             // Reset scene position when entering VR
-            const scene = document.querySelector('a-scene');
             const worldRoot = document.querySelector('#world-root');
             if (worldRoot) {
                 // Position the world slightly in front of the user
