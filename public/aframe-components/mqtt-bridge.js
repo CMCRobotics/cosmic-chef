@@ -30,7 +30,6 @@ AFRAME.registerComponent('mqtt-bridge', {
             this.prepMgr.send(event);
         });
 
-        this.lastHeadChefPayload = null;
         this.lastState = this.prepMgr.getSnapshot().value;
         this.onStateChange = this.onStateChange.bind(this);
         this.el.addEventListener('game-state-changed', this.onStateChange);
@@ -78,9 +77,10 @@ AFRAME.registerComponent('mqtt-bridge', {
                 break;
 
             case 'head-chef-submit': {
-                // The head-chef device re-publishes its state; only react to changes
-                if (payload === this.lastHeadChefPayload) return;
-                this.lastHeadChefPayload = payload;
+                // No dedup needed: CANCEL_ORDER and SUBMIT_RECIPE are only wired up in states
+                // where they apply (preparingIngredients, readyForFinalStir, recipeReadyForSubmit).
+                // XState silently ignores them elsewhere, and repeated identical deliveries within
+                // a round are harmless. Dedup would break legitimate repeat actions across rounds.
                 const event = headChefMessageToEvent(payload);
                 if (!event) {
                     this.log.warn(`Unknown head-chef state: ${payload}`);
