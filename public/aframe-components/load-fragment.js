@@ -5,11 +5,12 @@ AFRAME.registerComponent('load-fragment', {
     },
 
     init: function() {
+        const log = window.log.getLogger('load-fragment');
         const src = this.data.src;
         const templateId = this.data.templateId;
 
         if (!src || !templateId) {
-            console.error('load-fragment component requires both src and templateId parameters');
+            log.error('load-fragment component requires both src and templateId parameters');
             return;
         }
 
@@ -27,7 +28,7 @@ AFRAME.registerComponent('load-fragment', {
                 }
             })
             .catch(error => {
-                console.error('Error loading fragment:', error);
+                log.error('Error loading fragment:', error);
             });
     }
 });

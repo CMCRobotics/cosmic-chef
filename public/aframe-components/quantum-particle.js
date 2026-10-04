@@ -42,7 +42,6 @@ AFRAME.registerComponent('quantum-particle', {
 
     init: function () {
         this.log = window.log.getLogger('quantum-particle');
-        this.log.setLevel('info');
 
         // Create the core sphere
         this.core = document.createElement('a-entity');

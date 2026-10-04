@@ -17,14 +17,15 @@ Orientation file for coding agents and new contributors. Read this before making
 | Runtime / toolchain | **Bun** (not Node) |
 | Dev server | custom, `src/server.ts` (TypeScript) |
 | Game State Management | **XState** v5 |
+| Device input | **MQTT** (mqtt.js, Homie topics) → **RxJS** gesture streams |
 | 3D / XR framework | **A-Frame** 1.7.1 (declarative HTML entity-component scene graph) |
 | Live editing | `aframe-inspector` + `aframe-watcher-bun` (both CMCRobotics forks) |
 | Logging | **loglevel** (`window.log`) |
 | Config | **dotenv** (`.env`) |
-| 3D assets | GLB models from `https://cmc-cdn.web.cern.ch/assets/...` |
+| 3D assets | GLB models from the CMC CDN, served via `public/assets/models/` symlinks |
 | Testing | **Bun Test** (unit testing framework) |
 
-There is no build step for client code, no bundler, and no linter configured. Client code is plain ES5/ES6 JavaScript served as-is. We use **Bun Test** for server and logic unit testing.
+A-Frame components, the state machine and HTML are plain ES6 JavaScript served as-is. The one build step is `build:vendor`, which `bun run dev` runs automatically. It bundles the npm dependencies **and the TypeScript client logic in `src/client/`** into `public/vendor/bundle.js` (gitignored). The client logic is exposed as `window.CosmicChef`. There is no linter. **Bun Test** covers the state machine and the client logic.
 
 ## 3. Quickstart
 
@@ -34,7 +35,8 @@ bun test             # runs the unit test suite
 bun run dev          # serves http://localhost:3000
 ```
 
-- `bun run dev` → runs `src/server.ts`.
+- `bun run dev` → `build:vendor` then `src/server.ts`. Re-run it after editing `src/client/*.ts`.
+- MQTT: the game connects to `ws://localhost:9001` (see the `mqtt-bridge` schema). `public/test-sous-chefs.html` simulates the sous-chefs and the head chef from a keyboard.
 - `bun run compile` → single Linux x64 binary named `cosmic-chef` (gitignored).
 - Env vars: `PORT` (default `3000`), `PROJECT_DIR` (default `public`), `AFRAME_WATCHER_HTML`.
 - The HTML target resolves as **CLI arg > `AFRAME_WATCHER_HTML` env > `public/*.html`**.
@@ -42,12 +44,18 @@ bun run dev          # serves http://localhost:3000
 ## 4. Layout
 
 ```
-src/server.ts              Bun HTTP server: static files, A-Frame/Inspector bundles, POST /save
-public/index.html          Entry point: the <a-scene>, asset declarations, camera rig, hands
-public/scene.html          Scene fragment — game objects, injected at runtime
-public/assets-furniture.html   Large <a-asset-item> catalogue of furniture GLBs
-public/components/*.js     Custom A-Frame components (most work happens here)
-docs/physics.md            Physics + game-design reference (content authority)
+src/server.ts                   Bun HTTP server: static files, A-Frame/Inspector bundles, POST /save
+src/vendor.js                   Bundle entry: npm deps + src/client → public/vendor/bundle.js
+src/client/topics.ts            Builds/parses every MQTT topic
+src/client/adapters.ts          Pure translators: MQTT payloads / gesture streams → machine events
+public/index.html               Entry point: the <a-scene>, asset declarations, camera rig, hands
+public/galley.html              Galley fragment (stations, conveyors), injected by load-fragment
+public/scene.html               Particle showcase fragment (not loaded by default)
+public/xstate/preparation-machine.js   Game state machine + RECIPES (pure, unit-tested)
+public/aframe-components/*.js   Custom A-Frame components (most work happens here)
+public/dev/console-helpers.js   Browser-console helpers: testRecipe(), testGesture(), ...
+public/test-sous-chefs.html     Keyboard MQTT simulator for sous-chefs / head chef
+docs/physics.md                 Physics + game-design reference (content authority)
 ```
 
 ### How the server works (`src/server.ts`)
@@ -59,16 +67,28 @@ Request handling order: `/` → `public/index.html`; then any matching static fi
 `index.html` stays thin. Content lives in fragments pulled in by the `load-fragment` component:
 
 ```html
-<a-entity load-fragment="src: /scene.html; templateId: cosmic-chef-scene"></a-entity>
+<a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-1"></a-entity>
 ```
 
 `load-fragment` fetches the URL, wraps the HTML in a `<template>`, appends it to `<head>`, then clones the content into its own entity.
+
+### How game input flows
+```
+MQTT ─► mqtt-bridge ─► adapters (src/client) ─► preparation-manager.send(event) ─► XState actor
+                                                                                       │
+              galley-manager, sous-chef-gesture-feedback, ... ◄── 'game-state-changed' ┘
+                                                              ◄── 'invalid-gesture'
+```
+- **`preparation-manager` is the only owner of the actor.** Other components read state from the scene's `game-state-changed` event, and send events via `sceneEl.components['preparation-manager'].send(event)`. Never subscribe to the actor directly, poll for it, or put it on `window`.
+- **`mqtt-bridge` is the only MQTT client.** To support a new topic, add its builder/parser to `src/client/topics.ts`, a pure translator to `src/client/adapters.ts` (with a test), and a `case` in `mqtt-bridge.onMessage`.
+- **One event vocabulary** for every input source (MQTT, console, tests): `GESTURE_START` / `GESTURE_TICK` / `GESTURE_STOP` `{ chefId: 'chef-N', gesture, progressAmount? }`, plus `CAPTURE_RECIPE`, `SUBMIT_RECIPE`, `CANCEL_ORDER`, `NEXT_ROUND`, `SET_ACTIVE_CHEFS`. The machine validates gestures and *emits* `invalid-gesture`; `preparation-manager` re-emits it on the scene.
+- **`galley-manager` owns all ingredient entities**: spawning, moving, animating, vacuuming. Don't position or animate ingredients from anywhere else.
 
 ## 5. Conventions
 
 Follow the patterns already present in the codebase.
 
-**Behaviour goes in A-Frame components.** Never add loose scripts that poke at the DOM. Create `public/components/<name>.js`, register it, and add a `<script src="components/<name>.js">` tag in `index.html`:
+**Behaviour goes in A-Frame components.** Never add loose scripts that poke at the DOM. Create `public/aframe-components/<name>.js`, register it, and add a `<script src="aframe-components/<name>.js">` tag in `index.html`:
 
 ```js
 AFRAME.registerComponent('my-thing', {
@@ -77,17 +97,16 @@ AFRAME.registerComponent('my-thing', {
     },
     init: function() {
         const log = window.log.getLogger('my-thing');
-        log.setLevel('debug');
         // ...
     }
 });
 ```
 
 - **Naming:** kebab-case for components and entity ids (`load-fragment`, `world-root`, `table_low` for asset ids mirroring the CDN filename).
-- **Logging:** use `window.log.getLogger('<component-name>')` from loglevel, not bare `console.log`. (`load-fragment.js` still uses `console.error` for its own errors — prefer loglevel in new code.)
+- **Logging:** use `window.log.getLogger('<component-name>')` from loglevel, not bare `console.log`. Don't call `setLevel()` in components: the default (`info`) is set once in `src/vendor.js`, and `debug(true)` in the console switches every logger to debug.
 - **Style:** 4-space indent, `function() {}` rather than arrow functions for A-Frame lifecycle methods, `const`/`let` in bodies.
 - **Scene content:** add game objects to `public/scene.html` (or a new fragment), not directly into `index.html`.
-- **Assets:** declare GLBs as `<a-asset-item>` and reference them with `gltf-model="#id"`. Assets are **always** loaded from the CERN CDN — never commit binary models to the repo.
+- **Assets:** declare GLBs as `<a-asset-item>` and reference them with `gltf-model="#id"`. Models come from the CMC CDN asset folder (`public/assets/models/*` are symlinks to it). Never commit binary models to the repo.
 - **Interaction:** clickable entities need the `clickable` class; the scene raycasters (mouse cursor and both `laser-controls` hands) filter on `objects: .clickable`.
 - **World transform:** put world content under `#world-root`, which the `world-root` component repositions (and `start-experience` resets on `enter-vr`). Do not hardcode global offsets elsewhere.
 
@@ -99,7 +118,9 @@ AFRAME.registerComponent('my-thing', {
 - **`@ts-ignore` in `server.ts` is intentional** — the `with { type: "text" }` imports of the A-Frame bundles have no type declarations. Leave them.
 - **`node:fs` / path work must stay Bun-compatible** (`Bun.file`, `Bun.serve`). Do not introduce Node-only server APIs or an Express-style framework.
 - **AR requires HTTPS** on real devices; `localhost` is exempt for desktop testing.
-- **`RECIPES` in `public/xstate/preparation-machine.js` is the in-code mirror of [`docs/recipes.md`](docs/recipes.md).** Keep the `gesture`/`ingredient`/`composition`/`charge` fields synchronized whenever a recipe there changes. A step's final assembly action (the head chef's "Stir") is modeled as `stepType: 'synchronized'`, requiring a `GESTURE_TICK` with a `chefIds` array covering every active sous-chef, per `docs/game.md`'s "Synchronized Steps (Mega-Fusions)" rule — distinct from the default single-`chefId` sequential steps, and distinct from the generic `slice/dice/stir/smash` mechanic vocabulary in `docs/game-loop.md`.
+- **`RECIPES` in `public/xstate/preparation-machine.js` is the in-code mirror of [`docs/recipes.md`](docs/recipes.md).** Keep the `gesture`/`ingredient`/`composition`/`charge` fields synchronized whenever a recipe there changes. It is the only copy in code: `test-sous-chefs.html` loads the same file. A recipe's final assembly step is marked `stepType: 'synchronized'` (`docs/game.md`, "Synchronized Steps"), but the machine **does not enforce that every chef takes part yet**: any `GESTURE_TICK` with the final gesture advances `stirProgress`, and `chefId` is optional.
+- **Ingredient ids encode their type:** `'<type>-<n>'`, e.g. `'anti-down-1'` → type `'anti-down'`. The type must be a key of `PARTICLE_METADATA` in `quantum-particle.js`.
+- **The A-Frame `animation` component takes `dur`, not `duration`.** An unknown property is silently ignored and the animation runs at the 1000 ms default.
 - **Chef stations are discovered dynamically by `galley-manager.js`.** Each station in `public/galley.html` must have `class="chef-station"` and `data-station-id="SN"` (where N is 1, 2, or 3). The manager queries these attributes at runtime to look up station positions. **If you move a station's position in galley.html, no component code changes are needed** — the manager will discover the new position automatically. Stations are cached after first lookup for efficiency.
 
 ## 7. Verifying changes
@@ -114,9 +135,10 @@ bun test
 
 ### Manual Validation
 1. `bun run dev` and open `http://localhost:3000`.
-2. Check the browser console — loglevel output at debug level shows scene lifecycle (`Scene loaded`, `Entered VR/AR mode`, XR session start/end).
-3. Confirm models actually appear (missing CDN assets fail silently apart from a network error).
-4. For AR paths, test on a WebXR device or emulator; desktop falls back to mouse cursor plus the camera rig at `0 3 4`.
+2. Check the browser console. It lists the console helpers. Run `testRecipe('proton')`, `testGesture('tenderize', 100, 'chef-1')` and so on, or `debug(true)` for verbose logs.
+3. For the MQTT path, run a broker with websockets on `9001`, open `/test-sous-chefs.html` in a second tab and drive gestures from the keyboard.
+4. Confirm models actually appear (missing CDN assets fail silently apart from a network error).
+5. For AR paths, test on a WebXR device or emulator; desktop falls back to mouse cursor plus the camera rig at `0 0 -5.5`.
 
 ## 8. Workflow
 

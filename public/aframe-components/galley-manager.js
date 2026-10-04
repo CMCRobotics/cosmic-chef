@@ -13,7 +13,6 @@ AFRAME.registerComponent('galley-manager', {
 
     init: function () {
         this.log = window.log.getLogger('galley-manager');
-        this.log.setLevel('info');
         this.log.debug('Initializing galley-manager');
 
         // Cache of discovered station positions (lazy-loaded)
@@ -246,7 +245,7 @@ AFRAME.registerComponent('galley-manager', {
             property: 'position',
             from: `${fromPos.x} ${fromPos.y} ${fromPos.z}`,
             to: `${toPos.x} ${toPos.y} ${toPos.z}`,
-            duration,
+            dur: duration,
             easing: 'easeInOutQuad'
         });
 
@@ -265,40 +264,20 @@ AFRAME.registerComponent('galley-manager', {
         el.removeAttribute('anim-space-float');
         el.removeAttribute('animation');
 
-        const startPos = el.getAttribute('position');
-        const startTime = Date.now();
+        el.addEventListener('animationcomplete', () => {
+            // Re-add floating animation once the ingredient has arrived
+            el.setAttribute('anim-space-float', {
+                speed: 0.8,
+                distance: 0.2
+            });
+        }, { once: true });
 
-
-        // Manual interpolation using tick
-        const animate = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-
-            // Easing: easeInOutQuad
-            const t = progress < 0.5
-                ? 2 * progress * progress
-                : -1 + (4 - 2 * progress) * progress;
-
-            const newPos = {
-                x: startPos.x + (deliveryPos.x - startPos.x) * t,
-                y: startPos.y + (deliveryPos.y - startPos.y) * t,
-                z: startPos.z + (deliveryPos.z - startPos.z) * t
-            };
-
-            el.setAttribute('position', newPos);
-
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                // Re-add floating animation after animation completes
-                el.setAttribute('anim-space-float', {
-                    speed: 0.8,
-                    distance: 0.2
-                });
-            }
-        };
-
-        requestAnimationFrame(animate);
+        el.setAttribute('animation', {
+            property: 'position',
+            to: `${deliveryPos.x} ${deliveryPos.y} ${deliveryPos.z}`,
+            dur: duration,
+            easing: 'easeInOutQuad'
+        });
     },
 
     convergeToDeliveryArea: function (context) {
@@ -316,7 +295,7 @@ AFRAME.registerComponent('galley-manager', {
                 el.setAttribute('animation', {
                     property: 'position',
                     to: `${deliveryPos.x} ${deliveryPos.y} ${deliveryPos.z}`,
-                    duration,
+                    dur: duration,
                     easing: 'easeInOutQuad'
                 });
             }
