@@ -185,13 +185,17 @@ AFRAME.registerComponent('recipe-status-button', {
             return;
         }
 
-        if (!this.isReady) {
-            this.log.warn('Recipe not ready yet');
+        if (this.isReady) {
+            // Green O: submit recipe
+            this.publishSubmitToMQTT();
+        } else if (this.currentRecipe) {
+            // Red X: cancel recipe
+            this.publishCancelToMQTT();
+        } else {
+            this.log.warn('No recipe to cancel');
             return;
         }
 
-        // Publish MQTT update — state machine will receive it via mqtt-bridge
-        this.publishSubmitToMQTT();
         this.showSubmitFeedback();
     },
 
@@ -209,6 +213,24 @@ AFRAME.registerComponent('recipe-status-button', {
             // "submitting" → adapter converts to SUBMIT_RECIPE event
             mqttBridge.client.publish(topic, 'submitting', { qos: 1 });
             this.log.info(`Published SUBMIT to MQTT: ${topic}`);
+        } else {
+            this.log.warn('MQTT client not available or not connected');
+        }
+    },
+
+    publishCancelToMQTT: function () {
+        // Publish MQTT event to cancel — state machine will receive it via mqtt-bridge
+        const scene = document.querySelector('a-scene');
+        const mqttBridge = scene?.components['mqtt-bridge'];
+
+        if (mqttBridge && mqttBridge.client && mqttBridge.client.connected) {
+            const gameId = mqttBridge.data?.gameId || 'default';
+            const teamId = mqttBridge.data?.teamId || 'team-1';
+            const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
+
+            // "idle" → adapter converts to CANCEL_ORDER event
+            mqttBridge.client.publish(topic, 'idle', { qos: 1 });
+            this.log.info(`Published CANCEL to MQTT: ${topic}`);
         } else {
             this.log.warn('MQTT client not available or not connected');
         }
