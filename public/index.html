@@ -74,16 +74,20 @@
             <a-asset-item id="asset_frying_pan" src="assets/models/food/frying-pan.glb"></a-asset-item>
 
 
+            <a-asset-item id="asset_blackhole" src="assets/models/blackhole.glb"></a-asset-item>
+
         </a-assets>
 
         <!-- Main world container -->
         <a-entity id="world-root" world-root>
             
             <!-- The light position determines how bright the sun is in the Environment component -->
-            <a-entity environment="preset: starry; stageSize: 100; lightPosition: 0 -0.01 -0.2; ground: none; groundTexture: none;"></a-entity>
+            <a-entity environment="preset: starry; stageSize: 100; lightPosition: 0 -0.01 -0.2; fog: 0.1; ground: none; groundTexture: none;"></a-entity>
             
 
             <a-circle position="0 -30 0" scale="100 100 100" rotation="-90 0 0" color="black"> </a-circle> 
+
+            <a-entity id="primordial-chaos" gltf-model="#asset_blackhole" animation-mixer="clip: *; loop: repeat; timeScale: 0.1" position="0 40 20" scale="20 20 20"></a-entity>
           
 
 
