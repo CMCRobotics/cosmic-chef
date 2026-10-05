@@ -296,15 +296,15 @@ AFRAME.registerComponent('tractor-beam', {
     publishCaptureToMQTT: function () {
         // Publish MQTT event — adapter will convert to CAPTURE_RECIPE
         const scene = document.querySelector('a-scene');
-        const mqttBridge = scene?.components['mqtt-bridge'];
+        const mqttComponent = scene?.components['mqtt-bridge'] || scene?.components['head-chef-mqtt-client'];
 
-        if (mqttBridge && mqttBridge.client && mqttBridge.client.connected) {
-            const gameId = mqttBridge.data?.gameId || 'default';
-            const teamId = mqttBridge.data?.teamId || 'team-1';
+        if (mqttComponent && mqttComponent.client && mqttComponent.client.connected) {
+            const gameId = mqttComponent.data?.gameId || 'default';
+            const teamId = mqttComponent.data?.teamId || 'team-1';
             const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
 
             // "captured" → adapter converts to CAPTURE_RECIPE event
-            mqttBridge.client.publish(topic, 'captured', { qos: 1 });
+            mqttComponent.client.publish(topic, 'captured', { qos: 1 });
             this.log.info(`Published CAPTURE to MQTT: ${topic}`);
         } else {
             this.log.warn('MQTT client not available or not connected');

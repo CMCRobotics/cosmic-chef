@@ -125,14 +125,20 @@ AFRAME.registerComponent('mqtt-bridge', {
         const recipeCaptured = state === 'preparingIngredients' && this.lastState === 'waitingForRecipe';
         this.lastState = state;
 
-        if (!recipeCaptured || !this.client) return;
+        if (!this.client) return;
+
+        // Publish game state for head-chef and other listeners
+        const stateTopic = window.CosmicChef.gameStateTopic(this.data.teamId, this.data.gameId);
+        this.client.publish(stateTopic, JSON.stringify({ state, context }), { qos: 1 });
 
         // Announce the captured recipe (the round/recipe topic is also how recipes arrive;
         // the echo is ignored because the machine only captures in waitingForRecipe)
-        const { name, composition, charge, ingredientSequences, finalStep } = context.currentOrder;
-        const topic = window.CosmicChef.recipeTopic(this.data.teamId, this.data.gameId);
-        this.client.publish(topic, JSON.stringify({ name, composition, charge, ingredientSequences, finalStep }), { qos: 1 });
-        this.log.info(`Published recipe to ${topic}: ${name}`);
+        if (recipeCaptured) {
+            const { name, composition, charge, ingredientSequences, finalStep } = context.currentOrder;
+            const topic = window.CosmicChef.recipeTopic(this.data.teamId, this.data.gameId);
+            this.client.publish(topic, JSON.stringify({ name, composition, charge, ingredientSequences, finalStep }), { qos: 1 });
+            this.log.info(`Published recipe to ${topic}: ${name}`);
+        }
     },
 
     remove: function () {

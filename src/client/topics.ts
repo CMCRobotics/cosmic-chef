@@ -11,7 +11,8 @@
 export type ParsedTopic =
   | { kind: "sous-chef-gesture"; sousChef: number }
   | { kind: "head-chef-submit" }
-  | { kind: "recipe" };
+  | { kind: "recipe" }
+  | { kind: "game-state" };
 
 export function gameTopic(teamId: string, gameId: string): string {
   return `cosmic-chef/team-${teamId}/game-${gameId}`;
@@ -27,6 +28,10 @@ export function headChefSubmitTopic(teamId: string, gameId: string): string {
 
 export function recipeTopic(teamId: string, gameId: string): string {
   return `${gameTopic(teamId, gameId)}/round/recipe`;
+}
+
+export function gameStateTopic(teamId: string, gameId: string): string {
+  return `${gameTopic(teamId, gameId)}/state/broadcast`;
 }
 
 /** All topics a game client subscribes to. */
@@ -48,5 +53,6 @@ export function parseTopic(topic: string, teamId: string, gameId: string): Parse
   if (gesture) return { kind: "sous-chef-gesture", sousChef: parseInt(gesture[1], 10) };
   if (rest === "head-chef/animation/submit-state") return { kind: "head-chef-submit" };
   if (rest === "round/recipe") return { kind: "recipe" };
+  if (rest === "state/broadcast") return { kind: "game-state" };
   return null;
 }
