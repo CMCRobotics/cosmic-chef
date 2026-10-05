@@ -70,18 +70,24 @@ AFRAME.registerComponent('recipe-spawner', {
         const recipeId = `recipe-${this.recipeCount++}`;
         const spawnPos = this.el.getAttribute('position');
 
+        // Pick a random recipe for this crate
+        const availableRecipes = window.RECIPES || [];
+        const selectedRecipe = availableRecipes[Math.floor(Math.random() * availableRecipes.length)];
+        const recipeName = selectedRecipe?.name || 'RECIPE';
+
         // Create recipe entity
         const recipeEl = document.createElement('a-entity');
         recipeEl.setAttribute('id', recipeId);
         recipeEl.setAttribute('class', 'fallable-recipe');
         recipeEl.setAttribute('data-recipe-id', recipeId);
+        recipeEl.setAttribute('data-recipe', JSON.stringify(selectedRecipe)); // Store recipe data
 
-        // Visual: box with text
+        // Visual: bigger box with text
         recipeEl.setAttribute('geometry', {
             primitive: 'box',
-            width: 0.8,
-            height: 0.8,
-            depth: 0.8
+            width: 1.6,
+            height: 1.6,
+            depth: 1.6
         });
         recipeEl.setAttribute('material', {
             color: '#ff6600',
@@ -91,18 +97,57 @@ AFRAME.registerComponent('recipe-spawner', {
             opacity: 0.9
         });
 
-        // Recipe name text
-        const textEl = document.createElement('a-entity');
-        textEl.setAttribute('text', {
-            value: 'RECIPE',
+        // Recipe name text on all sides
+        const textConfig = {
+            value: recipeName.toUpperCase(),
             align: 'center',
             anchor: 'center',
             baseline: 'center',
             color: '#ffffff',
-            fontSize: 40
-        });
-        textEl.setAttribute('position', '0 0 0.41'); // In front of box
-        recipeEl.appendChild(textEl);
+            fontSize: 512,
+            width: 4
+        };
+
+        // Front
+        const frontText = document.createElement('a-entity');
+        frontText.setAttribute('text', textConfig);
+        frontText.setAttribute('position', '0 0 0.81');
+        recipeEl.appendChild(frontText);
+
+        // Back
+        const backText = document.createElement('a-entity');
+        backText.setAttribute('text', textConfig);
+        backText.setAttribute('position', '0 0 -0.81');
+        backText.setAttribute('rotation', '0 180 0');
+        recipeEl.appendChild(backText);
+
+        // Left
+        const leftText = document.createElement('a-entity');
+        leftText.setAttribute('text', textConfig);
+        leftText.setAttribute('position', '-0.81 0 0');
+        leftText.setAttribute('rotation', '0 90 0');
+        recipeEl.appendChild(leftText);
+
+        // Right
+        const rightText = document.createElement('a-entity');
+        rightText.setAttribute('text', textConfig);
+        rightText.setAttribute('position', '0.81 0 0');
+        rightText.setAttribute('rotation', '0 -90 0');
+        recipeEl.appendChild(rightText);
+
+        // Top
+        const topText = document.createElement('a-entity');
+        topText.setAttribute('text', textConfig);
+        topText.setAttribute('position', '0 0.81 0');
+        topText.setAttribute('rotation', '90 0 0');
+        recipeEl.appendChild(topText);
+
+        // Bottom
+        const bottomText = document.createElement('a-entity');
+        bottomText.setAttribute('text', textConfig);
+        bottomText.setAttribute('position', '0 -0.81 0');
+        bottomText.setAttribute('rotation', '-90 0 0');
+        recipeEl.appendChild(bottomText);
 
         // Position at spawn point
         recipeEl.setAttribute('position', `${spawnPos.x} ${spawnPos.y} ${spawnPos.z}`);

@@ -261,8 +261,28 @@ highlightRecipe: function (recipeEl) {
         recipeEl.classList.add('captured-recipe');
         recipeEl.setAttribute('data-captured', 'true');
 
-        // Publish MQTT capture event
-        this.publishCaptureToMQTT();
+        // Extract the recipe from the crate
+        const recipeDataStr = recipeEl.getAttribute('data-recipe');
+        let recipe = null;
+        if (recipeDataStr) {
+            try {
+                recipe = JSON.parse(recipeDataStr);
+                this.log.info(`Recipe from crate: ${recipe.name}`);
+            } catch (e) {
+                this.log.error('Failed to parse recipe from crate', e);
+            }
+        }
+
+        // Send CAPTURE_RECIPE event to the state machine with the recipe
+        const scene = document.querySelector('a-scene');
+        const prepMgr = scene?.components['preparation-manager'];
+        if (prepMgr && recipe) {
+            prepMgr.send({ type: 'CAPTURE_RECIPE', recipe });
+            this.log.info(`Sent CAPTURE_RECIPE to state machine: ${recipe.name}`);
+        } else {
+            // Fallback: publish MQTT capture event
+            this.publishCaptureToMQTT();
+        }
 
         // Notify recipe-spawner that recipe was captured
         const spawner = document.querySelector('[recipe-spawner]');
