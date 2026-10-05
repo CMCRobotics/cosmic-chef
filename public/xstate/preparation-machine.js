@@ -193,11 +193,11 @@ const preparationMachine = createMachine({
         },
         orderSuccess: {
             entry: ['incrementScore', 'incrementSuccessCount'],
-            on: { NEXT_ROUND: 'waitingForRecipe' }
+            on: { NEXT_ROUND: { target: 'waitingForRecipe', actions: 'resetRecipeState' } }
         },
         orderPenalized: {
             entry: ['applyPenalty', 'incrementPenalizedCount'],
-            on: { NEXT_ROUND: 'waitingForRecipe' }
+            on: { NEXT_ROUND: { target: 'waitingForRecipe', actions: 'resetRecipeState' } }
         },
         gameOver: { type: 'final' }
     }
@@ -206,9 +206,19 @@ const preparationMachine = createMachine({
         setActiveChefs: assign(({ event }) => ({
             activeChefsCount: typeof event.count === 'number' ? event.count : 1
         })),
+        resetRecipeState: assign(({ context }) => ({
+            currentOrder: null,
+            stations: context.stations.map(station => clearStation({ stationId: station.stationId, chefId: station.chefId })),
+            ingredients: [],
+            ingredientQueue: [],
+            stirProgress: 0
+        })),
         initializeRecipe: assign(({ event, context }) => {
-            const recipe = (event.recipe && event.recipe.ingredientSequences) ? event.recipe : RECIPES[Math.floor(Math.random() * RECIPES.length)];
-            getLogger().info('Recipe Captured:', recipe.name);
+            getLogger().info('initializeRecipe called with event.recipe:', event.recipe);
+            const hasIngredients = event.recipe && event.recipe.ingredientSequences;
+            getLogger().info('Has ingredientSequences?', hasIngredients);
+            const recipe = hasIngredients ? event.recipe : RECIPES[Math.floor(Math.random() * RECIPES.length)];
+            getLogger().info('Recipe Captured:', recipe.name, '| From crate?', hasIngredients);
 
             const ingredientIds = Object.keys(recipe.ingredientSequences);
             const ingredientQueue = ingredientIds.slice();
