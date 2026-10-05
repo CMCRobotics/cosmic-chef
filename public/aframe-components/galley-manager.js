@@ -379,19 +379,15 @@ AFRAME.registerComponent('galley-manager', {
         // Schedule state reset after vacuum completes (for both cancellation and submission)
         setTimeout(() => {
             this.clearAllIngredients();
-            this.sendNextRound();
+            this.requestNextRound();
             this.vacuumInProgress = false;
         }, this.data.vacuumResetDelay);
     },
 
-    sendNextRound: function () {
-        const prepMgr = this.el.sceneEl.components['preparation-manager'];
-        if (prepMgr) {
-            this.log.info('Sending NEXT_ROUND to state machine');
-            prepMgr.send({ type: 'NEXT_ROUND' });
-        } else {
-            this.log.error('Could not find preparation-manager to send NEXT_ROUND');
-        }
+    requestNextRound: function () {
+        // Emit event for mqtt-bridge to handle (decoupled from preparation-manager)
+        this.log.info('Requesting NEXT_ROUND');
+        this.el.sceneEl.emit('next-round-requested');
     },
 
     showInvalidGestureIndicator: function (stationId, chefId) {

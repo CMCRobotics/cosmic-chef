@@ -34,6 +34,13 @@ AFRAME.registerComponent('mqtt-bridge', {
         this.onStateChange = this.onStateChange.bind(this);
         this.el.addEventListener('game-state-changed', this.onStateChange);
 
+        // Listen for next-round requests from galley-manager (decoupled from direct calls)
+        this.onNextRoundRequested = () => {
+            this.log.info('Next round requested, sending NEXT_ROUND to state machine');
+            this.prepMgr.send({ type: 'NEXT_ROUND' });
+        };
+        this.el.addEventListener('next-round-requested', this.onNextRoundRequested);
+
         this.connect();
     },
 
@@ -143,6 +150,7 @@ AFRAME.registerComponent('mqtt-bridge', {
 
     remove: function () {
         this.el.removeEventListener('game-state-changed', this.onStateChange);
+        this.el.removeEventListener('next-round-requested', this.onNextRoundRequested);
         this.gestureSubscription.unsubscribe();
         if (this.client) {
             this.client.end();
