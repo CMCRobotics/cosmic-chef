@@ -38,16 +38,10 @@ export function headChefMessageToEvent(payload: string): GameEvent | null {
   switch (payload.trim().toLowerCase()) {
     case "idle":
       return { type: "CANCEL_ORDER" };
-    case "captured": {
-      // Check if a recipe was stored globally from the head-chef crate
-      const capturedRecipe = (window as any)._capturedRecipe;
-      const event: any = { type: "CAPTURE_RECIPE" };
-      if (capturedRecipe && capturedRecipe.ingredientSequences) {
-        event.recipe = capturedRecipe;
-        (window as any)._capturedRecipe = null; // Clear after use
-      }
-      return event;
-    }
+    case "captured":
+      // Recipe is sent separately via the recipe topic with recipeMessageToEvent
+      // This is just a trigger event; actual recipe comes from MQTT recipe topic
+      return { type: "CAPTURE_RECIPE" };
     case "submitting":
       return { type: "SUBMIT_RECIPE" };
     default:

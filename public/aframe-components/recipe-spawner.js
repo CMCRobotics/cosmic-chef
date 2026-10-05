@@ -74,6 +74,7 @@ AFRAME.registerComponent('recipe-spawner', {
         const availableRecipes = window.RECIPES || [];
         const selectedRecipe = availableRecipes[Math.floor(Math.random() * availableRecipes.length)];
         const recipeName = selectedRecipe?.name || 'RECIPE';
+        this.log.info(`Spawning crate with recipe: ${recipeName}`, selectedRecipe);
 
         // Create recipe entity
         const recipeEl = document.createElement('a-entity');

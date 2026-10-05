@@ -274,14 +274,8 @@ highlightRecipe: function (recipeEl) {
             }
         }
 
-        // Store the captured recipe globally so the MQTT adapter can access it
-        if (recipe) {
-            window._capturedRecipe = recipe;
-            this.log.info(`Stored captured recipe globally: ${recipe.name}`);
-        }
-
-        // Publish MQTT capture event (adapter will use the stored recipe if available)
-        this.publishCaptureToMQTT();
+        // Publish MQTT capture event and recipe data
+        this.publishCaptureToMQTT(recipe);
 
         // Notify recipe-spawner that recipe was captured
         const spawner = document.querySelector('[recipe-spawner]');
@@ -292,17 +286,26 @@ highlightRecipe: function (recipeEl) {
         }
     },
 
-    publishCaptureToMQTT: function () {
+    publishCaptureToMQTT: function (recipe) {
         const scene = document.querySelector('a-scene');
         const mqttComponent = scene?.components['mqtt-bridge'] || scene?.components['head-chef-mqtt-client'];
 
         if (mqttComponent && mqttComponent.client && mqttComponent.client.connected) {
             const gameId = mqttComponent.data?.gameId || 'default';
             const teamId = mqttComponent.data?.teamId || 'team-1';
-            const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
 
-            mqttComponent.client.publish(topic, 'captured', { qos: 1 });
-            this.log.info(`Published CAPTURE to MQTT: ${topic}`);
+            // Publish recipe data to recipe topic (if available)
+            if (recipe && recipe.ingredientSequences) {
+                const recipeTopic = `cosmic-chef/team-${teamId}/game-${gameId}/round/recipe`;
+                const recipePayload = JSON.stringify(recipe);
+                mqttComponent.client.publish(recipeTopic, recipePayload, { qos: 1 });
+                this.log.info(`Published recipe to MQTT: ${recipeTopic}`);
+            }
+
+            // Publish capture state to trigger the capture in state machine
+            const submitTopic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
+            mqttComponent.client.publish(submitTopic, 'captured', { qos: 1 });
+            this.log.info(`Published CAPTURE state to MQTT: ${submitTopic}`);
         } else {
             this.log.warn('MQTT client not available or not connected');
         }
