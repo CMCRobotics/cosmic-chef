@@ -39,7 +39,7 @@ AFRAME.registerComponent('head-chef-status-display', {
             align: 'center',
             anchor: 'center',
             baseline: 'center',
-            width: 15,
+            width: 50,
             color: '#00ff00',
             wrapCount: 100,
             fontSize: 120
@@ -47,9 +47,9 @@ AFRAME.registerComponent('head-chef-status-display', {
 
         // Position centered on the screen (screen is at 0 2.7 -5.2)
         // Offset slightly forward from screen surface
-        textEl.setAttribute('position', '0 0 0.1');
+        textEl.setAttribute('position', '0 2.7 0.1');
         textEl.setAttribute('rotation', '0 0 0'); // Face the screen directly
-        textEl.setAttribute('scale', '0.64 0.64 0.64'); // 8x larger (0.08 * 8)
+        textEl.setAttribute('scale', '0.4 0.25 0.4'); // 8x larger (0.08 * 8)
 
         // Add semi-transparent background panel behind text
         const panelEl = document.createElement('a-entity');
