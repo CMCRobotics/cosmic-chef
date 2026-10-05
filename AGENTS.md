@@ -122,6 +122,7 @@ AFRAME.registerComponent('my-thing', {
 - **Ingredient ids encode their type:** `'<type>-<n>'`, e.g. `'anti-down-1'` → type `'anti-down'`. The type must be a key of `PARTICLE_METADATA` in `quantum-particle.js`.
 - **The A-Frame `animation` component takes `dur`, not `duration`.** An unknown property is silently ignored and the animation runs at the 1000 ms default.
 - **Chef stations are discovered dynamically by `galley-manager.js`.** Each station in `public/galley.html` must have `class="chef-station"` and `data-station-id="SN"` (where N is 1, 2, or 3). The manager queries these attributes at runtime to look up station positions. **If you move a station's position in galley.html, no component code changes are needed** — the manager will discover the new position automatically. Stations are cached after first lookup for efficiency.
+- **`head-chef.html` and `index.html` (galley) are separate HTML documents with separate `window` contexts.** The head-chef runs in its own window at `/head-chef.html`, the galley at `/`. They cannot share global variables or `window` state. All cross-window communication must go through **MQTT only** — never use `window._capturedRecipe` or other globals. Both windows subscribe to the same MQTT topics, so data sent through MQTT reaches both: when head-chef captures a recipe, it publishes to the recipe topic, and mqtt-bridge in the galley receives it.
 
 ## 7. Verifying changes
 
