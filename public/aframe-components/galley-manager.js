@@ -88,17 +88,22 @@ AFRAME.registerComponent('galley-manager', {
     onStateChange: function (state, context) {
         this.log.debug(`State: ${state}, Ingredients: ${context.ingredients.length}, Stations: ${context.stations.length}`);
 
-        // Handle new recipe: clear old ingredient entities when recipe changes
-        if (context.currentOrder && context.currentOrder.name !== this.lastRecipeName) {
+        // Clear ingredients when entering preparingIngredients (new recipe captured)
+        if (state === 'preparingIngredients' && this.lastState !== 'preparingIngredients') {
             this.clearAllIngredients();
+        }
+
+        // Also handle recipe name changes as a defensive check
+        if (context.currentOrder && context.currentOrder.name !== this.lastRecipeName) {
             this.lastRecipeName = context.currentOrder.name;
         }
 
-        // Sync ingredient entities with context.stations
-        this.syncIngredientsWithStations(context);
-
-        // Update gesture animations based on progress
-        this.updateGestureAnimations(context);
+        // Only sync ingredients when actively in a recipe state
+        const isRecipeActive = ['preparingIngredients', 'checkIfAllReady', 'readyForFinalStir', 'recipeReadyForSubmit'].includes(state);
+        if (isRecipeActive) {
+            this.syncIngredientsWithStations(context);
+            this.updateGestureAnimations(context);
+        }
 
         // Handle state-specific transitions
         if (state === 'readyForFinalStir') {
@@ -373,6 +378,7 @@ AFRAME.registerComponent('galley-manager', {
 
         // Schedule state reset after vacuum completes (for both cancellation and submission)
         setTimeout(() => {
+            this.clearAllIngredients();
             this.sendNextRound();
             this.vacuumInProgress = false;
         }, this.data.vacuumResetDelay);
