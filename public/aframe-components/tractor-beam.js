@@ -1,236 +1,209 @@
 /**
  * tractor-beam.js
- * Captures recipes with a semi-transparent cylinder visual.
- * Attached to controller; trigger to activate, release to place on intake.
+ * Allows head chef to aim and select recipes from falling recipes.
+ * Raycasts from camera forward; highlights intersected recipe; capture on "b" press.
  */
 
 AFRAME.registerComponent('tractor-beam', {
     schema: {
-        maxDistance: { type: 'number', default: 30 }, // max reach in units
-        pullSpeed: { type: 'number', default: 0.15 }, // lerp factor per frame
-        cylinderRadius: { type: 'number', default: 0.5 }, // tractor beam width
-        cylinderOpacity: { type: 'number', default: 0.3 } // transparency
+        maxDistance: { type: 'number', default: 100 }, // max raycast distance
+        highlightEmissive: { type: 'string', default: '#ffff00' }, // yellow glow for targeted recipe
+        highlightIntensity: { type: 'number', default: 0.8 } // glow intensity
     },
 
     init: function () {
         this.log = window.log.getLogger('tractor-beam');
         this.log.debug('Initializing tractor-beam');
 
-        this.isActive = false;
-        this.targetRecipe = null;
-        this.beamVisual = null;
-        this.controller = this.el; // The controller this is attached to
+        this.keyPressed = false;
+        this.targetRecipe = null; // currently highlighted by raycast
+        this.capturedRecipe = null; // recipe being pulled to intake
+        this.originalMaterial = null; // store original recipe material for unhighlighting
 
-        // Track trigger state
-        this.triggerPressed = false;
-        this.mouseDown = false;
+        // Get camera for raycasting
+        this.camera = document.querySelector('a-camera');
+        if (!this.camera) {
+            this.log.error('Camera not found - tractor beam cannot aim');
+            return;
+        }
 
-        // Listen for VR controller events
-        this.controller.addEventListener('triggerdown', () => this.onTriggerDown());
-        this.controller.addEventListener('triggerup', () => this.onTriggerUp());
+        // Listen for keyboard events
+        document.addEventListener('keydown', (e) => this.onKeyDown(e));
+        document.addEventListener('keyup', (e) => this.onKeyUp(e));
 
-        // Listen for mouse events (desktop testing)
-        document.addEventListener('mousedown', (e) => this.onMouseDown(e));
-        document.addEventListener('mouseup', () => this.onMouseUp());
-        document.addEventListener('mousemove', () => this.tick());
-
-        // Update loop for pulling recipe toward hand
+        // Update loop for aiming beam and pulling recipe
         this.tick = AFRAME.utils.throttleTick(this.tick.bind(this), 60); // 60fps cap
 
-        this.log.debug('Tractor beam ready');
+        this.log.debug('Tractor beam ready - aim with camera, press "b" to capture');
     },
 
-    onTriggerDown: function () {
-        this.log.debug('Trigger pressed');
-        this.triggerPressed = true;
-        this.activateTractorBeam();
-    },
-
-    onMouseDown: function (e) {
-        // Only use mouse if clicking on a recipe
-        const intersected = this.getIntersectedRecipe(e);
-        if (intersected) {
-            this.log.debug('Mouse clicked on recipe');
-            this.mouseDown = true;
-            this.activateTractorBeam();
+    onKeyDown: function (e) {
+        if (e.key.toLowerCase() === 'b' && !this.keyPressed) {
+            this.keyPressed = true;
+            this.captureTargetRecipe();
         }
     },
 
-    activateTractorBeam: function () {
-        // Raycast for recipes
-        const intersection = this.findClosestRecipe();
-        if (intersection) {
-            this.targetRecipe = intersection.el;
-            this.isActive = true;
-
-            // Find intake hopper target position
-            this.intakeHopper = document.querySelector('.recipe-team-intake');
-            if (!this.intakeHopper) {
-                this.log.warn('Intake hopper not found');
-                this.isActive = false;
-                return;
+    onKeyUp: function (e) {
+        if (e.key.toLowerCase() === 'b') {
+            this.keyPressed = false;
+            if (this.capturedRecipe) {
+                this.placeRecipeOnIntake(this.capturedRecipe);
             }
-
-            this.log.info(`Locked onto recipe: ${this.targetRecipe.id}, pulling to intake`);
-
-            // Create tractor beam visual
-            this.createBeamVisual();
-        } else {
-            this.log.debug('No recipe in range');
         }
-    },
-
-    onTriggerUp: function () {
-        this.log.debug('Trigger released');
-        this.triggerPressed = false;
-
-        if (this.targetRecipe && this.isActive) {
-            // Place recipe on intake hopper
-            this.placeRecipeOnIntake(this.targetRecipe);
-        }
-
-        // Clean up
-        this.isActive = false;
-        this.targetRecipe = null;
-        this.removeBeamVisual();
-    },
-
-    onMouseUp: function () {
-        this.log.debug('Mouse released');
-        this.mouseDown = false;
-
-        if (this.targetRecipe && this.isActive) {
-            // Place recipe on intake hopper
-            this.placeRecipeOnIntake(this.targetRecipe);
-        }
-
-        // Clean up
-        this.isActive = false;
-        this.targetRecipe = null;
-        this.removeBeamVisual();
-    },
-
-    getIntersectedRecipe: function (e) {
-        // Simple raycast from mouse position
-        const canvas = document.querySelector('a-scene').canvas;
-        const x = (e.clientX / canvas.clientWidth) * 2 - 1;
-        const y = -(e.clientY / canvas.clientHeight) * 2 + 1;
-
-        // Get recipes in scene
-        const recipes = document.querySelectorAll('.fallable-recipe');
-        if (recipes.length === 0) return null;
-
-        // For simplicity, find closest recipe to mouse
-        // In full VR, this would be a proper raycast
-        return recipes[0]; // Click any recipe to activate (closest found during findClosestRecipe)
-    },
-
-    findClosestRecipe: function () {
-        // Query for all fallable-recipe entities
-        const recipes = document.querySelectorAll('.fallable-recipe');
-        let closest = null;
-        let minDistance = this.data.maxDistance;
-
-        const controllerPos = this.controller.getAttribute('position');
-
-        recipes.forEach((recipeEl) => {
-            const recipePos = recipeEl.getAttribute('position');
-            const distance = this.distance(controllerPos, recipePos);
-
-            if (distance < minDistance) {
-                minDistance = distance;
-                closest = {
-                    el: recipeEl,
-                    distance: distance,
-                    pos: recipePos
-                };
-            }
-        });
-
-        return closest;
-    },
-
-    distance: function (p1, p2) {
-        const dx = p1.x - p2.x;
-        const dy = p1.y - p2.y;
-        const dz = p1.z - p2.z;
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
-    },
-
-    createBeamVisual: function () {
-        if (this.beamVisual) {
-            this.removeBeamVisual();
-        }
-
-        const beam = document.createElement('a-entity');
-        beam.setAttribute('id', 'tractor-beam-visual');
-        beam.setAttribute('geometry', {
-            primitive: 'cylinder',
-            radius: this.data.cylinderRadius,
-            height: this.data.maxDistance
-        });
-        beam.setAttribute('material', {
-            color: '#00ffff',
-            emissive: '#00ffff',
-            emissiveIntensity: 0.6,
-            transparent: true,
-            opacity: this.data.cylinderOpacity
-        });
-
-        // Position at controller origin pointing toward recipe
-        beam.setAttribute('position', '0 0 0');
-        beam.setAttribute('rotation', '90 0 0'); // Orient cylinder along Z-axis
-
-        this.controller.appendChild(beam);
-        this.beamVisual = beam;
-
-        this.log.debug('Tractor beam visual created');
-    },
-
-    removeBeamVisual: function () {
-        if (this.beamVisual && this.beamVisual.parentNode) {
-            this.beamVisual.remove();
-        }
-        this.beamVisual = null;
     },
 
     tick: function () {
-        if (!this.isActive || !this.targetRecipe || !this.intakeHopper) return;
+        // Continuously raycast to find what recipe the head chef is aiming at
+        const raycasted = this.raycastForRecipe();
 
-        // Lerp recipe position toward intake hopper
-        const recipePos = this.targetRecipe.getAttribute('position');
-        const intakePos = this.intakeHopper.getAttribute('position');
-
-        // Pull recipe upward and toward intake
-        const newPos = {
-            x: recipePos.x + (intakePos.x - recipePos.x) * this.data.pullSpeed,
-            y: recipePos.y + (intakePos.y - recipePos.y) * this.data.pullSpeed,
-            z: recipePos.z + (intakePos.z - recipePos.z) * this.data.pullSpeed
-        };
-
-        this.targetRecipe.setAttribute('position', `${newPos.x} ${newPos.y} ${newPos.z}`);
-
-        // Scale up recipe as it gets closer (visual effect)
-        const distance = this.distance(newPos, intakePos);
-        const scaleFactor = Math.max(0.6, 1.5 - (distance / this.data.maxDistance));
-        this.targetRecipe.setAttribute('scale', `${scaleFactor} ${scaleFactor} ${scaleFactor}`);
-
-        // Update beam to point from recipe to intake
-        if (this.beamVisual) {
-            this.beamVisual.setAttribute('scale', `1 ${distance / 10} 1`);
+        // Update highlight on new target
+        if (raycasted !== this.targetRecipe) {
+            if (this.targetRecipe) {
+                this.unhighlightRecipe(this.targetRecipe);
+            }
+            this.targetRecipe = raycasted;
+            if (this.targetRecipe) {
+                this.highlightRecipe(this.targetRecipe);
+            }
         }
 
-        // Check if recipe reached intake (close enough to place)
+        // If holding a recipe, pull it toward intake
+        if (this.capturedRecipe) {
+            this.pullRecipeToIntake(this.capturedRecipe);
+        }
+    },
+
+    raycastForRecipe: function () {
+        // Get camera three.js object
+        const cameraObj3D = this.camera.object3D;
+        if (!cameraObj3D) return null;
+
+        // Get camera world position and direction
+        const worldPos = new THREE.Vector3();
+        cameraObj3D.getWorldPosition(worldPos);
+
+        const direction = new THREE.Vector3(0, 0, -1);
+        direction.applyQuaternion(cameraObj3D.quaternion);
+
+        // Raycast using three.js raycaster
+        const raycaster = new THREE.Raycaster(worldPos, direction.normalize());
+
+        // Get all recipe entities and their geometry
+        const recipes = document.querySelectorAll('.fallable-recipe');
+        const recipeMeshes = Array.from(recipes).map(el => {
+            const obj3D = el.object3D;
+            if (obj3D) {
+                // Traverse the object to find all meshes
+                const meshes = [];
+                obj3D.traverse((child) => {
+                    if (child.isMesh) {
+                        child.userData.recipeEl = el;
+                        meshes.push(child);
+                    }
+                });
+                return meshes;
+            }
+            return [];
+        }).flat();
+
+        if (recipeMeshes.length === 0) return null;
+
+        const intersects = raycaster.intersectObjects(recipeMeshes);
+        if (intersects.length > 0) {
+            const firstHit = intersects[0].object;
+            return firstHit.userData.recipeEl;
+        }
+
+        return null;
+    },
+
+highlightRecipe: function (recipeEl) {
+        if (!recipeEl) return;
+
+        const materialComponent = recipeEl.getAttribute('material');
+        this.originalMaterial = materialComponent;
+
+        // Add yellow glow to highlight
+        recipeEl.setAttribute('material', {
+            color: materialComponent.color || '#ff6600',
+            emissive: this.data.highlightEmissive,
+            emissiveIntensity: this.data.highlightIntensity,
+            transparent: true,
+            opacity: materialComponent.opacity || 0.9
+        });
+
+        this.log.debug(`Highlighted recipe: ${recipeEl.id}`);
+    },
+
+    unhighlightRecipe: function (recipeEl) {
+        if (!recipeEl || !this.originalMaterial) return;
+
+        recipeEl.setAttribute('material', this.originalMaterial);
+        this.originalMaterial = null;
+
+        this.log.debug(`Unhighlighted recipe: ${recipeEl.id}`);
+    },
+
+    captureTargetRecipe: function () {
+        if (!this.targetRecipe) {
+            this.log.debug('No recipe targeted');
+            return;
+        }
+
+        this.capturedRecipe = this.targetRecipe;
+        this.log.info(`Captured recipe: ${this.capturedRecipe.id}`);
+    },
+
+    pullRecipeToIntake: function (recipeEl) {
+        const intakeEls = document.querySelectorAll('.recipe-team-intake');
+        if (intakeEls.length === 0) return;
+
+        // Find closest intake
+        const recipePos = recipeEl.getAttribute('position');
+        let closestIntake = intakeEls[0];
+        let minDist = Infinity;
+
+        intakeEls.forEach((el) => {
+            const intakePos = el.getAttribute('position');
+            const dx = recipePos.x - intakePos.x;
+            const dy = recipePos.y - intakePos.y;
+            const dz = recipePos.z - intakePos.z;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (dist < minDist) {
+                minDist = dist;
+                closestIntake = el;
+            }
+        });
+
+        const intakePos = closestIntake.getAttribute('position');
+
+        // Smoothly lerp recipe toward intake
+        const lerpFactor = 0.1; // adjust for speed
+        const newPos = {
+            x: recipePos.x + (intakePos.x - recipePos.x) * lerpFactor,
+            y: recipePos.y + (intakePos.y - recipePos.y) * lerpFactor,
+            z: recipePos.z + (intakePos.z - recipePos.z) * lerpFactor
+        };
+
+        recipeEl.setAttribute('position', `${newPos.x} ${newPos.y} ${newPos.z}`);
+
+        // Scale up as it gets closer
+        const distance = Math.sqrt(
+            (newPos.x - intakePos.x) ** 2 +
+            (newPos.y - intakePos.y) ** 2 +
+            (newPos.z - intakePos.z) ** 2
+        );
+        const scaleFactor = Math.max(0.6, 1.5 - (distance / this.data.maxDistance));
+        recipeEl.setAttribute('scale', `${scaleFactor} ${scaleFactor} ${scaleFactor}`);
+
+        // Check if reached intake
         if (distance < 1.0) {
-            this.placeRecipeOnIntake(this.targetRecipe);
-            this.isActive = false;
-            this.targetRecipe = null;
-            this.removeBeamVisual();
+            this.finalizeCaptureOnIntake(recipeEl);
         }
     },
 
     placeRecipeOnIntake: function (recipeEl) {
-        // Find the closest recipe-team-intake hopper (galley intake)
         const intakeEls = document.querySelectorAll('.recipe-team-intake');
         if (intakeEls.length === 0) {
             this.log.error('Recipe intake hoppers not found');
@@ -255,14 +228,13 @@ AFRAME.registerComponent('tractor-beam', {
         });
 
         const intakeEl = closest;
-
         const intakePos = intakeEl.getAttribute('position');
         const intakeScale = intakeEl.getAttribute('scale') || { x: 1, y: 1, z: 1 };
 
         // Position recipe on top of intake (slightly above)
         const placedPos = {
             x: intakePos.x,
-            y: intakePos.y + (intakeScale.y * 1.2), // slightly above hopper
+            y: intakePos.y + (intakeScale.y * 1.2),
             z: intakePos.z
         };
 
@@ -277,11 +249,19 @@ AFRAME.registerComponent('tractor-beam', {
         // Reset scale
         recipeEl.setAttribute('scale', '0.6 0.6 0.6');
 
+        // Clean up
+        this.unhighlightRecipe(recipeEl);
+        this.capturedRecipe = null;
+
+        this.finalizeCaptureOnIntake(recipeEl);
+    },
+
+    finalizeCaptureOnIntake: function (recipeEl) {
         // Add captured class and mark as placed
         recipeEl.classList.add('captured-recipe');
         recipeEl.setAttribute('data-captured', 'true');
 
-        // Publish MQTT capture event (will update state machine via adapter)
+        // Publish MQTT capture event
         this.publishCaptureToMQTT();
 
         // Notify recipe-spawner that recipe was captured
@@ -289,12 +269,11 @@ AFRAME.registerComponent('tractor-beam', {
         if (spawner && spawner.components['recipe-spawner']) {
             const recipeId = recipeEl.getAttribute('data-recipe-id');
             spawner.components['recipe-spawner'].captureRecipe(recipeId);
-            this.log.info(`Recipe placed on intake: ${recipeId}`);
+            this.log.info(`Recipe captured: ${recipeId}`);
         }
     },
 
     publishCaptureToMQTT: function () {
-        // Publish MQTT event — adapter will convert to CAPTURE_RECIPE
         const scene = document.querySelector('a-scene');
         const mqttComponent = scene?.components['mqtt-bridge'] || scene?.components['head-chef-mqtt-client'];
 
@@ -303,7 +282,6 @@ AFRAME.registerComponent('tractor-beam', {
             const teamId = mqttComponent.data?.teamId || 'team-1';
             const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
 
-            // "captured" → adapter converts to CAPTURE_RECIPE event
             mqttComponent.client.publish(topic, 'captured', { qos: 1 });
             this.log.info(`Published CAPTURE to MQTT: ${topic}`);
         } else {
@@ -312,7 +290,9 @@ AFRAME.registerComponent('tractor-beam', {
     },
 
     remove: function () {
-        this.removeBeamVisual();
+        if (this.targetRecipe) {
+            this.unhighlightRecipe(this.targetRecipe);
+        }
         this.log.debug('Tractor beam removed');
     }
 });

@@ -29,6 +29,7 @@
     <script src="aframe-components/head-chef-manager.js"></script>
     <script src="aframe-components/recipe-spawner.js"></script>
     <script src="aframe-components/tractor-beam.js"></script>
+    <script src="aframe-components/head-chef-camera-zoom.js"></script>
     <script src="aframe-components/head-chef-status-display.js"></script>
     <script src="aframe-components/recipe-status-button.js"></script>
 
@@ -84,7 +85,7 @@
 
         <!-- Camera Rig -->
         <a-entity id="cameraRig" position="0 2.6 4">
-            <a-camera position="0 0 0"></a-camera>
+            <a-camera position="0 0 0" head-chef-camera-zoom="minZoom: 0.8; maxZoom: 60.0; defaultZoom: 0.8; zoomSpeed: 2; zoomSmoothness: 0.5; FOV: 65; minFOV: 35; maxFOV: 65"></a-camera>
         </a-entity>
 
     </a-scene>

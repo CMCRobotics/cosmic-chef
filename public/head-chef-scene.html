@@ -12,12 +12,12 @@
 <a-entity sous-chef-gesture-feedback="chefId: chef-1" position="1 1.5 -2"></a-entity>
 
 <!-- Recipe spawn area (positioned above galley) -->
-<a-entity id="head-chef-workspace" position="0 6 0">
+<a-entity id="head-chef-workspace" position="0 30 0">
 
     <!-- Recipe Spawn Point (recipes fall from here at galley center) -->
     <a-entity
         id="recipe-spawn-zone"
-        recipe-spawner
+        recipe-spawner="fallDistance: 40"
         position="0 0 0">
     </a-entity>
 

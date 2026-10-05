@@ -22,14 +22,14 @@ AFRAME.registerComponent('recipe-spawner', {
         this.spawnHandle = null;
         this.isSpawning = false;
 
+        const scene = this.el.sceneEl;
+
         // Listen to game state to start/stop spawning
-        const scene = document.querySelector('a-scene');
         scene.addEventListener('game-state-changed', (evt) => {
             this.onGameStateChange(evt.detail.state, evt.detail.context);
         });
 
         // Start spawning when scene is loaded, or immediately if already loaded
-        const scene = this.el.sceneEl;
         if (scene.hasLoaded) {
             this.startSpawning();
         } else {
