@@ -28,6 +28,7 @@
     <script src="aframe-components/quantum-particle.js"></script>
     <script src="aframe-components/animations/anim-space-float.js"></script>
     <script src="aframe-components/final-stir-camera.js"></script>
+    <script src="aframe-components/camera-focus-galley.js"></script>
     <script src="dev/url-params.js"></script>
 
 </head>
@@ -135,7 +136,7 @@
         <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .clickable"></a-entity>
 
         <!-- Camera Rig -->
-        <a-entity id="cameraRig" final-stir-camera rotation="-10 180 0" position="0 0 -5.5">
+        <a-entity id="cameraRig" final-stir-camera camera-focus-galley="distance: 5; lookDownDegrees: 15" rotation="-10 180 0" position="0 0 -5.5">
             <a-camera position="0 2.5 0"></a-camera>
         </a-entity>
       
