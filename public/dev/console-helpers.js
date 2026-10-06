@@ -13,6 +13,11 @@
         log.info(`🎮 Running as team: ${window.CURRENT_TEAM.toUpperCase()}`);
     }
 
+    // Auto-focus on camera-focus-galley logs by default
+    setTimeout(() => {
+        focusLog('camera-focus-galley');
+    }, 100);
+
     function prepMgr() {
         return scene.components['preparation-manager'];
     }
@@ -38,6 +43,24 @@
         window.log.setLevel(level);
         window.log.rebuild(); // propagate to named loggers
         log.info(`Log level set to: ${level}`);
+    };
+
+    window.silence = function (loggerNames = []) {
+        const defaults = ['preparation-manager', 'mqtt-bridge', 'head-chef-state-receiver', 'team-galley-receiver', 'galley-manager'];
+        const targets = loggerNames.length > 0 ? loggerNames : defaults;
+        targets.forEach(name => {
+            window.log.getLogger(name).setLevel('warn');
+        });
+        log.info(`Silenced loggers: ${targets.join(', ')}`);
+    };
+
+    window.focusLog = function (loggerName = 'camera-focus-galley') {
+        const allLoggers = ['preparation-manager', 'mqtt-bridge', 'head-chef-state-receiver', 'team-galley-receiver', 'galley-manager', 'load-fragment', 'start-experience', 'world-root', 'galley-layout', 'final-stir-camera'];
+        allLoggers.forEach(name => {
+            window.log.getLogger(name).setLevel('warn');
+        });
+        window.log.getLogger(loggerName).setLevel('info');
+        log.info(`Focusing on: ${loggerName}`);
     };
 
     window.getGameState = snapshot;
