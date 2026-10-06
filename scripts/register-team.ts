@@ -43,7 +43,7 @@ async function registerTeam() {
   return new Promise<void>((resolve, reject) => {
     client.on("connect", async () => {
       try {
-        const gameId = `session-${Date.now()}`;
+        const gameId = "default";  // Use fixed gameId so all teams share the same game session
         const headChefId = `player-head-${teamId}`;
         const sousChefIds = Array.from({ length: numSousChefs }, (_, i) =>
           `player-sous-${teamId}-${i + 1}`
