@@ -40,6 +40,7 @@
         webxr="optionalFeatures: hit-test, local-floor, hand-tracking; requiredFeatures: local-floor;"
         renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
         cursor="rayOrigin: mouse"
+        fog="color: #1d1d1e; distance: 800;"
         raycaster="objects: .clickable"
         inspector="url: /aframe-inspector.min.js">
       
@@ -76,16 +77,19 @@
 
             <a-asset-item id="asset_blackhole" src="assets/models/blackhole.glb"></a-asset-item>
 
+            <img id="skybox_space_nebula" src="assets/skybox-space-nebula.png">
+
         </a-assets>
 
         <!-- Main world container -->
         <a-entity id="world-root" world-root>
             
-            <!-- The light position determines how bright the sun is in the Environment component -->
-            <a-entity environment="preset: starry; stageSize: 100; lightPosition: 0 -0.01 -0.2; fog: 0.1; ground: none; groundTexture: none;"></a-entity>
+            <!-- Skybox -->
+            <a-sky src="#skybox_space_nebula"></a-sky>
             
-
-            <a-circle position="0 -30 0" scale="100 100 100" rotation="-90 0 0" color="black"> </a-circle> 
+           <a-entity environment="preset: starry; stageSize: 100; lightPosition: 0 -0.01 -0.2; fog: none; ground: none; groundTexture: none;"></a-entity>
+            
+            <!-- <a-circle position="0 -30 0" scale="100 100 100" rotation="-90 0 0" color="black"> </a-circle>  -->
 
             <a-entity id="primordial-chaos" gltf-model="#asset_blackhole" animation-mixer="clip: *; loop: repeat; timeScale: 0.1" position="0 40 20" scale="20 20 20"></a-entity>
           
@@ -103,6 +107,18 @@
             <a-entity sous-chef-gesture-feedback="chefId: chef-3" position="-1 1.5 -2"></a-entity>
             <a-entity sous-chef-gesture-feedback="chefId: chef-2" position="0 1.5 -2"></a-entity>
             <a-entity sous-chef-gesture-feedback="chefId: chef-1" position="1 1.5 -2"></a-entity>
+
+
+            <a-entity id="galley2" position="30 0 40" rotation="0 -120 0">
+               <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: blue" rotation="-90 0 0" position="0 0.03 0"></a-entity>
+               <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-2"></a-entity>
+            </a-entity>
+
+
+            <a-entity id="galley3" position="-30 0 40" rotation="0 120 0">
+               <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: #fffff" rotation="-90 0 0" position="0 0.03 0"></a-entity>
+               <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-3"></a-entity>
+            </a-entity>
 
         </a-entity>
       
