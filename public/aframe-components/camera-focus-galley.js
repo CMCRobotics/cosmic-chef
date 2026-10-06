@@ -1,20 +1,28 @@
 /**
  * camera-focus-galley.js
  * Positions the camera to focus on the local team's galley.
- * Uses the team ID from URL parameter to find the galley and position the camera
- * at Y 2.5 facing the sous-chef stations.
- *
- * Usage: <a-entity id="cameraRig" camera-focus-galley>
+ * Uses per-team configuration to account for different galley positions in the circle.
  */
 
 AFRAME.registerComponent('camera-focus-galley', {
     schema: {
-        distance: { type: 'number', default: 5 },
-        lookDownDegrees: { type: 'number', default: 15 }
+        backwardDistance: { type: 'number', default: 8 },
+        strafeOffset: { type: 'number', default: 0 },
+        upwardOffset: { type: 'number', default: 0 },
+        pitch: { type: 'number', default: -30 }
     },
 
     init: function () {
         this.log = window.log.getLogger('camera-focus-galley');
+
+        // Per-team camera configuration (fine-tuned for each galley's position in the circle)
+        // backwardDistance: how far back from galley (negative = forward/closer)
+        // strafeOffset: anti-clockwise around circle (positive = counter-clockwise, negative = clockwise)
+        this.teamConfigs = {
+            'team-blue': { backwardDistance: -4.5, strafeOffset: -1.1, pitch: -9 },
+            'team-white': { backwardDistance: -3.5, strafeOffset: 0, pitch: -9 },
+            'team-red': { backwardDistance: -5.5, strafeOffset: 0, pitch: -9 }
+        };
 
         // Wait for scene to be ready
         if (!this.el.sceneEl.hasLoaded) {
@@ -37,38 +45,49 @@ AFRAME.registerComponent('camera-focus-galley', {
             return;
         }
 
-        // Get the galley's position
+        // Get the galley's position and rotation
         const galleryPos = galleryEl.getAttribute('position');
-        if (!galleryPos) {
-            this.log.warn(`Galley position not set: #${galleryId}`);
+        const galleryRot = galleryEl.getAttribute('rotation');
+
+        if (!galleryPos || !galleryRot) {
+            this.log.warn(`Galley position or rotation not set: #${galleryId}`);
             return;
         }
 
-        // Calculate camera position: slightly toward center from the galley
-        // This gives a good view of the stations
-        const { distance } = this.data;
-        const galleryDistance = Math.sqrt(galleryPos.x * galleryPos.x + galleryPos.z * galleryPos.z);
+        // Use team-specific config if available, otherwise fall back to schema defaults
+        const teamConfig = this.teamConfigs[teamId] || {};
+        const backwardDistance = teamConfig.backwardDistance !== undefined ? teamConfig.backwardDistance : this.data.backwardDistance;
+        const strafeOffset = teamConfig.strafeOffset !== undefined ? teamConfig.strafeOffset : this.data.strafeOffset;
+        const pitch = teamConfig.pitch !== undefined ? teamConfig.pitch : this.data.pitch;
+        const upwardOffset = this.data.upwardOffset;
 
-        // Direction from galley toward center (inward)
-        const dirX = -galleryPos.x / galleryDistance;
-        const dirZ = -galleryPos.z / galleryDistance;
+        // Convert galley's yaw (Y rotation) to radians
+        const galleyYaw = galleryRot.y * (Math.PI / 180);
 
-        // Position camera at galley location, moved inward by 'distance', at height 2.5
-        const camX = galleryPos.x + dirX * distance;
-        const camY = 2.5;
-        const camZ = galleryPos.z + dirZ * distance;
+        // Create offset vectors:
+        // - backward: along galley's forward axis (toward/away from center)
+        // - strafe: perpendicular to forward, along the station line (anti-clockwise = positive)
+        const offsetBackward = backwardDistance;
+
+        // Forward (inward toward center): (sin(galleyYaw), cos(galleyYaw))
+        // Perpendicular (tangent/stations): (cos(galleyYaw), -sin(galleyYaw))
+        const offsetX = Math.sin(galleyYaw) * offsetBackward + Math.cos(galleyYaw) * strafeOffset;
+        const offsetZ = Math.cos(galleyYaw) * offsetBackward - Math.sin(galleyYaw) * strafeOffset;
+
+        // Calculate camera position
+        const camX = galleryPos.x + offsetX;
+        const camY = 2.5 + upwardOffset;
+        const camZ = galleryPos.z + offsetZ;
 
         this.el.setAttribute('position', `${camX} ${camY} ${camZ}`);
 
-        // Rotation: look down at stations
-        // Yaw: point toward galley center
-        const yaw = Math.atan2(-dirX, -dirZ) * (180 / Math.PI);
-        const pitch = this.data.lookDownDegrees;
+        // Calculate yaw: look at galley center
+        const lookYaw = galleyYaw * (180 / Math.PI) + 180;
 
-        this.el.setAttribute('rotation', `${pitch} ${yaw} 0`);
+        this.el.setAttribute('rotation', `${pitch} ${lookYaw} 0`);
 
         this.log.info(
-            `📹 Camera focused on ${teamId}: position=(${camX.toFixed(1)}, ${camY}, ${camZ.toFixed(1)}) rotation=(${pitch}, ${yaw.toFixed(1)}, 0)`
+            `📹 Camera focused on ${teamId}: position=(${camX.toFixed(2)}, ${camY.toFixed(2)}, ${camZ.toFixed(2)}) rotation=(${pitch}, ${lookYaw.toFixed(2)}, 0)`
         );
     }
 });
