@@ -23,6 +23,19 @@ AFRAME.registerComponent('mqtt-bridge', {
         this.log = window.log.getLogger('mqtt-bridge');
         this.prepMgr = this.el.components['preparation-manager'];
 
+        // Allow URL parameters to override schema defaults
+        if (window.CURRENT_TEAM) {
+            this.data.teamId = window.CURRENT_TEAM;
+        }
+        if (window.GAME_ID) {
+            this.data.gameId = window.GAME_ID;
+        }
+        if (window.NUM_SOUS_CHEFS) {
+            this.data.numSousChefs = window.NUM_SOUS_CHEFS;
+        }
+
+        this.log.info(`🎮 Team: ${this.data.teamId} | Game: ${this.data.gameId} | Sous-chefs: ${this.data.numSousChefs}`);
+
         const { createGestureInput } = window.CosmicChef;
         this.gestureInput = createGestureInput();
         this.gestureSubscription = this.gestureInput.events$.subscribe((event) => {

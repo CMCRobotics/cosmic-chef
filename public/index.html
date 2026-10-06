@@ -28,17 +28,22 @@
     <script src="aframe-components/quantum-particle.js"></script>
     <script src="aframe-components/animations/anim-space-float.js"></script>
     <script src="aframe-components/final-stir-camera.js"></script>
+    <script src="dev/url-params.js"></script>
 
 </head>
 <body>
     <script>
          window.AFRAME_INSPECTOR_CONFIG = {saveEndpoint: "/save"};
+         // Parse team from URL parameter, default to team-blue
+         window.CURRENT_TEAM = window.URLParams.get('team', 'team-blue');
+         window.GAME_ID = window.URLParams.get('gameId', 'default');
+         window.NUM_SOUS_CHEFS = parseInt(window.URLParams.get('numSousChefs', '3'), 10);
     </script>
 
     <a-scene
         start-experience
         preparation-manager
-        mqtt-bridge="teamId: team-1; gameId: default; numSousChefs: 3"
+        mqtt-bridge="teamId: team-blue; gameId: default; numSousChefs: 3"
         webxr="optionalFeatures: hit-test, local-floor, hand-tracking; requiredFeatures: local-floor;"
         renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
         cursor="rayOrigin: mouse"

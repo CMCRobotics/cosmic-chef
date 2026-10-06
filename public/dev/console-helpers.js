@@ -8,6 +8,11 @@
     const log = window.log.getLogger('console');
     const scene = document.querySelector('a-scene');
 
+    // Show which team is running this window
+    if (window.CURRENT_TEAM) {
+        log.info(`🎮 Running as team: ${window.CURRENT_TEAM.toUpperCase()}`);
+    }
+
     function prepMgr() {
         return scene.components['preparation-manager'];
     }
