@@ -98,7 +98,7 @@
             <a-entity id="hemisphere-light" position="0 50 0" light="color: #CEE4F0; groundColor: #553e35; intensity: 2.3; type: hemisphere"></a-entity>
 
 
-            <a-entity id="galley" position="0 0 0" galley-manager>
+            <a-entity id="galley" position="0 0 0" galley-manager="galleryId: galley">
                <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: red" rotation="-90 0 0" position="0 0.03 0"></a-entity>
                <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-1"></a-entity>
             </a-entity>
@@ -109,13 +109,13 @@
             <a-entity sous-chef-gesture-feedback="chefId: chef-1" position="1 1.5 -2"></a-entity>
 
 
-            <a-entity id="galley2" position="30 0 40" rotation="0 -120 0">
+            <a-entity id="galley2" position="30 0 40" rotation="0 -120 0" galley-manager="galleryId: galley2">
                <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: blue" rotation="-90 0 0" position="0 0.03 0"></a-entity>
                <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-2"></a-entity>
             </a-entity>
 
 
-            <a-entity id="galley3" position="-30 0 40" rotation="0 120 0">
+            <a-entity id="galley3" position="-30 0 40" rotation="0 120 0" galley-manager="galleryId: galley3">
                <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: #fffff" rotation="-90 0 0" position="0 0.03 0"></a-entity>
                <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-3"></a-entity>
             </a-entity>

@@ -8,22 +8,25 @@ AFRAME.registerComponent('galley-manager', {
     schema: {
         deliveryAreaPosition: { type: 'vec3', default: { x: -2, y: 1.7, z: 3 } },
         vacuumDuration: { type: 'number', default: 2000 },
-        vacuumResetDelay: { type: 'number', default: 2500 }
+        vacuumResetDelay: { type: 'number', default: 2500 },
+        galleryId: { type: 'string', default: '' }
     },
 
     init: function () {
         this.log = window.log.getLogger('galley-manager');
-        this.log.debug('Initializing galley-manager');
+        const galleryId = this.data.galleryId || this.el.id || 'galley-default';
+        this.log.debug(`Initializing galley-manager for gallery: ${galleryId}`);
 
         // Cache of discovered station positions (lazy-loaded)
         this.stationPositionCache = new Map();
 
-        // Track active ingredient entities
+        // Track active ingredient entities (scoped to this gallery)
         this.ingredientEntities = new Map(); // ingredientId → { el, stationId, progress }
         this.lastRecipeName = null;
         this.lastState = null;
         this.vacuumInProgress = false;
         this.invalidIndicators = {}; // stationId → { el, timeout }
+        this.galleryId = galleryId;
 
         // Listen for state changes from preparation-manager
         const scene = document.querySelector('a-scene');
@@ -170,7 +173,8 @@ AFRAME.registerComponent('galley-manager', {
         }
 
         const el = document.createElement('a-entity');
-        el.setAttribute('id', `ingredient_${ingredientId}`);
+        // Namespace ingredient ID by gallery to avoid collisions when multiple galleys are active
+        el.setAttribute('id', `ingredient_${ingredientId}__${this.galleryId}`);
         el.setAttribute('class', 'ingredient-entity');
 
         // Position at station
