@@ -88,7 +88,7 @@ AFRAME.registerComponent('team-galley-receiver', {
                     context
                 });
 
-                this.log.debug(`📊 Received state for ${teamId}: ${state}`);
+                this.log.trace(`📊 Received state for ${teamId}: ${state}`);
             } catch (e) {
                 this.log.error('Failed to parse game state:', e.message);
             }

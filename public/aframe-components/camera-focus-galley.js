@@ -1,28 +1,17 @@
 /**
  * camera-focus-galley.js
  * Positions the camera to focus on the local team's galley.
- * Uses per-team configuration to account for different galley positions in the circle.
+ * Auto-calculates distance to ensure all galley elements are visible.
  */
 
 AFRAME.registerComponent('camera-focus-galley', {
     schema: {
-        backwardDistance: { type: 'number', default: 8 },
-        strafeOffset: { type: 'number', default: 0 },
         upwardOffset: { type: 'number', default: 0 },
-        pitch: { type: 'number', default: -30 }
+        pitch: { type: 'number', default: -9 }
     },
 
     init: function () {
         this.log = window.log.getLogger('camera-focus-galley');
-
-        // Per-team camera configuration (fine-tuned for each galley's position in the circle)
-        // backwardDistance: how far back from galley (negative = forward/closer)
-        // strafeOffset: anti-clockwise around circle (positive = counter-clockwise, negative = clockwise)
-        this.teamConfigs = {
-            'team-blue': { backwardDistance: -4.5, strafeOffset: -1.1, pitch: -9 },
-            'team-white': { backwardDistance: -3.5, strafeOffset: 0, pitch: -9 },
-            'team-red': { backwardDistance: -5.5, strafeOffset: 0, pitch: -9 }
-        };
 
         // Wait for scene to be ready
         if (!this.el.sceneEl.hasLoaded) {
@@ -36,14 +25,32 @@ AFRAME.registerComponent('camera-focus-galley', {
         const teamId = window.CURRENT_TEAM || 'team-blue';
         this.log.debug(`Focusing camera on team: ${teamId}`);
 
+        // Per-team hardcoded adjustments
+        const teamAdjustments = {
+            'team-blue': { backwardDistance: -4.5, strafeOffset: -1.5 },
+            'team-red': { backwardDistance: -5.2, strafeOffset: -0.3 },
+            'team-white': { backwardDistance: -3.8, strafeOffset: -0.1 }
+        };
+        const adjustments = teamAdjustments[teamId] || { backwardDistance: -4.5, strafeOffset: 0.1 };
+
         // Find the galley element for this team
         const galleryId = teamId.replace('team-', 'galley-');
         const galleryEl = document.querySelector(`#${galleryId}`);
 
+        // If galley not found, retry after a delay (fragments may not be loaded yet)
         if (!galleryEl) {
-            this.log.warn(`Galley element not found: #${galleryId}`);
+            if (!this.retryCount) this.retryCount = 0;
+            if (this.retryCount < 5) {
+                this.retryCount++;
+                this.log.debug(`Galley #${galleryId} not found, retrying in 100ms...`);
+                setTimeout(() => this.focusOnTeamGalley(), 100);
+                return;
+            }
+            this.log.warn(`Galley element not found after 5 retries: #${galleryId}`);
             return;
         }
+
+        this.log.info(`✓ Found galley: #${galleryId}`);
 
         // Get the galley's position and rotation
         const galleryPos = galleryEl.getAttribute('position');
@@ -54,25 +61,17 @@ AFRAME.registerComponent('camera-focus-galley', {
             return;
         }
 
-        // Use team-specific config if available, otherwise fall back to schema defaults
-        const teamConfig = this.teamConfigs[teamId] || {};
-        const backwardDistance = teamConfig.backwardDistance !== undefined ? teamConfig.backwardDistance : this.data.backwardDistance;
-        const strafeOffset = teamConfig.strafeOffset !== undefined ? teamConfig.strafeOffset : this.data.strafeOffset;
-        const pitch = teamConfig.pitch !== undefined ? teamConfig.pitch : this.data.pitch;
-        const upwardOffset = this.data.upwardOffset;
+        const { upwardOffset, pitch } = this.data;
+        const { backwardDistance, strafeOffset } = adjustments;
 
         // Convert galley's yaw (Y rotation) to radians
         const galleyYaw = galleryRot.y * (Math.PI / 180);
 
         // Create offset vectors:
         // - backward: along galley's forward axis (toward/away from center)
-        // - strafe: perpendicular to forward, along the station line (anti-clockwise = positive)
-        const offsetBackward = backwardDistance;
-
-        // Forward (inward toward center): (sin(galleyYaw), cos(galleyYaw))
-        // Perpendicular (tangent/stations): (cos(galleyYaw), -sin(galleyYaw))
-        const offsetX = Math.sin(galleyYaw) * offsetBackward + Math.cos(galleyYaw) * strafeOffset;
-        const offsetZ = Math.cos(galleyYaw) * offsetBackward - Math.sin(galleyYaw) * strafeOffset;
+        // - strafe: perpendicular to forward, along the station line
+        const offsetX = Math.sin(galleyYaw) * backwardDistance + Math.cos(galleyYaw) * strafeOffset;
+        const offsetZ = Math.cos(galleyYaw) * backwardDistance - Math.sin(galleyYaw) * strafeOffset;
 
         // Calculate camera position
         const camX = galleryPos.x + offsetX;
@@ -86,8 +85,9 @@ AFRAME.registerComponent('camera-focus-galley', {
 
         this.el.setAttribute('rotation', `${pitch} ${lookYaw} 0`);
 
-        this.log.info(
-            `📹 Camera focused on ${teamId}: position=(${camX.toFixed(2)}, ${camY.toFixed(2)}, ${camZ.toFixed(2)}) rotation=(${pitch}, ${lookYaw.toFixed(2)}, 0)`
+        this.log.debug(
+            `📹 Camera: pos=(${camX.toFixed(2)}, ${camY.toFixed(2)}, ${camZ.toFixed(2)}), rotation=(${pitch}, ${lookYaw.toFixed(2)}, 0)`
         );
-    }
+    },
+
 });
