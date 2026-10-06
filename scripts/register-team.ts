@@ -140,6 +140,21 @@ async function registerTeam() {
           `Team ${teamId}`,
           "Team name"
         );
+
+        // Team color (used for galley ring color)
+        const teamColors: Record<string, string> = {
+          'team-blue': '#0066ff',
+          'team-white': '#ffffff',
+          'team-red': '#ff0033'
+        };
+        const teamColor = teamColors[teamId] || '#cccccc';
+        await publish(
+          client,
+          `${teamTopic}/identity/color`,
+          teamColor,
+          "Team color"
+        );
+
         await publish(
           client,
           `${teamTopic}/identity/player-count`,

@@ -23,6 +23,8 @@
     <script src="aframe-components/mqtt-bridge.js"></script>
     <script src="aframe-components/sous-chef-gesture-feedback.js"></script>
     <script src="aframe-components/galley-manager.js"></script>
+    <script src="aframe-components/team-galley-receiver.js"></script>
+    <script src="aframe-components/galley-layout.js"></script>
     <script src="aframe-components/quantum-particle.js"></script>
     <script src="aframe-components/animations/anim-space-float.js"></script>
     <script src="aframe-components/final-stir-camera.js"></script>
@@ -98,27 +100,28 @@
             <a-entity id="hemisphere-light" position="0 50 0" light="color: #CEE4F0; groundColor: #553e35; intensity: 2.3; type: hemisphere"></a-entity>
 
 
-            <a-entity id="galley" position="0 0 0" galley-manager="galleryId: galley">
-               <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: red" rotation="-90 0 0" position="0 0.03 0"></a-entity>
-               <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-1"></a-entity>
+            <!-- Galley layout: arranges all team galleys in a circle -->
+            <a-entity id="galley-layout-root" galley-layout="radius: 15; height: 0; rotationOffset: 0">
+                <!-- Team Blue's Galley -->
+                <a-entity id="galley-blue" team-galley-receiver="teamId: team-blue; gameId: default" galley-manager="galleryId: galley-blue">
+                    <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-blue"></a-entity>
+                </a-entity>
+
+                <!-- Team White's Galley -->
+                <a-entity id="galley-white" team-galley-receiver="teamId: team-white; gameId: default" galley-manager="galleryId: galley-white">
+                    <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-white"></a-entity>
+                </a-entity>
+
+                <!-- Team Red's Galley -->
+                <a-entity id="galley-red" team-galley-receiver="teamId: team-red; gameId: default" galley-manager="galleryId: galley-red">
+                    <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-red"></a-entity>
+                </a-entity>
             </a-entity>
 
             <!-- Sous-Chef Gesture Feedback Indicators (Dynamic Utensils) -->
             <a-entity sous-chef-gesture-feedback="chefId: chef-3" position="-1 1.5 -2"></a-entity>
             <a-entity sous-chef-gesture-feedback="chefId: chef-2" position="0 1.5 -2"></a-entity>
             <a-entity sous-chef-gesture-feedback="chefId: chef-1" position="1 1.5 -2"></a-entity>
-
-
-            <a-entity id="galley2" position="30 0 40" rotation="0 -120 0" galley-manager="galleryId: galley2">
-               <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: blue" rotation="-90 0 0" position="0 0.03 0"></a-entity>
-               <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-2"></a-entity>
-            </a-entity>
-
-
-            <a-entity id="galley3" position="-30 0 40" rotation="0 120 0" galley-manager="galleryId: galley3">
-               <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: #fffff" rotation="-90 0 0" position="0 0.03 0"></a-entity>
-               <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-3"></a-entity>
-            </a-entity>
 
         </a-entity>
       

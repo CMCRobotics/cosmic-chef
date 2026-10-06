@@ -28,16 +28,19 @@ AFRAME.registerComponent('galley-manager', {
         this.invalidIndicators = {}; // stationId → { el, timeout }
         this.galleryId = galleryId;
 
-        // Listen for state changes from preparation-manager
-        const scene = document.querySelector('a-scene');
-        scene.addEventListener('game-state-changed', (evt) => {
-            this.onStateChange(evt.detail.state, evt.detail.context);
-        });
+        // Listen for state changes from preparation-manager or team-galley-receiver
+        // If parent entity has team-galley-receiver, listen to it; otherwise listen to scene
+        const stateSource = this.el.parentNode?.components?.['team-galley-receiver'] ? this.el : document.querySelector('a-scene');
+        this.stateSource = stateSource;
 
-        // Listen for invalid gestures
-        scene.addEventListener('invalid-gesture', (evt) => {
-            this.showInvalidGestureIndicator(evt.detail.stationId, evt.detail.chefId);
-        });
+        this.onStateChange = this.onStateChange.bind(this);
+        this.onInvalidGesture = this.onInvalidGesture.bind(this);
+
+        stateSource.addEventListener('game-state-changed', this.onStateChange);
+
+        // Listen for invalid gestures on the scene
+        const scene = document.querySelector('a-scene');
+        scene.addEventListener('invalid-gesture', this.onInvalidGesture);
 
         this.log.debug(`Galley manager ready. Delivery area position: ${JSON.stringify(this.data.deliveryAreaPosition)}`);
     },
@@ -88,7 +91,16 @@ AFRAME.registerComponent('galley-manager', {
         return null;
     },
 
-    onStateChange: function (state, context) {
+    onStateChange: function (evt) {
+        const { state, context } = evt.detail;
+        this.onStateChangeHandler(state, context);
+    },
+
+    onInvalidGesture: function (evt) {
+        this.showInvalidGestureIndicator(evt.detail.stationId, evt.detail.chefId);
+    },
+
+    onStateChangeHandler: function (state, context) {
         this.log.debug(`State: ${state}, Ingredients: ${context.ingredients.length}, Stations: ${context.stations.length}`);
 
         // Clear ingredients when entering preparingIngredients (new recipe captured)
@@ -447,6 +459,15 @@ AFRAME.registerComponent('galley-manager', {
     },
 
     remove: function () {
+        // Remove event listeners
+        if (this.stateSource) {
+            this.stateSource.removeEventListener('game-state-changed', this.onStateChange);
+        }
+        const scene = document.querySelector('a-scene');
+        if (scene) {
+            scene.removeEventListener('invalid-gesture', this.onInvalidGesture);
+        }
+
         // Cleanup: remove all ingredient entities
         this.ingredientEntities.forEach((data) => {
             if (data.el && data.el.parentNode) {
