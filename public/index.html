@@ -23,26 +23,43 @@
     <script src="aframe-components/mqtt-bridge.js"></script>
     <script src="aframe-components/sous-chef-gesture-feedback.js"></script>
     <script src="aframe-components/galley-manager.js"></script>
+    <script src="aframe-components/team-galley-receiver.js"></script>
+    <script src="aframe-components/galley-layout.js"></script>
     <script src="aframe-components/quantum-particle.js"></script>
     <script src="aframe-components/animations/anim-space-float.js"></script>
     <script src="aframe-components/final-stir-camera.js"></script>
+    <script src="aframe-components/camera-focus-galley.js"></script>
+    <script src="dev/url-params.js"></script>
 
 </head>
 <body>
     <script>
          window.AFRAME_INSPECTOR_CONFIG = {saveEndpoint: "/save"};
+         // Parse team from URL parameter, default to team-blue
+         window.CURRENT_TEAM = window.URLParams.get('team', 'blue');
+         window.GAME_ID = window.URLParams.get('gameId', 'default');
+         window.NUM_SOUS_CHEFS = parseInt(window.URLParams.get('numSousChefs', '3'), 10);
     </script>
 
     <a-scene
         start-experience
         preparation-manager
-        mqtt-bridge="teamId: team-1; gameId: default; numSousChefs: 3"
+        id="scene"
         webxr="optionalFeatures: hit-test, local-floor, hand-tracking; requiredFeatures: local-floor;"
         renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
         cursor="rayOrigin: mouse"
         fog="color: #1d1d1e; distance: 800;"
         raycaster="objects: .clickable"
         inspector="url: /aframe-inspector.min.js">
+
+        <script>
+            // Dynamically configure mqtt-bridge based on URL params
+            document.querySelector('#scene').setAttribute('mqtt-bridge', {
+                teamId: window.CURRENT_TEAM || 'blue',
+                gameId: window.GAME_ID || 'default',
+                numSousChefs: window.NUM_SOUS_CHEFS || 3
+            });
+        </script>
       
         <a-assets>
             <a-asset-item id="asset_button_floor_square" src="assets/models/factory/button-floor-square.glb"></a-asset-item>
@@ -91,34 +108,35 @@
             
             <!-- <a-circle position="0 -30 0" scale="100 100 100" rotation="-90 0 0" color="black"> </a-circle>  -->
 
-            <a-entity id="primordial-chaos" gltf-model="#asset_blackhole" animation-mixer="clip: *; loop: repeat; timeScale: 0.1" position="0 40 20" scale="20 20 20"></a-entity>
+            <a-entity id="primordial-chaos" gltf-model="#asset_blackhole" animation-mixer="clip: *; loop: repeat; timeScale: 0.1" position="0 32 0" scale="20 20 20"></a-entity>
           
 
 
             <a-entity id="hemisphere-light" position="0 50 0" light="color: #CEE4F0; groundColor: #553e35; intensity: 2.3; type: hemisphere"></a-entity>
 
 
-            <a-entity id="galley" position="0 0 0" galley-manager>
-               <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: red" rotation="-90 0 0" position="0 0.03 0"></a-entity>
-               <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-1"></a-entity>
+            <!-- Galley layout: arranges all team galleys in a circle -->
+            <a-entity id="galley-layout-root" galley-layout="radius: 15; height: 0; rotationOffset: 0">
+                <!-- Team Blue's Galley -->
+                <a-entity id="galley-blue" team-galley-receiver="teamId: blue; gameId: default" galley-manager="galleryId: galley-blue">
+                    <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-blue"></a-entity>
+                </a-entity>
+
+                <!-- Team White's Galley -->
+                <a-entity id="galley-white" team-galley-receiver="teamId: white; gameId: default" galley-manager="galleryId: galley-white">
+                    <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-white"></a-entity>
+                </a-entity>
+
+                <!-- Team Red's Galley -->
+                <a-entity id="galley-red" team-galley-receiver="teamId: red; gameId: default" galley-manager="galleryId: galley-red">
+                    <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-red"></a-entity>
+                </a-entity>
             </a-entity>
 
             <!-- Sous-Chef Gesture Feedback Indicators (Dynamic Utensils) -->
             <a-entity sous-chef-gesture-feedback="chefId: chef-3" position="-1 1.5 -2"></a-entity>
             <a-entity sous-chef-gesture-feedback="chefId: chef-2" position="0 1.5 -2"></a-entity>
             <a-entity sous-chef-gesture-feedback="chefId: chef-1" position="1 1.5 -2"></a-entity>
-
-
-            <a-entity id="galley2" position="30 0 40" rotation="0 -120 0">
-               <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: blue" rotation="-90 0 0" position="0 0.03 0"></a-entity>
-               <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-2"></a-entity>
-            </a-entity>
-
-
-            <a-entity id="galley3" position="-30 0 40" rotation="0 120 0">
-               <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" material="color: #fffff" rotation="-90 0 0" position="0 0.03 0"></a-entity>
-               <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-3"></a-entity>
-            </a-entity>
 
         </a-entity>
       
@@ -127,8 +145,8 @@
         <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .clickable"></a-entity>
 
         <!-- Camera Rig -->
-        <a-entity id="cameraRig" final-stir-camera rotation="-10 180 0" position="0 0 -5.5">
-            <a-camera position="0 2.5 0"></a-camera>
+        <a-entity id="cameraRig" final-stir-camera camera-focus-galley="pitch: -9" rotation="-10 180 0" position="0 0 -5.5">
+            <a-camera position="0 1.2 0"></a-camera>
         </a-entity>
       
     </a-scene>

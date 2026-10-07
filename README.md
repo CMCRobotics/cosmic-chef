@@ -14,7 +14,16 @@ each other with the task of assembling fundamental particles called *hadrons*.
 
 ## ⚙️ How to Develop ?
 
-TBD
+### How to reset your broker's persistent data (Mosquitto)
+
+```bash
+sudo service mosquitto stop && sudo rm /var/lib/mosquitto/mosquitto.db && sudo service mosquitto start
+```
+
+### Useful commands
+
+* Reset your broker ```MQTT_BROKER_URL="wss://inmachine-mqtt.app.cern.ch" npm run init-teams```
+
 
 
 ## 📱 Compatibility

@@ -8,6 +8,15 @@
     const log = window.log.getLogger('console');
     const scene = document.querySelector('a-scene');
 
+    // Show which team is running this window
+    if (window.CURRENT_TEAM) {
+        log.info(`🎮 Running as team: ${window.CURRENT_TEAM.toUpperCase()}`);
+    }
+
+    setTimeout(() => {
+        focusLog(['galley-manager','preparation-manager', 'mqtt-bridge', 'head-chef-state-receiver', 'team-galley-receiver']);
+    }, 100);
+
     function prepMgr() {
         return scene.components['preparation-manager'];
     }
@@ -33,6 +42,27 @@
         window.log.setLevel(level);
         window.log.rebuild(); // propagate to named loggers
         log.info(`Log level set to: ${level}`);
+    };
+
+    window.silence = function (loggerNames = []) {
+        const defaults = ['preparation-manager', 'mqtt-bridge', 'head-chef-state-receiver', 'team-galley-receiver', 'galley-manager'];
+        const targets = loggerNames.length > 0 ? loggerNames : defaults;
+        targets.forEach(name => {
+            window.log.getLogger(name).setLevel('warn');
+        });
+        log.info(`Silenced loggers: ${targets.join(', ')}`);
+    };
+
+    window.focusLog = function (loggerNames = 'camera-focus-galley') {
+        const allLoggers = ['preparation-manager', 'mqtt-bridge', 'head-chef-state-receiver', 'team-galley-receiver', 'galley-manager', 'load-fragment', 'start-experience', 'world-root', 'galley-layout', 'final-stir-camera'];
+        allLoggers.forEach(name => {
+            window.log.getLogger(name).setLevel('warn');
+        });
+        const targets = Array.isArray(loggerNames) ? loggerNames : [loggerNames];
+        targets.forEach(name => {
+            window.log.getLogger(name).setLevel('info');
+        });
+        log.info(`Focusing on: ${targets.join(', ')}`);
     };
 
     window.getGameState = snapshot;

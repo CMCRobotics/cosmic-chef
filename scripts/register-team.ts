@@ -6,7 +6,7 @@
  * Registers a new game session with a team, head chef, and sous-chefs.
  * Usage: bun scripts/register-team.ts <team-id> <num-sous-chefs>
  *
- * Example: bun scripts/register-team.ts team-1 3
+ * Example: bun scripts/register-team.ts blue 3
  */
 
 import mqtt from "mqtt";
@@ -22,7 +22,7 @@ async function registerTeam() {
     console.error(
       "Usage: bun scripts/register-team.ts <team-id> <num-sous-chefs>"
     );
-    console.error("Example: bun scripts/register-team.ts team-1 3");
+    console.error("Example: bun scripts/register-team.ts blue 3");
     process.exit(1);
   }
 
@@ -43,7 +43,7 @@ async function registerTeam() {
   return new Promise<void>((resolve, reject) => {
     client.on("connect", async () => {
       try {
-        const gameId = `session-${Date.now()}`;
+        const gameId = "default";  // Use fixed gameId so all teams share the same game session
         const headChefId = `player-head-${teamId}`;
         const sousChefIds = Array.from({ length: numSousChefs }, (_, i) =>
           `player-sous-${teamId}-${i + 1}`
@@ -140,6 +140,21 @@ async function registerTeam() {
           `Team ${teamId}`,
           "Team name"
         );
+
+        // Team color (used for galley ring color)
+        const teamColors: Record<string, string> = {
+          'blue': '#0066ff',
+          'white': '#ffffff',
+          'red': '#ff0033'
+        };
+        const teamColor = teamColors[teamId] || '#cccccc';
+        await publish(
+          client,
+          `${teamTopic}/identity/color`,
+          teamColor,
+          "Team color"
+        );
+
         await publish(
           client,
           `${teamTopic}/identity/player-count`,

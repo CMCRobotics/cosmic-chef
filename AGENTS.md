@@ -8,6 +8,7 @@ Orientation file for coding agents and new contributors. Read this before making
 
 - **Goal:** teach real particle physics through a cooking metaphor. Presentation is surreal; the physics must stay accurate.
 - **Domain reference:** [`docs/physics.md`](docs/physics.md) is the **single source of truth** for all physics facts (flavours, particles, binding rules) and for how they map onto game concepts. Consult it before authoring any gameplay content, ingredient, dish or UI copy.
+- **MQTT / Network reference:** [`docs/mqtt-architecture.md`](docs/mqtt-architecture.md) and [`docs/homie-devices.md`](docs/homie-devices.md) define the **single source of truth** for MQTT topics, payload contracts, and component boundaries (`mqtt-bridge`, `team-galley-receiver`, `preparation-manager`).
 - **Status:** early prototype. Very little gameplay exists yet — mostly scene scaffolding and dev tooling.
 
 ## 2. Stack
@@ -80,7 +81,7 @@ MQTT ─► mqtt-bridge ─► adapters (src/client) ─► preparation-manager.
                                                               ◄── 'invalid-gesture'
 ```
 - **`preparation-manager` is the only owner of the actor.** Other components read state from the scene's `game-state-changed` event, and send events via `sceneEl.components['preparation-manager'].send(event)`. Never subscribe to the actor directly, poll for it, or put it on `window`.
-- **`mqtt-bridge` is the only MQTT client.** To support a new topic, add its builder/parser to `src/client/topics.ts`, a pure translator to `src/client/adapters.ts` (with a test), and a `case` in `mqtt-bridge.onMessage`.
+- **`mqtt-bridge` is the only MQTT client.** To support a new topic, add its builder/parser to `src/client/topics.ts`, a pure translator to `src/client/adapters.ts` (with a test), and a `case` in `mqtt-bridge.onMessage`. See [`docs/mqtt-architecture.md`](docs/mqtt-architecture.md) for full topic flow details. **Never publish to input topics that the bridge subscribes to** (such as `round/recipe-desired`), as this produces circular echo loops.
 - **One event vocabulary** for every input source (MQTT, console, tests): `GESTURE_START` / `GESTURE_TICK` / `GESTURE_STOP` `{ chefId: 'chef-N', gesture, progressAmount? }`, plus `CAPTURE_RECIPE`, `SUBMIT_RECIPE`, `CANCEL_ORDER`, `NEXT_ROUND`, `SET_ACTIVE_CHEFS`. The machine validates gestures and *emits* `invalid-gesture`; `preparation-manager` re-emits it on the scene.
 - **`galley-manager` owns all ingredient entities**: spawning, moving, animating, vacuuming. Don't position or animate ingredients from anywhere else.
 
@@ -123,6 +124,7 @@ AFRAME.registerComponent('my-thing', {
 - **The A-Frame `animation` component takes `dur`, not `duration`.** An unknown property is silently ignored and the animation runs at the 1000 ms default.
 - **Chef stations are discovered dynamically by `galley-manager.js`.** Each station in `public/galley.html` must have `class="chef-station"` and `data-station-id="SN"` (where N is 1, 2, or 3). The manager queries these attributes at runtime to look up station positions. **If you move a station's position in galley.html, no component code changes are needed** — the manager will discover the new position automatically. Stations are cached after first lookup for efficiency.
 - **`head-chef.html` and `index.html` (galley) are separate HTML documents with separate `window` contexts.** The head-chef runs in its own window at `/head-chef.html`, the galley at `/`. They cannot share global variables or `window` state. All cross-window communication must go through **MQTT only** — never use `window._capturedRecipe` or other globals. Both windows subscribe to the same MQTT topics, so data sent through MQTT reaches both: when head-chef captures a recipe, it publishes to the recipe topic, and mqtt-bridge in the galley receives it.
+- **Multiple galleys share one state machine, each with scoped managers.** `index.html` can instantiate many galleys (via `galley-layout`), all listening to the same `game-state-changed`. Each `galley-manager` listens to events on its own parent entity, so they don't interfere. **ID namespacing:** When `load-fragment` clones `galley.html` multiple times, all element IDs are automatically suffixed (`entity_chef_station_1__cosmic-chef-galley-1_0`). This avoids DOM collisions. `aframe-watcher` edits the clean source `galley.html`; IDs get fresh suffixes on reload. **Team galleys:** For each team's window to see all teams' galleys simultaneously, use `team-galley-receiver` (scoped MQTT subscriber for a team) paired with `galley-component` (renders that team's live state). Each team's window independently fetches other teams' state via MQTT, so all galleys animate in real-time showing different recipes.
 
 ## 7. Verifying changes
 
@@ -145,4 +147,4 @@ bun test
 
 - Default branch is **`develop`**; `origin/HEAD` points at it. Branch from and target `develop`.
 - Keep commits scoped and imperative.
-- **Maintenance rule:** when you discover a new convention, constraint or gotcha, add it to this file. When you change a physics fact or add gameplay content, update [`docs/physics.md`](docs/physics.md) first — it is the content authority.
+- **Maintenance rule:** when you discover a new convention, constraint or gotcha, add it to this file. When you change a physics fact or add gameplay content, update [`docs/physics.md`](docs/physics.md) first — it is the content authority. When you change MQTT topics, subscriptions, or network contracts, update [`docs/mqtt-architecture.md`](docs/mqtt-architecture.md) and [`docs/homie-devices.md`](docs/homie-devices.md).

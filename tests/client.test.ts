@@ -7,6 +7,8 @@ import {
   gameSubscriptions,
   headChefSubmitTopic,
   parseTopic,
+  recipeDesiredTopic,
+  recipeActualTopic,
   recipeTopic,
   sousChefGestureTopic,
 } from "../src/client/topics";
@@ -25,13 +27,14 @@ describe("topics", () => {
     expect(headChefSubmitTopic("team-1", "default")).toBe(
       "cosmic-chef/team-team-1/game-default/head-chef/animation/submit-state"
     );
-    expect(recipeTopic("team-1", "default")).toBe("cosmic-chef/team-team-1/game-default/round/recipe");
+    expect(recipeDesiredTopic("team-1", "default")).toBe("cosmic-chef/team-team-1/game-default/round/recipe-desired");
+    expect(recipeActualTopic("team-1", "default")).toBe("cosmic-chef/team-team-1/game-default/round/recipe-actual");
   });
 
   test("subscriptions cover head chef, recipe and every sous-chef", () => {
     expect(gameSubscriptions("t", "g", 3)).toEqual([
       headChefSubmitTopic("t", "g"),
-      recipeTopic("t", "g"),
+      recipeDesiredTopic("t", "g"),
       sousChefGestureTopic("t", "g", 1),
       sousChefGestureTopic("t", "g", 2),
       sousChefGestureTopic("t", "g", 3),
@@ -41,8 +44,9 @@ describe("topics", () => {
   test("parseTopic round-trips built topics and rejects other games", () => {
     expect(parseTopic(sousChefGestureTopic("t", "g", 3), "t", "g")).toEqual({ kind: "sous-chef-gesture", sousChef: 3 });
     expect(parseTopic(headChefSubmitTopic("t", "g"), "t", "g")).toEqual({ kind: "head-chef-submit" });
-    expect(parseTopic(recipeTopic("t", "g"), "t", "g")).toEqual({ kind: "recipe" });
-    expect(parseTopic(recipeTopic("t", "other"), "t", "g")).toBeNull();
+    expect(parseTopic(recipeDesiredTopic("t", "g"), "t", "g")).toEqual({ kind: "recipe-desired" });
+    expect(parseTopic(recipeActualTopic("t", "g"), "t", "g")).toEqual({ kind: "recipe-actual" });
+    expect(parseTopic(recipeDesiredTopic("t", "other"), "t", "g")).toBeNull();
     expect(parseTopic("cosmic-chef/team-t/game-g/unknown", "t", "g")).toBeNull();
   });
 });
