@@ -1,10 +1,10 @@
 <a-entity id="entity_button_floor_square" recipe-status-button class="clickable" gltf-model="#asset_button_floor_square" position="-0.225 0.4 2"
     scale="2 1.5 2"></a-entity>
 
-<a-entity id="entity_conveyor_stripe-2" gltf-model="#asset_conveyor_stripe" position="4 1 0" rotation="0 90 0"></a-entity>
-<a-entity id="entity_conveyor_stripe_corner" gltf-model="#asset_conveyor_stripe" position="4 1.05 -1"></a-entity>
-<a-entity id="entity_conveyor_stripe_corner-2" gltf-model="#asset_conveyor_stripe" position="-5 1.05 -1" rotation="0 90 0"></a-entity>
-<a-entity id="entity_conveyor_stripe_corner-3" gltf-model="#asset_conveyor_stripe" position="-5 1.05 3" rotation="0 180 0"></a-entity>
+<a-entity id="entity_conveyor_stripe-2" data-ingredient-intake="1" gltf-model="#asset_conveyor_stripe" position="4 1 0" rotation="0 90 0"></a-entity>
+<a-entity id="entity_conveyor_stripe_corner" data-ingredient-intake="2" gltf-model="#asset_conveyor_stripe" position="4 1.05 -1"></a-entity>
+<a-entity id="entity_conveyor_stripe_corner-2" data-ingredient-delivery="1" gltf-model="#asset_conveyor_stripe" position="-5 1.05 -1" rotation="0 90 0"></a-entity>
+<a-entity id="entity_conveyor_stripe_corner-3" data-ingredient-delivery="2" gltf-model="#asset_conveyor_stripe" position="-5 1.05 3" rotation="0 180 0"></a-entity>
 
 <a-entity id="entity_conveyor_stripe_sides" gltf-model="#asset_conveyor_stripe_sides"
     position="3 1 -1"></a-entity>
@@ -54,7 +54,7 @@
     rotation="0 90 0"></a-entity>
 <a-entity id="entity_machine_fortified" gltf-model="#asset_machine_fortified" position="-4 1 -1"></a-entity>
 
-<a-entity id="entity_piston_round" data-galley-extent="true"  gltf-model="#asset_piston_round" position="-2.73654 1.00541 3.02123"
+<a-entity id="entity_piston_round" data-ingredient-delivery="3" data-galley-extent="true"  gltf-model="#asset_piston_round" position="-2.73654 1.00541 3.02123"
     scale="2 0.4 2"></a-entity>
 
 <a-entity id="entity_scanner_high" gltf-model="#asset_scanner_high" position="0 0 -6" scale="2 5.60 8.25"
@@ -63,6 +63,7 @@
 <a-entity id="entity_screen_hanging_wide" gltf-model="#asset_screen_hanging_wide" position="0 2.7 -5.23928"
     scale="11.45 8.8 1" rotation="0 180 0"></a-entity>
 
-<a-circle id="galley_floor" opacity="0.8" position="0 0.004 0" rotation="-90 0 0" scale="6.2 6.2 6.2" color="#121213" shadow="receive: true"> </a-plane>
+<a-circle id="galley_floor" opacity="0.8" position="0 0.004 0" rotation="-90 0 0" scale="6.2 6.2 6.2" color="#121213" shadow="receive: true"> </a-circle>
 
+<a-camera id="delivery_camera" camera="fov: 20" rotation="-28 160 14" active="false" position="-1 4.41098 -1.41312"></a-camera>
 
