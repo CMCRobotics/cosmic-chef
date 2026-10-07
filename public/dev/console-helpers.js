@@ -13,9 +13,8 @@
         log.info(`🎮 Running as team: ${window.CURRENT_TEAM.toUpperCase()}`);
     }
 
-    // Auto-focus on camera-focus-galley logs by default
     setTimeout(() => {
-        focusLog('camera-focus-galley');
+        focusLog(['galley-manager','preparation-manager', 'mqtt-bridge', 'head-chef-state-receiver', 'team-galley-receiver']);
     }, 100);
 
     function prepMgr() {
@@ -54,13 +53,16 @@
         log.info(`Silenced loggers: ${targets.join(', ')}`);
     };
 
-    window.focusLog = function (loggerName = 'camera-focus-galley') {
+    window.focusLog = function (loggerNames = 'camera-focus-galley') {
         const allLoggers = ['preparation-manager', 'mqtt-bridge', 'head-chef-state-receiver', 'team-galley-receiver', 'galley-manager', 'load-fragment', 'start-experience', 'world-root', 'galley-layout', 'final-stir-camera'];
         allLoggers.forEach(name => {
             window.log.getLogger(name).setLevel('warn');
         });
-        window.log.getLogger(loggerName).setLevel('info');
-        log.info(`Focusing on: ${loggerName}`);
+        const targets = Array.isArray(loggerNames) ? loggerNames : [loggerNames];
+        targets.forEach(name => {
+            window.log.getLogger(name).setLevel('info');
+        });
+        log.info(`Focusing on: ${targets.join(', ')}`);
     };
 
     window.getGameState = snapshot;
