@@ -155,10 +155,14 @@ AFRAME.registerComponent('mqtt-bridge', {
 
         if (!this.client) return;
 
-        // Only publish when state VALUE changes (not on every context update)
-        if (stateChanged) {
+        const now = Date.now();
+        const shouldPublishProgress = !this.lastProgressPublish || (now - this.lastProgressPublish >= 250);
+
+        // Publish immediately on state transition, or throttled during active cooking progress
+        if (stateChanged || shouldPublishProgress) {
+            this.lastProgressPublish = now;
             const stateTopic = window.CosmicChef.gameStateTopic(this.data.teamId, this.data.gameId);
-            this.client.publish(stateTopic, JSON.stringify({ state, context }), { qos: 1 });
+            this.client.publish(stateTopic, JSON.stringify({ state, context }), { qos: stateChanged ? 1 : 0 });
         }
     },
 

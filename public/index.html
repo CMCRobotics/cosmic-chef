@@ -34,7 +34,6 @@
 </head>
 <body>
     <script>
-         window.AFRAME_INSPECTOR_CONFIG = {saveEndpoint: "/save"};
          // Parse team from URL parameter, default to team-blue
          window.CURRENT_TEAM = window.URLParams.get('team', 'blue');
          window.GAME_ID = window.URLParams.get('gameId', 'default');
@@ -49,8 +48,7 @@
         renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
         cursor="rayOrigin: mouse"
         fog="color: #1d1d1e; distance: 800;"
-        raycaster="objects: .clickable"
-        inspector="url: /aframe-inspector.min.js">
+        raycaster="objects: .clickable">
 
         <script>
             // Dynamically configure mqtt-bridge based on URL params
@@ -132,11 +130,6 @@
                     <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-red"></a-entity>
                 </a-entity>
             </a-entity>
-
-            <!-- Sous-Chef Gesture Feedback Indicators (Dynamic Utensils) -->
-            <a-entity sous-chef-gesture-feedback="chefId: chef-3" position="-1 1.5 -2"></a-entity>
-            <a-entity sous-chef-gesture-feedback="chefId: chef-2" position="0 1.5 -2"></a-entity>
-            <a-entity sous-chef-gesture-feedback="chefId: chef-1" position="1 1.5 -2"></a-entity>
 
         </a-entity>
       

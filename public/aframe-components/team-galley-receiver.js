@@ -19,20 +19,31 @@ AFRAME.registerComponent('team-galley-receiver', {
 
     init: function () {
         this.log = window.log.getLogger('team-galley-receiver');
-        // If this is the local team, we don't need to receive state via MQTT
-        // because the local preparation-manager already handles it.
-        // if (this.data.teamId === window.CURRENT_TEAM) {
-        //     this.log.info(`Team ${this.data.teamId} is local team. Receiver will remain dormant to avoid latency/duplication.`);
-        //     this.isLocalTeam = true;
-        //     return;
-        // }
+        const localTeam = (window.CURRENT_TEAM || 'blue').replace(/^team-/, '');
+        const thisTeam = (this.data.teamId || '').replace(/^team-/, '');
+        this.isLocalTeam = (thisTeam === localTeam);
 
-        this.log.debug(`Initializing team-galley-receiver for team: ${this.data.teamId}`);
+        this.log.debug(`Initializing team-galley-receiver for team: ${this.data.teamId} (isLocalTeam: ${this.isLocalTeam})`);
 
         this.currentState = null;
         this.currentContext = null;
         this.teamColor = '#cccccc'; // default
         this.ringCreated = false;
+
+        // If this is the local team, relay state changes directly from the scene actor
+        if (this.isLocalTeam) {
+            this.log.info(`Team ${this.data.teamId} is local team: relaying scene events directly.`);
+            this.onSceneStateChanged = (evt) => {
+                this.currentState = evt.detail.state;
+                this.currentContext = evt.detail.context;
+                // Relay to this.el without bubbling so galley-manager and feedback entities receive it
+                this.el.emit('game-state-changed', evt.detail, false);
+            };
+            const scene = this.el.sceneEl || document.querySelector('a-scene');
+            if (scene) {
+                scene.addEventListener('game-state-changed', this.onSceneStateChanged);
+            }
+        }
 
         this.connect();
     },
@@ -56,14 +67,16 @@ AFRAME.registerComponent('team-galley-receiver', {
         this.client.on('connect', () => {
             this.log.info(`✓ Connected for team ${teamId}`);
 
-            // Subscribe to game state
-            this.client.subscribe(stateTopic, (err) => {
-                if (err) {
-                    this.log.error('Subscription failed for game state:', err);
-                } else {
-                    this.log.info(`Subscribed to ${stateTopic}`);
-                }
-            });
+            // Subscribe to game state (only for remote teams, local team gets it from scene)
+            if (!this.isLocalTeam) {
+                this.client.subscribe(stateTopic, (err) => {
+                    if (err) {
+                        this.log.error('Subscription failed for game state:', err);
+                    } else {
+                        this.log.info(`Subscribed to ${stateTopic}`);
+                    }
+                });
+            }
 
             // Subscribe to team color
             this.client.subscribe(teamColorTopic, (err) => {
@@ -85,6 +98,8 @@ AFRAME.registerComponent('team-galley-receiver', {
         // Check if this is a game state message
         const parsed = window.CosmicChef.parseTopic(topic, teamId, gameId);
         if (parsed && parsed.kind === 'game-state') {
+            if (this.isLocalTeam) return; // Local team already relays directly from scene
+
             try {
                 const { state, context } = JSON.parse(payload);
                 this.currentState = state;
@@ -170,6 +185,12 @@ AFRAME.registerComponent('team-galley-receiver', {
     },
 
     remove: function () {
+        if (this.onSceneStateChanged) {
+            const scene = this.el.sceneEl || document.querySelector('a-scene');
+            if (scene) {
+                scene.removeEventListener('game-state-changed', this.onSceneStateChanged);
+            }
+        }
         if (this.client) {
             this.client.end();
         }

@@ -47,8 +47,12 @@ AFRAME.registerComponent('sous-chef-gesture-feedback', {
             this.utensils[name] = utensilEl;
         });
 
+        // Resolve event source: check closest ancestor with team-galley-receiver or galley-manager, fallback to scene
+        const scopedAncestor = this.el.closest('[team-galley-receiver], [galley-manager]');
+        this.stateSource = scopedAncestor || this.el.sceneEl;
+
         this.onStateChange = this.onStateChange.bind(this);
-        this.el.sceneEl.addEventListener('game-state-changed', this.onStateChange);
+        this.stateSource.addEventListener('game-state-changed', this.onStateChange);
     },
 
     onStateChange: function (evt) {
@@ -76,7 +80,9 @@ AFRAME.registerComponent('sous-chef-gesture-feedback', {
     },
 
     remove: function () {
-        this.el.sceneEl.removeEventListener('game-state-changed', this.onStateChange);
+        if (this.stateSource) {
+            this.stateSource.removeEventListener('game-state-changed', this.onStateChange);
+        }
         Object.values(this.utensils).forEach((utensilEl) => utensilEl.remove());
     }
 });
