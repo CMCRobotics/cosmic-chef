@@ -29,8 +29,8 @@ AFRAME.registerComponent('galley-manager', {
         this.galleryId = galleryId;
 
         // Listen for state changes from preparation-manager or team-galley-receiver
-        // If parent entity has team-galley-receiver, listen to it; otherwise listen to scene
-        const stateSource = this.el.parentNode?.components?.['team-galley-receiver'] ? this.el : document.querySelector('a-scene');
+        // If this entity has team-galley-receiver, listen to it; otherwise listen to scene
+        const stateSource = this.el.components?.['team-galley-receiver'] ? this.el : document.querySelector('a-scene');
         this.stateSource = stateSource;
 
         this.onStateChange = this.onStateChange.bind(this);

@@ -292,20 +292,20 @@ highlightRecipe: function (recipeEl) {
 
         if (mqttComponent && mqttComponent.client && mqttComponent.client.connected) {
             const gameId = mqttComponent.data?.gameId || 'default';
-            const teamId = mqttComponent.data?.teamId || 'team-1';
+            const teamId = mqttComponent.data?.teamId || 'blue';
 
-            // Publish recipe data to recipe topic (if available)
+            // Publish recipe data to recipe-desired topic (if available)
             if (recipe && recipe.ingredientSequences) {
-                const recipeTopic = `cosmic-chef/team-${teamId}/game-${gameId}/round/recipe`;
+                const topic = window.CosmicChef.recipeDesiredTopic(teamId, gameId);
                 const recipePayload = JSON.stringify(recipe);
-                mqttComponent.client.publish(recipeTopic, recipePayload, { qos: 1 });
-                this.log.info(`Published recipe to MQTT: ${recipeTopic}`);
+                mqttComponent.client.publish(topic, recipePayload, { qos: 1 });
+                this.log.info(`Published recipe for team ${teamId} to MQTT: ${topic}`);
             }
 
             // Publish capture state to trigger the capture in state machine
             const submitTopic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
             mqttComponent.client.publish(submitTopic, 'captured', { qos: 1 });
-            this.log.info(`Published CAPTURE state to MQTT: ${submitTopic}`);
+            this.log.info(`Published CAPTURE state for team ${teamId} to MQTT: ${submitTopic}`);
         } else {
             this.log.warn('MQTT client not available or not connected');
         }

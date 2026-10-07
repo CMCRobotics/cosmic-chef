@@ -6,7 +6,7 @@
  * Registers a new game session with a team, head chef, and sous-chefs.
  * Usage: bun scripts/register-team.ts <team-id> <num-sous-chefs>
  *
- * Example: bun scripts/register-team.ts team-1 3
+ * Example: bun scripts/register-team.ts blue 3
  */
 
 import mqtt from "mqtt";
@@ -22,7 +22,7 @@ async function registerTeam() {
     console.error(
       "Usage: bun scripts/register-team.ts <team-id> <num-sous-chefs>"
     );
-    console.error("Example: bun scripts/register-team.ts team-1 3");
+    console.error("Example: bun scripts/register-team.ts blue 3");
     process.exit(1);
   }
 
@@ -143,9 +143,9 @@ async function registerTeam() {
 
         // Team color (used for galley ring color)
         const teamColors: Record<string, string> = {
-          'team-blue': '#0066ff',
-          'team-white': '#ffffff',
-          'team-red': '#ff0033'
+          'blue': '#0066ff',
+          'white': '#ffffff',
+          'red': '#ff0033'
         };
         const teamColor = teamColors[teamId] || '#cccccc';
         await publish(

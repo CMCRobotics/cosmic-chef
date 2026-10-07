@@ -207,12 +207,12 @@ AFRAME.registerComponent('recipe-status-button', {
 
         if (mqttComponent && mqttComponent.client && mqttComponent.client.connected) {
             const gameId = mqttComponent.data?.gameId || 'default';
-            const teamId = mqttComponent.data?.teamId || 'team-1';
+            const teamId = mqttComponent.data?.teamId || 'blue';
             const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
 
             // "submitting" → adapter converts to SUBMIT_RECIPE event
             mqttComponent.client.publish(topic, 'submitting', { qos: 1 });
-            this.log.info(`Published SUBMIT to MQTT: ${topic}`);
+            this.log.info(`Published SUBMIT for team ${teamId} to MQTT: ${topic}`);
         } else {
             this.log.warn('MQTT client not available or not connected');
         }
@@ -225,12 +225,12 @@ AFRAME.registerComponent('recipe-status-button', {
 
         if (mqttComponent && mqttComponent.client && mqttComponent.client.connected) {
             const gameId = mqttComponent.data?.gameId || 'default';
-            const teamId = mqttComponent.data?.teamId || 'team-1';
+            const teamId = mqttComponent.data?.teamId || 'blue';
             const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
 
             // "idle" → adapter converts to CANCEL_ORDER event
             mqttComponent.client.publish(topic, 'idle', { qos: 1 });
-            this.log.info(`Published CANCEL to MQTT: ${topic}`);
+            this.log.info(`Published CANCEL for team ${teamId} to MQTT: ${topic}`);
         } else {
             this.log.warn('MQTT client not available or not connected');
         }

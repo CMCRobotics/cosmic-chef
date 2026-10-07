@@ -395,12 +395,12 @@
           />
         </div>
         <div class="config-group">
-          <label for="teamId">Team ID</label>
+          <label for="teamId">Team ID (suffix only)</label>
           <input
             type="text"
             id="teamId"
-            value="team-1"
-            placeholder="team-1"
+            value="blue"
+            placeholder="blue, red, white, or 1, 2, 3"
           />
         </div>
         <div class="config-group">
@@ -531,11 +531,18 @@
     <!-- Shared recipes (window.RECIPES) — same definitions the game uses -->
     <script src="/xstate/preparation-machine.js"></script>
     <script>
-      const { sousChefGestureTopic, headChefSubmitTopic, recipeTopic } = window.CosmicChef;
+      const { sousChefGestureTopic, headChefSubmitTopic, recipeTopic, recipeDesiredTopic } = window.CosmicChef;
 
       let client = null;
       let connected = false;
       let gameId = null;
+
+      // Read team from URL parameter if available (e.g., ?team=blue)
+      const urlParams = new URLSearchParams(window.location.search);
+      const teamFromUrl = urlParams.get('team');
+      if (teamFromUrl) {
+        document.getElementById("teamId").value = teamFromUrl;
+      }
 
       const keyMappings = {
         // Sous-Chef 1
@@ -602,11 +609,17 @@
 
       function connect() {
         const brokerUrl = document.getElementById("brokerUrl").value;
-        const teamId = document.getElementById("teamId").value;
+        let teamId = document.getElementById("teamId").value;
+
+        // Strip "team-" prefix if present (topic builders add it automatically)
+        if (teamId.startsWith("team-")) {
+          teamId = teamId.substring(5);
+        }
+
         let gameIdInput = document.getElementById("gameId").value;
 
         if (!gameIdInput) {
-          gameIdInput = `session-${Date.now()}`;
+          gameIdInput = "default";  // Use "default" to match galley gameId
           document.getElementById("gameId").value = gameIdInput;
         }
         gameId = gameIdInput;
@@ -682,7 +695,7 @@
         }
 
         const teamId = document.getElementById("teamId").value;
-        const topic = recipeTopic(teamId, gameId);
+        const topic = recipeDesiredTopic(teamId, gameId);
 
         // Get the recipe object from RECIPES (1-indexed: 1→RECIPES[0], 2→RECIPES[1], etc.)
         if (!window.RECIPES || window.RECIPES.length === 0) {

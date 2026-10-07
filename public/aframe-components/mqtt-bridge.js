@@ -23,10 +23,16 @@ AFRAME.registerComponent('mqtt-bridge', {
         this.log = window.log.getLogger('mqtt-bridge');
         this.prepMgr = this.el.components['preparation-manager'];
 
-        // Allow URL parameters to override schema defaults
-        if (window.CURRENT_TEAM) {
+        // Force teamId from URL if present, overriding any HTML attributes
+        const urlParams = new URLSearchParams(window.location.search);
+        const teamParam = urlParams.get('team');
+        if (teamParam) {
+            this.data.teamId = teamParam;
+        } else if (window.CURRENT_TEAM) {
             this.data.teamId = window.CURRENT_TEAM;
         }
+        
+        this.log.info(`Final effective TeamID: ${this.data.teamId}`);
         if (window.GAME_ID) {
             this.data.gameId = window.GAME_ID;
         }
@@ -74,6 +80,7 @@ AFRAME.registerComponent('mqtt-bridge', {
 
         this.client.on('connect', () => {
             this.log.info('✓ Connected to MQTT broker');
+            this.log.info(`Subscribing to: ${JSON.stringify(topics)}`);
             this.client.subscribe(topics, (err) => {
                 if (err) {
                     this.log.error('Subscription failed:', err);
@@ -122,13 +129,13 @@ AFRAME.registerComponent('mqtt-bridge', {
                 break;
             }
 
-            case 'recipe': {
+            case 'recipe-desired': {
                 const event = recipeMessageToEvent(payload);
                 if (!event) {
                     this.log.error('Ignoring malformed recipe message');
                     return;
                 }
-                this.log.info(`Recipe received: ${event.recipe.name}`);
+                this.log.info(`Recipe to prepare received: ${event.recipe.name}`);
                 this.prepMgr.send(event);
                 break;
             }
@@ -152,15 +159,6 @@ AFRAME.registerComponent('mqtt-bridge', {
         if (stateChanged) {
             const stateTopic = window.CosmicChef.gameStateTopic(this.data.teamId, this.data.gameId);
             this.client.publish(stateTopic, JSON.stringify({ state, context }), { qos: 1 });
-        }
-
-        // Announce the captured recipe (the round/recipe topic is also how recipes arrive;
-        // the echo is ignored because the machine only captures in waitingForRecipe)
-        if (recipeCaptured) {
-            const { name, composition, charge, ingredientSequences, finalStep } = context.currentOrder;
-            const topic = window.CosmicChef.recipeTopic(this.data.teamId, this.data.gameId);
-            this.client.publish(topic, JSON.stringify({ name, composition, charge, ingredientSequences, finalStep }), { qos: 1 });
-            this.log.info(`Published recipe to ${topic}: ${name}`);
         }
     },
 

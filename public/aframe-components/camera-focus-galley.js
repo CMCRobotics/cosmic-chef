@@ -22,19 +22,19 @@ AFRAME.registerComponent('camera-focus-galley', {
     },
 
     focusOnTeamGalley: function () {
-        const teamId = window.CURRENT_TEAM || 'team-blue';
-        this.log.debug(`Focusing camera on team: ${teamId}`);
+        const teamSuffix = window.CURRENT_TEAM || 'blue';
+        this.log.debug(`Focusing camera on team: ${teamSuffix}`);
 
         // Per-team hardcoded adjustments
         const teamAdjustments = {
-            'team-blue': { backwardDistance: -4.5, strafeOffset: -1.5 },
-            'team-red': { backwardDistance: -5.2, strafeOffset: -0.3 },
-            'team-white': { backwardDistance: -3.8, strafeOffset: -0.1 }
+            'blue': { backwardDistance: -4.5, strafeOffset: -1.5 },
+            'red': { backwardDistance: -5.2, strafeOffset: -0.3 },
+            'white': { backwardDistance: -3.8, strafeOffset: -0.1 }
         };
-        const adjustments = teamAdjustments[teamId] || { backwardDistance: -4.5, strafeOffset: 0.1 };
+        const adjustments = teamAdjustments[teamSuffix] || { backwardDistance: -4.5, strafeOffset: 0.1 };
 
         // Find the galley element for this team
-        const galleryId = teamId.replace('team-', 'galley-');
+        const galleryId = `galley-${teamSuffix}`;
         const galleryEl = document.querySelector(`#${galleryId}`);
 
         // If galley not found, retry after a delay (fragments may not be loaded yet)

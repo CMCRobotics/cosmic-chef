@@ -36,7 +36,7 @@
     <script>
          window.AFRAME_INSPECTOR_CONFIG = {saveEndpoint: "/save"};
          // Parse team from URL parameter, default to team-blue
-         window.CURRENT_TEAM = window.URLParams.get('team', 'team-blue');
+         window.CURRENT_TEAM = window.URLParams.get('team', 'blue');
          window.GAME_ID = window.URLParams.get('gameId', 'default');
          window.NUM_SOUS_CHEFS = parseInt(window.URLParams.get('numSousChefs', '3'), 10);
     </script>
@@ -44,13 +44,22 @@
     <a-scene
         start-experience
         preparation-manager
-        mqtt-bridge="teamId: team-blue; gameId: default; numSousChefs: 3"
+        id="scene"
         webxr="optionalFeatures: hit-test, local-floor, hand-tracking; requiredFeatures: local-floor;"
         renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
         cursor="rayOrigin: mouse"
         fog="color: #1d1d1e; distance: 800;"
         raycaster="objects: .clickable"
         inspector="url: /aframe-inspector.min.js">
+
+        <script>
+            // Dynamically configure mqtt-bridge based on URL params
+            document.querySelector('#scene').setAttribute('mqtt-bridge', {
+                teamId: window.CURRENT_TEAM || 'blue',
+                gameId: window.GAME_ID || 'default',
+                numSousChefs: window.NUM_SOUS_CHEFS || 3
+            });
+        </script>
       
         <a-assets>
             <a-asset-item id="asset_button_floor_square" src="assets/models/factory/button-floor-square.glb"></a-asset-item>
@@ -109,17 +118,17 @@
             <!-- Galley layout: arranges all team galleys in a circle -->
             <a-entity id="galley-layout-root" galley-layout="radius: 15; height: 0; rotationOffset: 0">
                 <!-- Team Blue's Galley -->
-                <a-entity id="galley-blue" team-galley-receiver="teamId: team-blue; gameId: default" galley-manager="galleryId: galley-blue">
+                <a-entity id="galley-blue" team-galley-receiver="teamId: blue; gameId: default" galley-manager="galleryId: galley-blue">
                     <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-blue"></a-entity>
                 </a-entity>
 
                 <!-- Team White's Galley -->
-                <a-entity id="galley-white" team-galley-receiver="teamId: team-white; gameId: default" galley-manager="galleryId: galley-white">
+                <a-entity id="galley-white" team-galley-receiver="teamId: white; gameId: default" galley-manager="galleryId: galley-white">
                     <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-white"></a-entity>
                 </a-entity>
 
                 <!-- Team Red's Galley -->
-                <a-entity id="galley-red" team-galley-receiver="teamId: team-red; gameId: default" galley-manager="galleryId: galley-red">
+                <a-entity id="galley-red" team-galley-receiver="teamId: red; gameId: default" galley-manager="galleryId: galley-red">
                     <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-red"></a-entity>
                 </a-entity>
             </a-entity>

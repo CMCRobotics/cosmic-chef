@@ -19,6 +19,15 @@ AFRAME.registerComponent('team-galley-receiver', {
 
     init: function () {
         this.log = window.log.getLogger('team-galley-receiver');
+        
+        // If this is the local team, we don't need to receive state via MQTT
+        // because the local preparation-manager already handles it.
+        if (this.data.teamId === window.CURRENT_TEAM) {
+            this.log.info(`Team ${this.data.teamId} is local team. Receiver will remain dormant to avoid latency/duplication.`);
+            this.isLocalTeam = true;
+            return;
+        }
+
         this.log.debug(`Initializing team-galley-receiver for team: ${this.data.teamId}`);
 
         this.currentState = null;
@@ -150,6 +159,10 @@ AFRAME.registerComponent('team-galley-receiver', {
     },
 
     getSnapshot: function () {
+        if (this.isLocalTeam) {
+            const prepMgr = document.querySelector('a-scene').components['preparation-manager'];
+            return prepMgr ? prepMgr.getSnapshot() : { value: null, context: null };
+        }
         return {
             value: this.currentState,
             context: this.currentContext
