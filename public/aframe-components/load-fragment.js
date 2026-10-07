@@ -1,13 +1,15 @@
 AFRAME.registerComponent('load-fragment', {
     schema: {
         src: {type: 'string', default: ''},
-        templateId: {type: 'string', default: ''}
+        templateId: {type: 'string', default: ''},
+        renameEntityIds: {type: 'boolean', default: true}
     },
 
     init: function() {
         const log = window.log.getLogger('load-fragment');
         const src = this.data.src;
         const templateId = this.data.templateId;
+        const renameEntityIds = this.data.renameEntityIds;
 
         if (!src || !templateId) {
             log.error('load-fragment component requires both src and templateId parameters');
@@ -25,11 +27,13 @@ AFRAME.registerComponent('load-fragment', {
                 if (template) {
                     const clone = document.importNode(template.content, true);
 
-                    // Namespace all IDs in the clone to avoid collisions when loading multiple instances
-                    const instanceCount = document.querySelectorAll(`[data-load-fragment-source="${templateId}"]`).length;
-                    clone.querySelectorAll('[id]').forEach(el => {
-                        el.setAttribute('id', `${el.id}__${templateId}_${instanceCount}`);
-                    });
+                    if(renameEntityIds){
+                        // Namespace all IDs in the clone to avoid collisions when loading multiple instances
+                        const instanceCount = document.querySelectorAll(`[data-load-fragment-source="${templateId}"]`).length;
+                        clone.querySelectorAll('[id]').forEach(el => {
+                            el.setAttribute('id', `${el.id}__${templateId}_${instanceCount}`);
+                        });
+                    }
 
                     // Mark the parent entity so we can count instances on next load
                     this.el.setAttribute('data-load-fragment-source', templateId);
