@@ -94,7 +94,8 @@ AFRAME.registerComponent('team-galley-receiver', {
                 this.el.emit('game-state-changed', {
                     state,
                     context
-                }, false);
+                }, false); // IMPORTANT - the event must not bubble up !
+                // Or it can trigger a game-state-change in other galleys.
 
                 this.log.trace(`📊 Received state for ${teamId}: ${state}`);
             } catch (e) {
