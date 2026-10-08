@@ -1,5 +1,6 @@
 include:
   - component: '$CI_SERVER_FQDN/acc-co/devops/ksc-hq/ksc-ci-components/container@main'
     inputs:
+      kaniko-build-args: "--build-arg BUN_IMAGE=registry.cern.ch/docker.io/oven/bun:slim"
       image-promote-rules:
         - when: never

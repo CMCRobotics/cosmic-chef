@@ -1,5 +1,7 @@
+ARG BUN_IMAGE=oven/bun:slim
+
 # Stage 1: Build the frontend
-FROM oven/bun:slim AS build
+FROM ${BUN_IMAGE} AS build
 
 WORKDIR /build
 
@@ -11,7 +13,7 @@ RUN bun install
 RUN bun run build
 
 # Stage 2: Runtime environment
-FROM oven/bun:slim
+FROM ${BUN_IMAGE}
 
 WORKDIR /app
 
