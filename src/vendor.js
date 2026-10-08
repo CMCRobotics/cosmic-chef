@@ -5,6 +5,7 @@ import * as TWEEN from "@tweenjs/tween.js";
 import "aframe-environment-component";
 import * as XState from "xstate";
 import * as RxJS from "rxjs";
+import * as mqtt from "mqtt";
 import * as CosmicChef from "./client/index.ts";
 
 // Default level for every named logger; debug() in dev/console-helpers.js changes it at runtime.
@@ -16,4 +17,5 @@ window.log = log;
 window.TWEEN = TWEEN;
 window.XState = XState;
 window.RxJS = RxJS;
+window.mqtt = mqtt;
 window.CosmicChef = CosmicChef;
