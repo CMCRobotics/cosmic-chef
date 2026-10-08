@@ -11,6 +11,8 @@ spec:
     metadata:
       labels:
         app: cosmic-chef-aframe
+      annotations:
+        cosmic-chef/commit-sha: {{ .Values.commitSha | default "" | quote }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

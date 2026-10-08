@@ -1,5 +1,8 @@
 replicaCount: 1
 
+# Set by CI on each deploy so the pod template changes and pods roll out
+commitSha: ""
+
 image:
   repository: ghcr.io/cmcrobotics/cosmic-chef
   pullPolicy: IfNotPresent
