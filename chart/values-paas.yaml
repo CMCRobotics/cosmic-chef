@@ -4,7 +4,7 @@ image:
   tag: "develop"
 
 imagePullSecrets:
-  - name: gitlab-registry
+  - name: gitlab-registry-cosmic-chef
 
 domain: cosmic-chef.app.cern.ch
 
