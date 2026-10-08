@@ -5,10 +5,11 @@
   "scripts": {
     "build:vendor": "bun build src/vendor.js --outfile public/vendor/bundle.js --minify",
     "dev": "bun run build:vendor && bun run src/server.ts",
-    "compile": "bun run build:vendor && bun build src/server.ts --compile --outfile dist/cosmic-chef",
+    "compile": "bun build src/server.ts --compile --outfile dist/cosmic-chef",
     "test": "bun test",
+    "clean": "rm -rf dist/ public/vendor/bundle.js",
     "build": "bun run copy-public && bun run compile",
-    "copy-public": "mkdir -p dist && cp -r public dist/"
+    "copy-public": "mkdir -p dist && bun run build:vendor && cp -r public dist/"
   },
   "dependencies": {
     "@tweenjs/tween.js": "^25.0.0",
