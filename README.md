@@ -22,7 +22,7 @@ sudo service mosquitto stop && sudo rm /var/lib/mosquitto/mosquitto.db && sudo s
 
 ### Useful commands
 
-* Reset your broker ```MQTT_BROKER_URL="wss://inmachine-mqtt.app.cern.ch" npm run init-teams```
+* Set up a blue team with three sous chefs ```MQTT_BROKER="wss://cosmic-chef-mqtt.app.cern.ch" node scripts/register-team.ts blue 3```
 
 
 ## 🚀 Deployment (CERN PaaS / OpenShift)
