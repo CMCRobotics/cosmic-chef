@@ -70,6 +70,16 @@ export const serverOptions = {
       });
     }
 
+    // Runtime config for the browser (MQTT broker URL from .env)
+    if (req.method === "GET" && url.pathname === "/config.js") {
+      const config = {
+        MQTT_BROKER_URL: process.env.MQTT_BROKER_URL || "ws://localhost:9001",
+      };
+      return new Response(`window.COSMIC_CHEF_CONFIG = ${JSON.stringify(config)};`, {
+        headers: { "Content-Type": "application/javascript" },
+      });
+    }
+
     // Handle Save Endpoint
     if (req.method === "POST" && url.pathname === "/save") {
       console.log("Triggering save...");

@@ -39,7 +39,7 @@ bun run dev          # serves http://localhost:3000
 - `bun run dev` → `build:vendor` then `src/server.ts`. Re-run it after editing `src/client/*.ts`.
 - MQTT: the game connects to `ws://localhost:9001` (see the `mqtt-bridge` schema). `public/test-sous-chefs.html` simulates the sous-chefs and the head chef from a keyboard.
 - `bun run compile` → single Linux x64 binary named `cosmic-chef` (gitignored).
-- Env vars: `PORT` (default `3000`), `PROJECT_DIR` (default `public`), `AFRAME_WATCHER_HTML`.
+- Env vars: `PORT` (default `3000`), `PROJECT_DIR` (default `public`), `AFRAME_WATCHER_HTML`, `MQTT_BROKER_URL` (default `ws://localhost:9001`, served to the browser as `window.COSMIC_CHEF_CONFIG` via `/config.js`; set it in `.env`).
 - The HTML target resolves as **CLI arg > `AFRAME_WATCHER_HTML` env > `public/*.html`**.
 
 ## 4. Layout
@@ -116,6 +116,7 @@ AFRAME.registerComponent('my-thing', {
 - **A-Frame is bundled locally.** `public/index.html` loads `vendor/bundle.js`, which includes A-Frame 1.7.1 (pinned in `package.json`) bundled with dependencies. There is no version inconsistency—the running version matches `package.json`.
 - **The Inspector rewrites your source.** `POST /save` writes changes back into the HTML files. Avoid hand-editing fragments while the Inspector is saving, or your edits may be clobbered.
 - **Static files win over built-in routes.** A real file in `public/` shadows `/aframe.min.js` and `/aframe-inspector.min.js`, because the static lookup runs first.
+- **MQTT broker URL is injected, not hardcoded.** Components read `window.COSMIC_CHEF_CONFIG.MQTT_BROKER_URL` from `/config.js` as their schema default, so `config.js` must load before any component script. Don't add new hardcoded broker URLs.
 - **`@ts-ignore` in `server.ts` is intentional** — the `with { type: "text" }` imports of the A-Frame bundles have no type declarations. Leave them.
 - **`node:fs` / path work must stay Bun-compatible** (`Bun.file`, `Bun.serve`). Do not introduce Node-only server APIs or an Express-style framework.
 - **AR requires HTTPS** on real devices; `localhost` is exempt for desktop testing.

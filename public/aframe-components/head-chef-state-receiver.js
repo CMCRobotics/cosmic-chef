@@ -9,7 +9,7 @@
 
 AFRAME.registerComponent('head-chef-state-receiver', {
     schema: {
-        brokerUrl: { type: 'string', default: 'ws://localhost:9001' },
+        brokerUrl: { type: 'string', default: (window.COSMIC_CHEF_CONFIG && window.COSMIC_CHEF_CONFIG.MQTT_BROKER_URL) || 'ws://localhost:9001' },
         teamId: { type: 'string', default: 'team-1' },
         gameId: { type: 'string', default: 'default' }
     },

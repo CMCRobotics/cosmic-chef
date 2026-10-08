@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sous-Chef Gesture Test Interface</title>
+    <!-- Runtime config (MQTT_BROKER_URL from .env) -->
+    <script src="config.js"></script>
     <!-- Vendor Dependencies Bundle (includes RxJS, XState, loglevel, etc.) -->
     <script src="vendor/bundle.js"></script>
     <!-- MQTT Client -->
@@ -390,7 +392,7 @@
           <input
             type="text"
             id="brokerUrl"
-            value="ws://localhost:9001"
+            value=""
             placeholder="ws://localhost:9001"
           />
         </div>
@@ -531,6 +533,8 @@
     <!-- Shared recipes (window.RECIPES) — same definitions the game uses -->
     <script src="/xstate/preparation-machine.js"></script>
     <script>
+      document.getElementById("brokerUrl").value =
+        (window.COSMIC_CHEF_CONFIG && window.COSMIC_CHEF_CONFIG.MQTT_BROKER_URL) || "ws://localhost:9001";
       const { sousChefGestureTopic, headChefSubmitTopic, recipeTopic, recipeDesiredTopic } = window.CosmicChef;
 
       let client = null;
