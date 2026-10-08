@@ -1,0 +1,58 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/cmcrobotics/cosmic-chef
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 3000
+
+# Custom domain name for the application
+domain: intelligence.example.com
+
+# Configuration for the frontend clients
+config:
+  mqttBrokerUrl: "" # If empty, will default to wss://{{ .Values.domain }}/mqtt
+
+route:
+  enabled: true
+
+mosquitto:
+  enabled: true
+  wsDomain: "" # If empty, will default to mqtt-{{ .Values.domain }}
+  image:
+    repository: eclipse-mosquitto
+    tag: 2.0.18
+  service:
+    type: ClusterIP
+    wsPort: 9001
+    mqttPort: 1883
+
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    # Example for cert-manager
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: intelligence.example.com
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+          backend:
+            serviceName: aframe-scene
+            servicePort: 3000
+        - path: /mqtt
+          pathType: ImplementationSpecific
+          backend:
+            serviceName: mosquitto
+            servicePort: 9001
+  tls: []
+  #  - secretName: intelligence-tls
+  #    hosts:
+  #      - intelligence.example.com

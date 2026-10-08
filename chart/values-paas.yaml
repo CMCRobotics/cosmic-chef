@@ -1,0 +1,29 @@
+image:
+  repository: gitlab-registry.cern.ch/cmcrobotics/workshops/cosmic-chef/cosmic-chef
+  pullPolicy: Always
+  tag: "develop"
+
+imagePullSecrets:
+  - name: gitlab-registry
+
+domain: cosmic-chef.app.cern.ch
+
+route:
+  enabled: true
+  
+config:
+  mqttBrokerUrl: "wss://cosmic-chef-mqtt.app.cern.ch" 
+
+mosquitto:
+  enabled: true
+  wsDomain: "cosmic-chef-mqtt.app.cern.ch" # If empty, will default to mqtt-{{ .Values.domain }}
+  image:
+    repository: registry.cern.ch/docker.io/eclipse-mosquitto
+    tag: 2.0.18
+  service:
+    type: ClusterIP
+    wsPort: 9001
+    mqttPort: 1883
+
+ingress:
+  enabled: false

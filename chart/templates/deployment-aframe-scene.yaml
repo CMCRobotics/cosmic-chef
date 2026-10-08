@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cosmic-chef-aframe
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: cosmic-chef-aframe
+  template:
+    metadata:
+      labels:
+        app: cosmic-chef-aframe
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext: {}
+      containers:
+        - name: cosmic-chef-aframe
+          securityContext: {}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "3000"
+            - name: MQTT_BROKER_URL
+              value: "mqtt://mosquitto:1883"
+            - name: MQTT_BROKER_URL_CLIENT
+              value: {{ .Values.config.mqttBrokerUrl | default (printf "wss://%s/mqtt" .Values.domain) | quote }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cosmic-chef-aframe
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app: cosmic-chef-aframe
