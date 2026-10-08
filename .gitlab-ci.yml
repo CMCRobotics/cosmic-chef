@@ -16,7 +16,7 @@ Bun build:
   stage: build
   script:
     - bun install
-    - bun build
+    - bun run build
   artifacts:
     paths:
       - dist/
