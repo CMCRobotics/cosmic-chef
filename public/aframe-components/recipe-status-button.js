@@ -230,20 +230,17 @@ AFRAME.registerComponent('recipe-status-button', {
     showSubmitFeedback: function () {
         // Brief pulse animation to indicate submission
         if (this.statusOverlay) {
-            const currentScale = this.statusOverlay.getAttribute('scale') || { x: 1, y: 1, z: 1 };
-
-            this.statusOverlay.setAttribute('animation', {
+            // Always pulse from the fixed base scale and reverse back to it. Reading the current
+            // scale here would compound, since a tween can still be running when the next press arrives.
+            this.statusOverlay.setAttribute('animation__pulse', {
                 property: 'scale',
-                to: `${currentScale.x * 1.3} ${currentScale.y * 1.3} ${currentScale.z * 1.3}`,
+                from: '1 1 1',
+                to: '1.3 1.3 1.3',
                 dur: 150,
+                dir: 'alternate',
+                loop: 2,
                 easing: 'easeInOutQuad'
             });
-
-            // Scale back
-            setTimeout(() => {
-                this.statusOverlay.removeAttribute('animation');
-                this.statusOverlay.setAttribute('scale', `${currentScale.x} ${currentScale.y} ${currentScale.z}`);
-            }, 150);
 
             this.log.info('Recipe submitted!');
         }

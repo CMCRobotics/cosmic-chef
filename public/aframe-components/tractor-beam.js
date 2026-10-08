@@ -6,14 +6,13 @@
  * crate is pulled to the closest intake, and the capture is published to its team.
  */
 
-// A captured crate is scaled to this and rests on top of its intake (the crate is 1.6 units wide)
-const PLACED_CRATE_SCALE = 0.6;
-const PLACED_CRATE_HALF_HEIGHT = (1.6 / 2) * PLACED_CRATE_SCALE;
+// A captured crate keeps its regular size and rests on top of its intake
+const PLACED_CRATE_HALF_HEIGHT = 1.6 / 2; // half the height of the crate
 const CRATE_SHRINK_MS = 500; // how long a finished crate takes to shrink away
 
 AFRAME.registerComponent('tractor-beam', {
     schema: {
-        maxDistance: { type: 'number', default: 100 }, // used to scale the crate while it is pulled
+        maxDistance: { type: 'number', default: 100 }, // how far the aim ray reaches
         highlightEmissive: { type: 'string', default: '#ffff00' }, // yellow glow for the selected crate
         highlightIntensity: { type: 'number', default: 0.8 } // glow intensity
     },
@@ -27,7 +26,8 @@ AFRAME.registerComponent('tractor-beam', {
         this.selectedRecipe = null; // crate locked by the first right click
         this.highlightedRecipe = null; // crate currently glowing
         this.capturedRecipe = null; // crate being pulled to intake
-        this.originalMaterial = null; // store original recipe material for unhighlighting
+        this.teamState = null; // the team's last state broadcast, null until the first one
+        this.savedMaterials = new Map(); // crate → its original mesh materials, while it is highlighted
 
         // Right click: first click selects the aimed crate, second click captures it
         this.onMouseDown = this.onMouseDown.bind(this);
@@ -38,6 +38,7 @@ AFRAME.registerComponent('tractor-beam', {
         // A submitted or cancelled order removes its crate from the intake
         this.onStateChanged = (evt) => {
             const { state } = evt.detail;
+            this.teamState = state;
             if (state === 'orderSuccess' || state === 'orderPenalized') {
                 this.disposeCapturedRecipes();
             }
@@ -53,6 +54,12 @@ AFRAME.registerComponent('tractor-beam', {
     onMouseDown: function (evt) {
         if (evt.button !== 2) return; // right button only
         if (this.capturedRecipe) return; // a crate is already on its way to the intake
+
+        // The galley only takes a new recipe while it is waiting for one; a capture at any other time is ignored
+        if (this.teamState && this.teamState !== 'waitingForRecipe') {
+            this.log.info(`Team is busy (${this.teamState}), the crate cannot be captured yet`);
+            return;
+        }
 
         if (!this.aimedRecipe) {
             this.selectedRecipe = null; // right click on nothing clears the selection
@@ -110,27 +117,37 @@ AFRAME.registerComponent('tractor-beam', {
         return hits.length > 0 ? hits[0].object.userData.recipeEl : null;
     },
 
+    // Glow the crate's model meshes. The mesh materials are swapped for copies, so the
+    // model's own materials (which may be shared between crates) are never changed.
     highlightRecipe: function (recipeEl) {
-        if (!recipeEl) return;
+        if (!recipeEl || this.savedMaterials.has(recipeEl)) return;
 
-        // Copy the values (not the live attribute object) so unhighlighting restores them exactly
-        const { color, emissive, emissiveIntensity, opacity, transparent } = recipeEl.getAttribute('material');
-        this.originalMaterial = { color, emissive, emissiveIntensity, opacity, transparent };
+        const saved = [];
+        recipeEl.object3D.traverse((child) => {
+            if (!child.isMesh || !child.material || !child.material.emissive) return; // skip the text labels
+            saved.push({ mesh: child, material: child.material });
 
-        recipeEl.setAttribute('material', {
-            ...this.originalMaterial,
-            emissive: this.data.highlightEmissive,
-            emissiveIntensity: this.data.highlightIntensity
+            const glowing = child.material.clone();
+            glowing.emissive.set(this.data.highlightEmissive);
+            glowing.emissiveIntensity = this.data.highlightIntensity;
+            child.material = glowing;
         });
+        if (saved.length > 0) {
+            this.savedMaterials.set(recipeEl, saved);
+        }
 
         this.log.debug(`Highlighted recipe: ${recipeEl.id}`);
     },
 
     unhighlightRecipe: function (recipeEl) {
-        if (!recipeEl || !this.originalMaterial) return;
+        const saved = recipeEl && this.savedMaterials.get(recipeEl);
+        if (!saved) return;
 
-        recipeEl.setAttribute('material', this.originalMaterial);
-        this.originalMaterial = null;
+        saved.forEach(({ mesh, material }) => {
+            mesh.material.dispose();
+            mesh.material = material;
+        });
+        this.savedMaterials.delete(recipeEl);
 
         this.log.debug(`Unhighlighted recipe: ${recipeEl.id}`);
     },
@@ -149,7 +166,7 @@ AFRAME.registerComponent('tractor-beam', {
     },
 
     pullRecipeToIntake: function (recipeEl) {
-        const intakeEls = document.querySelectorAll('.recipe-team-intake');
+        const intakeEls = document.querySelectorAll('[data-recipe-team-intake="true"]');
         if (intakeEls.length === 0) {
             this.log.error('No recipe intake in the scene - dropping the capture');
             this.capturedRecipe = null;
@@ -182,16 +199,11 @@ AFRAME.registerComponent('tractor-beam', {
         const local = crateObj.parent.worldToLocal(next.clone());
         recipeEl.setAttribute('position', `${local.x} ${local.y} ${local.z}`);
 
-        // Scale up as it gets closer
-        const distance = next.distanceTo(target);
-        const scaleFactor = Math.max(0.6, 1.5 - (distance / this.data.maxDistance));
-        recipeEl.setAttribute('scale', `${scaleFactor} ${scaleFactor} ${scaleFactor}`);
-
         // Landed: sit exactly on top of the intake and finalize the capture once
+        const distance = next.distanceTo(target);
         if (distance < 0.1) {
             const placed = crateObj.parent.worldToLocal(target.clone());
             recipeEl.setAttribute('position', `${placed.x} ${placed.y} ${placed.z}`);
-            recipeEl.setAttribute('scale', `${PLACED_CRATE_SCALE} ${PLACED_CRATE_SCALE} ${PLACED_CRATE_SCALE}`);
 
             this.capturedRecipe = null;
             this.finalizeCaptureOnIntake(recipeEl);
