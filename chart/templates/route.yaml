@@ -5,6 +5,9 @@ metadata:
   name: cosmic-chef-aframe
   labels:
     app: cosmic-chef-aframe
+  annotations:
+    haproxy.router.openshift.io/ip_whitelist: ''
+
 spec:
   host: {{ .Values.domain }}
   to:
