@@ -26,6 +26,8 @@ metadata:
   name: mosquitto-ws
   labels:
     app: mosquitto
+  annotations:
+    haproxy.router.openshift.io/ip_whitelist: ''
 spec:
   host: {{ .Values.mosquitto.wsDomain | default (printf "mqtt-%s" .Values.domain) }}
   to:
