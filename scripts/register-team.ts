@@ -1,12 +1,15 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 /**
  * Team & Game Registration Script
  *
  * Registers a new game session with a team, head chef, and sous-chefs.
- * Usage: bun scripts/register-team.ts <team-id> <num-sous-chefs>
+ * Usage: node scripts/register-team.ts <team-id> <num-sous-chefs>
  *
- * Example: bun scripts/register-team.ts blue 3
+ * Example: node scripts/register-team.ts blue 3
+ *
+ * Runs under Node, not Bun: mqtt.js's wss:// transport uses the `ws` package,
+ * which Bun does not support ("Not supported yet in Bun").
  */
 
 import mqtt from "mqtt";
@@ -16,7 +19,7 @@ const RETAIN = true;
 const QOS = 1;
 
 async function registerTeam() {
-  const args = Bun.argv.slice(2);
+  const args = process.argv.slice(2);
 
   if (args.length < 2) {
     console.error(
