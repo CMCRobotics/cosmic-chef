@@ -1,6 +1,21 @@
 include:
   - component: '$CI_SERVER_FQDN/acc-co/devops/ksc-hq/ksc-ci-components/container@main'
+    build-stage: package
     inputs:
+      docker-path: dist/
       image-promote-rules:
         - when: never
 
+stages:
+  - build
+  - package
+
+image: registry.cern.ch/docker.io/oven/bun:slim
+
+build:
+  script:
+    - bun install
+    - bun build
+  artifacts:
+    paths:
+      - dist/
