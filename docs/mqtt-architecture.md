@@ -6,7 +6,7 @@ Reference document for component responsibilities, MQTT topic layouts, and cross
 
 ## 1. System Topology & Component Roles
 
-Each client window (`index.html`) represents a view for a specific team (set via URL param `?team=blue|red|white`). A circular galley layout allows viewing all teams simultaneously, while each window runs its own local state machine for its active team.
+Each client window (`index.html`) represents a view for a specific team (set via URL param `?team=blue|red|white`). The team is remembered in localStorage (`cosmic-chef.team`) and a `?team=` in the URL replaces it. `head-chef.html` uses the same team and only subscribes to its own team's state. A circular galley layout allows viewing all teams simultaneously, while each window runs its own local state machine for its active team.
 
 ```
                       ┌────────────────────────────────────────┐

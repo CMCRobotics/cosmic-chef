@@ -104,13 +104,6 @@ AFRAME.registerComponent('recipe-status-button', {
         this.lastState = state;
     },
 
-    // Called by tractor beam when recipe is manually captured
-    enableForNewRecipe: function () {
-        this.isDisabled = false;
-        this.log.info('New recipe manually captured, button re-enabled');
-        this.updateButtonState(this.lastState, { currentOrder: this.currentRecipe, stations: [] });
-    },
-
     updateButtonState: function (state, context) {
         // Determine if recipe is ready based on state
         this.isReady = state === 'recipeReadyForSubmit' && context.currentOrder !== null && !this.isDisabled;
@@ -206,9 +199,8 @@ AFRAME.registerComponent('recipe-status-button', {
         const mqttComponent = scene?.components['mqtt-bridge'] || scene?.components['head-chef-mqtt-client'];
 
         if (mqttComponent && mqttComponent.client && mqttComponent.client.connected) {
-            const gameId = mqttComponent.data?.gameId || 'default';
-            const teamId = mqttComponent.data?.teamId || 'blue';
-            const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
+            const { gameId, teamId } = mqttComponent.data;
+            const topic = window.CosmicChef.headChefSubmitTopic(teamId, gameId);
 
             // "submitting" → adapter converts to SUBMIT_RECIPE event
             mqttComponent.client.publish(topic, 'submitting', { qos: 1 });
@@ -224,9 +216,8 @@ AFRAME.registerComponent('recipe-status-button', {
         const mqttComponent = scene?.components['mqtt-bridge'] || scene?.components['head-chef-mqtt-client'];
 
         if (mqttComponent && mqttComponent.client && mqttComponent.client.connected) {
-            const gameId = mqttComponent.data?.gameId || 'default';
-            const teamId = mqttComponent.data?.teamId || 'blue';
-            const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
+            const { gameId, teamId } = mqttComponent.data;
+            const topic = window.CosmicChef.headChefSubmitTopic(teamId, gameId);
 
             // "idle" → adapter converts to CANCEL_ORDER event
             mqttComponent.client.publish(topic, 'idle', { qos: 1 });
@@ -239,20 +230,17 @@ AFRAME.registerComponent('recipe-status-button', {
     showSubmitFeedback: function () {
         // Brief pulse animation to indicate submission
         if (this.statusOverlay) {
-            const currentScale = this.statusOverlay.getAttribute('scale') || { x: 1, y: 1, z: 1 };
-
-            this.statusOverlay.setAttribute('animation', {
+            // Always pulse from the fixed base scale and reverse back to it. Reading the current
+            // scale here would compound, since a tween can still be running when the next press arrives.
+            this.statusOverlay.setAttribute('animation__pulse', {
                 property: 'scale',
-                to: `${currentScale.x * 1.3} ${currentScale.y * 1.3} ${currentScale.z * 1.3}`,
+                from: '1 1 1',
+                to: '1.3 1.3 1.3',
                 dur: 150,
+                dir: 'alternate',
+                loop: 2,
                 easing: 'easeInOutQuad'
             });
-
-            // Scale back
-            setTimeout(() => {
-                this.statusOverlay.removeAttribute('animation');
-                this.statusOverlay.setAttribute('scale', `${currentScale.x} ${currentScale.y} ${currentScale.z}`);
-            }, 150);
 
             this.log.info('Recipe submitted!');
         }

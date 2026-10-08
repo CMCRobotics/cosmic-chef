@@ -14,7 +14,7 @@
     }
 
     setTimeout(() => {
-        focusLog(['galley-manager','preparation-manager', 'mqtt-bridge', 'head-chef-state-receiver', 'team-galley-receiver']);
+        focusLog(['galley-manager','preparation-manager', 'mqtt-bridge', 'head-chef-mqtt-client', 'team-galley-receiver']);
     }, 100);
 
     function prepMgr() {
@@ -45,7 +45,7 @@
     };
 
     window.silence = function (loggerNames = []) {
-        const defaults = ['preparation-manager', 'mqtt-bridge', 'head-chef-state-receiver', 'team-galley-receiver', 'galley-manager'];
+        const defaults = ['preparation-manager', 'mqtt-bridge', 'head-chef-mqtt-client', 'team-galley-receiver', 'galley-manager'];
         const targets = loggerNames.length > 0 ? loggerNames : defaults;
         targets.forEach(name => {
             window.log.getLogger(name).setLevel('warn');
@@ -54,7 +54,7 @@
     };
 
     window.focusLog = function (loggerNames = 'camera-focus-galley') {
-        const allLoggers = ['preparation-manager', 'mqtt-bridge', 'head-chef-state-receiver', 'team-galley-receiver', 'galley-manager', 'load-fragment', 'start-experience', 'world-root', 'galley-layout', 'final-stir-camera'];
+        const allLoggers = ['preparation-manager', 'mqtt-bridge', 'head-chef-mqtt-client', 'team-galley-receiver', 'galley-manager', 'load-fragment', 'start-experience', 'world-root', 'galley-layout', 'final-stir-camera'];
         allLoggers.forEach(name => {
             window.log.getLogger(name).setLevel('warn');
         });

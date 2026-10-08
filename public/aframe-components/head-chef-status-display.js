@@ -81,56 +81,10 @@ AFRAME.registerComponent('head-chef-status-display', {
     updateDisplay: function () {
         if (!this.statusText || !this.lastContext) return;
 
-        const lines = [];
+        // Wording and layout live in src/client/status.ts (unit-tested)
+        const team = (window.CURRENT_TEAM || 'blue').toUpperCase();
+        const lines = [`TEAM ${team}`, ...window.CosmicChef.describeHeadChefStatus(this.lastState, this.lastContext)];
 
-        // Recipe info
-        if (this.lastContext.currentOrder) {
-            lines.push(`📖 Recipe: ${this.lastContext.currentOrder.name}`);
-        } else {
-            lines.push('📖 Recipe: None');
-        }
-
-        // Game state
-        lines.push(`State: ${this.lastState}`);
-
-        // Sous-chef status
-        lines.push('');
-        lines.push('Sous-Chefs:');
-        this.lastContext.stations?.forEach((station) => {
-            const gesture = station.gesturesRequired?.[0]?.gesture || 'idle';
-            const progress = Math.round(station.progress || 0);
-            const ingredientId = station.ingredientId?.split('-')[0] || 'empty';
-            lines.push(`  ${station.stationId}: ${gesture} (${progress}%) [${ingredientId}]`);
-        });
-
-        // Ingredient counts
-        lines.push('');
-        lines.push('Ingredients at Stations:');
-        const ingredientCounts = {};
-        this.lastContext.stations?.forEach((station) => {
-            if (station.ingredientId) {
-                const type = station.ingredientType || 'unknown';
-                ingredientCounts[type] = (ingredientCounts[type] || 0) + 1;
-            }
-        });
-        if (Object.keys(ingredientCounts).length === 0) {
-            lines.push('  (none)');
-        } else {
-            Object.entries(ingredientCounts).forEach(([type, count]) => {
-                lines.push(`  ${type}: ${count}`);
-            });
-        }
-
-        // Captured recipe status
-        lines.push('');
-        const headChefMgr = document.querySelector('#head-chef-root')?.components['head-chef-manager'];
-        if (headChefMgr?.capturedRecipe) {
-            lines.push(`✓ Captured Recipe: ${headChefMgr.capturedRecipe}`);
-        } else {
-            lines.push('✗ No recipe captured yet');
-        }
-
-        // Update text
         const textAttr = this.statusText.getAttribute('text');
         textAttr.value = lines.join('\n');
         this.statusText.setAttribute('text', textAttr);

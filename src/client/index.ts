@@ -4,3 +4,5 @@
  */
 export * from "./topics";
 export * from "./adapters";
+export * from "./team";
+export * from "./status";

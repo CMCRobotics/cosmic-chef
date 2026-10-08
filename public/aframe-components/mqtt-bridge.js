@@ -14,7 +14,7 @@ AFRAME.registerComponent('mqtt-bridge', {
 
     schema: {
         brokerUrl: { type: 'string', default: (window.COSMIC_CHEF_CONFIG && window.COSMIC_CHEF_CONFIG.MQTT_BROKER_URL) || 'ws://localhost:9001' },
-        teamId: { type: 'string', default: 'team-1' },
+        teamId: { type: 'string', default: 'blue' },
         gameId: { type: 'string', default: 'default' },
         numSousChefs: { type: 'number', default: 3 }
     },
@@ -23,12 +23,8 @@ AFRAME.registerComponent('mqtt-bridge', {
         this.log = window.log.getLogger('mqtt-bridge');
         this.prepMgr = this.el.components['preparation-manager'];
 
-        // Force teamId from URL if present, overriding any HTML attributes
-        const urlParams = new URLSearchParams(window.location.search);
-        const teamParam = urlParams.get('team');
-        if (teamParam) {
-            this.data.teamId = teamParam;
-        } else if (window.CURRENT_TEAM) {
+        // Team is resolved once by index.html (URL ?team= or remembered team), overriding HTML attributes
+        if (window.CURRENT_TEAM) {
             this.data.teamId = window.CURRENT_TEAM;
         }
         
