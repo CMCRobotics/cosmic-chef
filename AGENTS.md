@@ -57,6 +57,7 @@ public/aframe-components/*.js   Custom A-Frame components (most work happens her
 public/dev/console-helpers.js   Browser-console helpers: testRecipe(), testGesture(), ...
 public/test-sous-chefs.html     Keyboard MQTT simulator for sous-chefs / head chef
 docs/physics.md                 Physics + game-design reference (content authority)
+docs/head-chef-controls.md   Head-chef controls (desktop and VR), floor button, status panel
 ```
 
 ### How the server works (`src/server.ts`)

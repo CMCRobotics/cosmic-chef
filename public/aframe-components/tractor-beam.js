@@ -35,6 +35,10 @@ AFRAME.registerComponent('tractor-beam', {
         document.addEventListener('mousedown', this.onMouseDown);
         document.addEventListener('contextmenu', this.onContextMenu);
 
+        // In VR the right trigger does the same job (this component lives on the right hand)
+        this.onTriggerDown = () => this.onPress();
+        this.el.addEventListener('triggerdown', this.onTriggerDown);
+
         // A submitted or cancelled order removes its crate from the intake
         this.onStateChanged = (evt) => {
             const { state } = evt.detail;
@@ -53,6 +57,11 @@ AFRAME.registerComponent('tractor-beam', {
 
     onMouseDown: function (evt) {
         if (evt.button !== 2) return; // right button only
+        this.onPress();
+    },
+
+    // Select the aimed crate, or capture the selected one (right mouse button or right trigger)
+    onPress: function () {
         if (this.capturedRecipe) return; // a crate is already on its way to the intake
 
         // The galley only takes a new recipe while it is waiting for one; a capture at any other time is ignored
@@ -289,6 +298,7 @@ AFRAME.registerComponent('tractor-beam', {
         this.el.sceneEl.removeEventListener('game-state-changed', this.onStateChanged);
         document.removeEventListener('mousedown', this.onMouseDown);
         document.removeEventListener('contextmenu', this.onContextMenu);
+        this.el.removeEventListener('triggerdown', this.onTriggerDown);
         this.unhighlightRecipe(this.highlightedRecipe);
         this.log.debug('Tractor beam removed');
     }

@@ -116,8 +116,9 @@
         </a-entity>
 
         <!-- Controller Entities (VR hands) -->
-        <a-entity id="leftHand" laser-controls="hand: left" raycaster="objects: .clickable"></a-entity>
-        <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .clickable" tractor-beam></a-entity>
+        <!-- cursor turns a trigger press on the hand into a click (e.g. the floor button) -->
+        <a-entity id="leftHand" laser-controls="hand: left" raycaster="objects: .clickable" cursor="rayOrigin: entity"></a-entity>
+        <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .clickable" cursor="rayOrigin: entity" tractor-beam></a-entity>
 
         <!-- Camera Rig -->
         <a-entity id="cameraRig" position="0 2.6 4">

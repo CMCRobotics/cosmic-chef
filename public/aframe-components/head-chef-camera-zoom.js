@@ -1,7 +1,7 @@
 /**
  * head-chef-camera-zoom.js
  * Analog camera zoom for head chef.
- * VR: trigger on right hand to zoom in/out
+ * VR: squeeze (grip) the right hand to zoom in/out
  * Desktop: +/- keys to zoom in/out
  * FOV narrows when zooming in (sniper-like effect)
  */
@@ -32,8 +32,8 @@ AFRAME.registerComponent('head-chef-camera-zoom', {
         // Get VR right hand controller
         this.rightHand = document.querySelector('#rightHand');
         if (this.rightHand) {
-            this.rightHand.addEventListener('triggerdown', () => this.onTriggerDown());
-            this.rightHand.addEventListener('triggerup', () => this.onTriggerUp());
+            this.rightHand.addEventListener('gripdown', () => this.onTriggerDown());
+            this.rightHand.addEventListener('gripup', () => this.onTriggerUp());
         }
 
         // Listen for keyboard zoom (+/- keys)
@@ -49,7 +49,7 @@ AFRAME.registerComponent('head-chef-camera-zoom', {
         // Update loop
         this.tick = AFRAME.utils.throttleTick(this.tick.bind(this), 60);
 
-        this.log.debug('Head chef camera zoom ready - VR: trigger to zoom, Desktop: +/- keys');
+        this.log.debug('Head chef camera zoom ready - VR: grip to zoom, Desktop: +/- keys');
     },
 
     onTriggerDown: function () {
