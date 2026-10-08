@@ -2,7 +2,7 @@ include:
   - component: '$CI_SERVER_FQDN/acc-co/devops/ksc-hq/ksc-ci-components/container@main'
     build-stage: package
     inputs:
-      docker-path: dist/
+      docker-path: ${CI_PROJECT_DIR}/dist/
       image-promote-rules:
         - when: never
 
