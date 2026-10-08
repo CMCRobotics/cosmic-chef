@@ -29,7 +29,7 @@ AFRAME.registerComponent('preparation-manager', {
         });
         this.gameActor.on('invalid-gesture', ({ stationId, chefId, gesture }) => {
             this.log.warn(`Invalid gesture: ${gesture} from ${chefId} at station ${stationId}`);
-            this.el.emit('invalid-gesture', { stationId, chefId, gesture });
+            this.el.emit('invalid-gesture', { stationId, chefId, gesture }); 
         });
 
         this.gameActor.start();

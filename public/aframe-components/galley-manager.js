@@ -26,6 +26,7 @@ AFRAME.registerComponent('galley-manager', {
         this.lastState = null;
         this.vacuumInProgress = false;
         this.invalidIndicators = {}; // stationId → { el, timeout }
+        this.feedbackEntities = new Map(); // stationId → el with sous-chef-gesture-feedback
         this.galleryId = galleryId;
 
         // Listen for state changes from preparation-manager or team-galley-receiver
@@ -42,7 +43,37 @@ AFRAME.registerComponent('galley-manager', {
         const scene = document.querySelector('a-scene');
         scene.addEventListener('invalid-gesture', this.onInvalidGesture);
 
+        // Lazily ensure feedback indicators exist for stations
+        this.ensureStationFeedbackEntities();
+
         this.log.debug(`Galley manager ready. Delivery area position: ${JSON.stringify(this.data.deliveryAreaPosition)}`);
+    },
+
+    ensureStationFeedbackEntities: function () {
+        // Map station ID (S1, S2, S3) to chef ID (chef-1, chef-2, chef-3)
+        const stationChefMap = {
+            'S1': 'chef-1',
+            'S2': 'chef-2',
+            'S3': 'chef-3'
+        };
+
+        Object.keys(stationChefMap).forEach((stationId) => {
+            if (this.feedbackEntities.has(stationId)) return;
+
+            const pos = this.getStationPosition(stationId);
+            if (!pos) return;
+
+            const chefId = stationChefMap[stationId];
+            const feedbackEl = document.createElement('a-entity');
+            feedbackEl.setAttribute('id', `feedback_${stationId}__${this.galleryId}`);
+            feedbackEl.setAttribute('sous-chef-gesture-feedback', { chefId });
+            // Position above the station/board (pos.y is 1.5, board is 1.3; put utensil at 1.8)
+            feedbackEl.setAttribute('position', `${pos.x} 1.8 ${pos.z}`);
+
+            this.el.appendChild(feedbackEl);
+            this.feedbackEntities.set(stationId, feedbackEl);
+            this.log.debug(`Created gesture feedback entity for ${chefId} at station ${stationId}`);
+        });
     },
 
     getStationPosition: function (stationId) {
@@ -102,6 +133,9 @@ AFRAME.registerComponent('galley-manager', {
 
     onStateChangeHandler: function (state, context) {
         this.log.debug(`State: ${state}, Ingredients: ${context.ingredients.length}, Stations: ${context.stations.length}`);
+
+        // Ensure station feedback entities exist (in case stations loaded asynchronously via load-fragment)
+        this.ensureStationFeedbackEntities();
 
         // Clear ingredients when entering preparingIngredients (new recipe captured)
         if (state === 'preparingIngredients' && this.lastState !== 'preparingIngredients') {
@@ -236,7 +270,7 @@ AFRAME.registerComponent('galley-manager', {
                     });
 
                     // Log progress for debugging
-                    if (station.progress % 25 === 0 && station.progress !== data.lastLoggedProgress) {
+                    if (station.progress !== data.lastLoggedProgress) {
                         this.log.debug(
                             `${station.ingredientId}: ${currentGesture.gesture} ${station.progress}%`
                         );
@@ -475,6 +509,15 @@ AFRAME.registerComponent('galley-manager', {
             }
         });
         this.ingredientEntities.clear();
+
+        // Cleanup: remove gesture feedback entities
+        this.feedbackEntities.forEach((el) => {
+            if (el && el.parentNode) {
+                el.remove();
+            }
+        });
+        this.feedbackEntities.clear();
+
         this.log.debug('Galley manager removed');
     }
 });

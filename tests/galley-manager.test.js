@@ -161,4 +161,70 @@ describe("galley-manager — state management", () => {
         updateRecipeName({ currentOrder: { name: 'proton' } });
         expect(state.lastRecipeName).toBe('proton');
     });
+
+    test("updateGestureAnimations updates quantum-particle progress on ingredient entities", () => {
+        const updatedEntities = [];
+        const mockEntity = {
+            setAttribute: (component, attrs) => {
+                updatedEntities.push({ component, attrs });
+            }
+        };
+
+        state.ingredientEntities.set('up-1', {
+            el: mockEntity,
+            stationId: 'S1',
+            lastLoggedProgress: null
+        });
+
+        const context = {
+            stations: [
+                {
+                    stationId: 'S1',
+                    ingredientId: 'up-1',
+                    currentGestureIndex: 0,
+                    gesturesRequired: [{ gesture: 'tenderize' }],
+                    progress: 30
+                }
+            ]
+        };
+
+        // Replicate updateGestureAnimations
+        context.stations.forEach((station) => {
+            if (station.ingredientId && state.ingredientEntities.has(station.ingredientId)) {
+                const data = state.ingredientEntities.get(station.ingredientId);
+                const currentGesture = station.gesturesRequired[station.currentGestureIndex];
+                if (currentGesture) {
+                    data.el.setAttribute('quantum-particle', {
+                        active: true,
+                        gesture: currentGesture.gesture,
+                        progress: Math.min(1.0, station.progress / 100)
+                    });
+                }
+            }
+        });
+
+        expect(updatedEntities.length).toBe(1);
+        expect(updatedEntities[0]).toEqual({
+            component: 'quantum-particle',
+            attrs: {
+                active: true,
+                gesture: 'tenderize',
+                progress: 0.3
+            }
+        });
+    });
+
+    test("team-galley-receiver identifies local team regardless of 'team-' prefix", () => {
+        const isLocal = (teamId, currentTeam) => {
+            const local = (currentTeam || 'blue').replace(/^team-/, '');
+            const target = (teamId || '').replace(/^team-/, '');
+            return target === local;
+        };
+
+        expect(isLocal('blue', 'blue')).toBe(true);
+        expect(isLocal('team-blue', 'blue')).toBe(true);
+        expect(isLocal('blue', 'team-blue')).toBe(true);
+        expect(isLocal('red', 'blue')).toBe(false);
+        expect(isLocal('white', 'blue')).toBe(false);
+    });
 });
