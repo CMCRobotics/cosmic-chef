@@ -104,13 +104,6 @@ AFRAME.registerComponent('recipe-status-button', {
         this.lastState = state;
     },
 
-    // Called by tractor beam when recipe is manually captured
-    enableForNewRecipe: function () {
-        this.isDisabled = false;
-        this.log.info('New recipe manually captured, button re-enabled');
-        this.updateButtonState(this.lastState, { currentOrder: this.currentRecipe, stations: [] });
-    },
-
     updateButtonState: function (state, context) {
         // Determine if recipe is ready based on state
         this.isReady = state === 'recipeReadyForSubmit' && context.currentOrder !== null && !this.isDisabled;
@@ -206,9 +199,8 @@ AFRAME.registerComponent('recipe-status-button', {
         const mqttComponent = scene?.components['mqtt-bridge'] || scene?.components['head-chef-mqtt-client'];
 
         if (mqttComponent && mqttComponent.client && mqttComponent.client.connected) {
-            const gameId = mqttComponent.data?.gameId || 'default';
-            const teamId = mqttComponent.data?.teamId || 'blue';
-            const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
+            const { gameId, teamId } = mqttComponent.data;
+            const topic = window.CosmicChef.headChefSubmitTopic(teamId, gameId);
 
             // "submitting" → adapter converts to SUBMIT_RECIPE event
             mqttComponent.client.publish(topic, 'submitting', { qos: 1 });
@@ -224,9 +216,8 @@ AFRAME.registerComponent('recipe-status-button', {
         const mqttComponent = scene?.components['mqtt-bridge'] || scene?.components['head-chef-mqtt-client'];
 
         if (mqttComponent && mqttComponent.client && mqttComponent.client.connected) {
-            const gameId = mqttComponent.data?.gameId || 'default';
-            const teamId = mqttComponent.data?.teamId || 'blue';
-            const topic = `cosmic-chef/team-${teamId}/game-${gameId}/head-chef/animation/submit-state`;
+            const { gameId, teamId } = mqttComponent.data;
+            const topic = window.CosmicChef.headChefSubmitTopic(teamId, gameId);
 
             // "idle" → adapter converts to CANCEL_ORDER event
             mqttComponent.client.publish(topic, 'idle', { qos: 1 });

@@ -13,6 +13,11 @@ import {
   sousChefGestureTopic,
 } from "../src/client/topics";
 import {
+  TEAM_STORAGE_KEY,
+  normalizeTeamId,
+  resolveTeamId,
+} from "../src/client/team";
+import {
   chefIdFor,
   createGestureEventStream,
   headChefMessageToEvent,
@@ -137,5 +142,62 @@ describe("gesture event stream", () => {
     const { value, context } = actor.getSnapshot();
     expect(value).toBe("recipeReadyForSubmit");
     expect(context.chefGestures).toEqual({ "chef-1": "idle", "chef-2": "idle" });
+  });
+});
+
+describe("team selection", () => {
+  const memoryStorage = (initial: Record<string, string> = {}) => {
+    const data = new Map(Object.entries(initial));
+    return {
+      data,
+      getItem: (key: string) => data.get(key) ?? null,
+      setItem: (key: string, value: string) => data.set(key, value),
+    };
+  };
+  const throwingStorage = {
+    getItem: () => { throw new Error("denied"); },
+    setItem: () => { throw new Error("denied"); },
+  };
+
+  test("normalizes team ids", () => {
+    expect(normalizeTeamId("red")).toBe("red");
+    expect(normalizeTeamId("Team-White")).toBe("white");
+    expect(normalizeTeamId("team-1")).toBeNull();
+    expect(normalizeTeamId("")).toBeNull();
+    expect(normalizeTeamId(null)).toBeNull();
+  });
+
+  test("a URL team is used and remembered", () => {
+    const storage = memoryStorage();
+    expect(resolveTeamId("?team=red", storage)).toBe("red");
+    expect(storage.data.get(TEAM_STORAGE_KEY)).toBe("red");
+  });
+
+  test("a reload without a URL team keeps the remembered team", () => {
+    const storage = memoryStorage({ [TEAM_STORAGE_KEY]: "white" });
+    expect(resolveTeamId("", storage)).toBe("white");
+    expect(resolveTeamId("?gameId=default", storage)).toBe("white");
+  });
+
+  test("a URL team replaces the remembered team", () => {
+    const storage = memoryStorage({ [TEAM_STORAGE_KEY]: "white" });
+    expect(resolveTeamId("?team=blue", storage)).toBe("blue");
+    expect(storage.data.get(TEAM_STORAGE_KEY)).toBe("blue");
+  });
+
+  test("an invalid URL team is ignored in favour of the remembered team", () => {
+    const storage = memoryStorage({ [TEAM_STORAGE_KEY]: "red" });
+    expect(resolveTeamId("?team=green", storage)).toBe("red");
+    expect(storage.data.get(TEAM_STORAGE_KEY)).toBe("red");
+  });
+
+  test("defaults to blue with nothing stored", () => {
+    expect(resolveTeamId("", memoryStorage())).toBe("blue");
+    expect(resolveTeamId("", null)).toBe("blue");
+  });
+
+  test("unavailable storage does not break resolution", () => {
+    expect(resolveTeamId("?team=red", throwingStorage)).toBe("red");
+    expect(resolveTeamId("", throwingStorage)).toBe("blue");
   });
 });

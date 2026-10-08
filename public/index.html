@@ -34,8 +34,8 @@
 </head>
 <body>
     <script>
-         // Parse team from URL parameter, default to team-blue
-         window.CURRENT_TEAM = window.URLParams.get('team', 'blue');
+         // Team from ?team= (remembered in localStorage), default blue
+         window.CURRENT_TEAM = window.CosmicChef.resolveTeamId(window.location.search, window.localStorage);
          window.GAME_ID = window.URLParams.get('gameId', 'default');
          window.NUM_SOUS_CHEFS = parseInt(window.URLParams.get('numSousChefs', '3'), 10);
     </script>

@@ -2,24 +2,32 @@
  * recipe-spawner.js
  * Spawns recipe entities at configured intervals.
  * Recipes fall from sky and can be captured by the head chef.
+ * Each spawner belongs to one team: its crates carry that team in data-team-id, so a
+ * captured crate is published to the team it came from.
  */
 
 AFRAME.registerComponent('recipe-spawner', {
     schema: {
         spawnInterval: { type: 'number', default: 5000 }, // ms between spawns
         fallSpeed: { type: 'number', default: 3 }, // units per second downward
-        fallDistance: { type: 'number', default: 10 }, // how far down recipes fall before despawning
+        fallDistance: { type: 'number', default: 15 }, // how far down recipes fall before despawning
         timeout: { type: 'number', default: 15000 }, // ms before uncaptured recipe despawns
-        recipeModel: { type: 'string', default: '#asset_hopper_high_round' } // visual model for recipe
+        recipeModel: { type: 'string', default: '#asset_hopper_high_round' }, // visual model for recipe
+        spawnRadius: { type: 'number', default: 0.5 }, // crates spawn on a circle of this radius around the spawner
+        spawnPoints: { type: 'int', default: 5 }, // positions on that circle, used round robin
+        spawnJitter: { type: 'number', default: 1000 }, // extra random ms added to each gap between spawns
+        teamId: { type: 'string', default: '' } // defaults to window.CURRENT_TEAM
     },
 
     init: function () {
         this.log = window.log.getLogger('recipe-spawner');
+        this.data.teamId = this.data.teamId || window.CURRENT_TEAM || 'blue';
         this.log.debug('Initializing recipe-spawner');
 
         this.recipeCount = 0;
         this.activeRecipes = new Map(); // recipeId → { el, startTime }
         this.spawnHandle = null;
+        this.nextSpawnIndex = 0; // next position on the spawn circle
         this.isSpawning = false;
 
         const scene = this.el.sceneEl;
@@ -49,10 +57,16 @@ AFRAME.registerComponent('recipe-spawner', {
         // Spawn first recipe immediately
         this.spawnRecipe();
 
-        // Then spawn at intervals
-        this.spawnHandle = setInterval(() => {
+        // Then keep spawning, with a slightly random gap each time
+        this.scheduleNextSpawn();
+    },
+
+    scheduleNextSpawn: function () {
+        const delay = this.data.spawnInterval + Math.random() * this.data.spawnJitter;
+        this.spawnHandle = setTimeout(() => {
             this.spawnRecipe();
-        }, this.data.spawnInterval);
+            this.scheduleNextSpawn();
+        }, delay);
     },
 
     stopSpawning: function () {
@@ -61,14 +75,26 @@ AFRAME.registerComponent('recipe-spawner', {
         this.log.info('Stopping recipe spawn cycle');
 
         if (this.spawnHandle) {
-            clearInterval(this.spawnHandle);
+            clearTimeout(this.spawnHandle);
             this.spawnHandle = null;
         }
     },
 
+    // Round robin over spawnPoints positions on a circle around the centre (the spawner's position)
+    nextSpawnPosition: function (centre) {
+        const points = Math.max(1, this.data.spawnPoints);
+        const angle = (2 * Math.PI * this.nextSpawnIndex) / points;
+        this.nextSpawnIndex = (this.nextSpawnIndex + 1) % points;
+        return {
+            x: centre.x + this.data.spawnRadius * Math.cos(angle),
+            y: centre.y,
+            z: centre.z + this.data.spawnRadius * Math.sin(angle)
+        };
+    },
+
     spawnRecipe: function () {
         const recipeId = `recipe-${this.recipeCount++}`;
-        const spawnPos = this.el.getAttribute('position');
+        const spawnPos = this.nextSpawnPosition(this.el.getAttribute('position'));
 
         // Pick a random recipe for this crate
         const availableRecipes = window.RECIPES || [];
@@ -79,8 +105,9 @@ AFRAME.registerComponent('recipe-spawner', {
         // Create recipe entity
         const recipeEl = document.createElement('a-entity');
         recipeEl.setAttribute('id', recipeId);
-        recipeEl.setAttribute('class', 'fallable-recipe');
+        recipeEl.setAttribute('class', 'fallable-recipe clickable');
         recipeEl.setAttribute('data-recipe-id', recipeId);
+        recipeEl.setAttribute('data-team-id', this.data.teamId);
         recipeEl.setAttribute('data-recipe', JSON.stringify(selectedRecipe)); // Store recipe data
 
         // Visual: bigger box with text
@@ -227,7 +254,7 @@ AFRAME.registerComponent('recipe-spawner', {
 
         this.log.info(`Captured recipe: ${recipeId}`);
 
-        // Move recipe to intake hopper (handled by head-chef-manager)
+        // The crate is pulled to the intake by tractor-beam, which publishes the capture
         // Remove from active tracking
         this.activeRecipes.delete(recipeId);
 

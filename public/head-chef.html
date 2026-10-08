@@ -9,6 +9,10 @@
     <script src="config.js"></script>
     <!-- Vendor Dependencies Bundle (Offline / Local) -->
     <script src="vendor/bundle.js"></script>
+    <!-- Team from ?team= (remembered in localStorage), default blue. Before components so their defaults see it -->
+    <script>
+        window.CURRENT_TEAM = window.CosmicChef.resolveTeamId(window.location.search, window.localStorage);
+    </script>
 
     <script src="xstate/preparation-machine.js"></script>
 
@@ -24,11 +28,10 @@
     <script src="aframe-components/quantum-particle.js"></script>
     <script src="aframe-components/animations/anim-space-float.js"></script>
     <script src="aframe-components/final-stir-camera.js"></script>
-    <script src="aframe-components/head-chef-state-receiver.js"></script>
     <script src="aframe-components/head-chef-mqtt-client.js"></script>
-    <script src="aframe-components/head-chef-manager.js"></script>
     <script src="aframe-components/recipe-spawner.js"></script>
     <script src="aframe-components/tractor-beam.js"></script>
+    <script src="aframe-components/crosshair.js"></script>
     <script src="aframe-components/head-chef-camera-zoom.js"></script>
     <script src="aframe-components/head-chef-status-display.js"></script>
     <script src="aframe-components/recipe-status-button.js"></script>
@@ -41,8 +44,7 @@
 
     <a-scene
         start-experience
-        head-chef-state-receiver="teamId: team-1; gameId: default"
-        head-chef-mqtt-client="teamId: team-1; gameId: default"
+        head-chef-mqtt-client="gameId: default"
         webxr="optionalFeatures: hit-test, local-floor, hand-tracking; requiredFeatures: local-floor;"
         renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
         cursor="rayOrigin: mouse"
@@ -103,7 +105,7 @@
             <a-entity id="hemisphere-light" position="0 50 0" light="color: #CEE4F0; groundColor: #553e35; intensity: 2.3; type: hemisphere"></a-entity>
 
             <!-- Head Chef Workspace -->
-            <a-entity id="head-chef-root" head-chef-manager position="0 0 0">
+            <a-entity id="head-chef-root" position="0 0 0">
                 <a-entity load-fragment="src: /head-chef-scene.html; templateId: cosmic-chef-head-chef-1"></a-entity>
             </a-entity>
 
@@ -116,7 +118,7 @@
 
         <!-- Camera Rig -->
         <a-entity id="cameraRig" position="0 2.6 4">
-            <a-camera position="0 0 0" head-chef-camera-zoom="minZoom: 1; maxZoom: 200.0; defaultZoom: 1 ; zoomSpeed: 5; zoomSmoothness: 0.5; FOV: 65; minFOV: 35; maxFOV: 65"></a-camera>
+            <a-camera position="0 0 0" crosshair="opacity: 0.5" head-chef-camera-zoom="minZoom: 1; maxZoom: 200.0; defaultZoom: 1 ; zoomSpeed: 5; zoomSmoothness: 0.5; FOV: 65; minFOV: 35; maxFOV: 65"></a-camera>
         </a-entity>
 
     </a-scene>
