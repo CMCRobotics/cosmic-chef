@@ -12,7 +12,8 @@ stages:
 
 image: registry.cern.ch/docker.io/oven/bun:slim
 
-build:
+Bun build:
+  stage: build
   script:
     - bun install
     - bun build
