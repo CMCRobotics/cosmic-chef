@@ -112,6 +112,12 @@ AFRAME.registerComponent('recipe-spawner', {
         // Visual: the recipe crate (see recipe-crate.js)
         window.buildRecipeCrateParts(recipeName).forEach((part) => recipeEl.appendChild(part));
 
+        // Invisible hitbox on the root: A-Frame's laser raycaster only tests meshes on the clickable
+        // entity itself, not on its child model. The crate's own aim is handled by tractor-beam.
+        const size = 2 * window.RECIPE_CRATE_HALF_SIZE;
+        recipeEl.setAttribute('geometry', { primitive: 'box', width: size, height: size, depth: size });
+        recipeEl.setAttribute('material', { visible: false });
+
         // Position at spawn point
         recipeEl.setAttribute('position', `${spawnPos.x} ${spawnPos.y} ${spawnPos.z}`);
 

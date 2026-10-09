@@ -21,7 +21,7 @@ Only one crate can be captured at a time. Crates can only be captured while the 
 
 | Input | Action |
 | :--- | :--- |
-| **Either hand's laser** (aim) | The laser points at the crates. The crate under it is highlighted. No crosshair is shown in VR. |
+| **Either hand's laser** (aim) | The laser points at the crates. The crate the laser passes through is highlighted, as drawn on screen. No crosshair is shown in VR. |
 | **Either trigger** | **Select** the aimed crate. Press again on the same crate to **capture** it. Press on empty space to clear the selection. |
 | **Left thumbstick** (push up / pull down) | **Zoom** in and out. The further the stick is pushed, the faster it zooms. Release to keep the current zoom. |
 | **Left thumbstick press** | **Reset** the zoom to the default. |

@@ -15,7 +15,6 @@ AFRAME.registerComponent('tractor-beam', {
     schema: {
         maxDistance: { type: 'number', default: 100 }, // how far the aim ray reaches
         aimRadius: { type: 'number', default: 1.0 }, // a crate is aimed at when the ray passes this close to its centre (metres)
-        aimPitch: { type: 'number', default: 4 }, // degrees the aim ray is tilted up, to correct the hand's low aim
         highlightEmissive: { type: 'string', default: '#ffff00' }, // yellow glow for the selected crate
         highlightIntensity: { type: 'number', default: 0.2 } // glow intensity (subtle)
     },
@@ -115,18 +114,21 @@ AFRAME.registerComponent('tractor-beam', {
     },
 
     raycastForRecipe: function () {
-        // In VR the ray comes out of the aim hand; on desktop from the centre of the view
-        const aimObj3D = this.el.sceneEl.is('vr-mode') ? this.aimHand.object3D : this.camera && this.camera.object3D;
-        if (!aimObj3D) return null;
-
         const origin = new THREE.Vector3();
-        aimObj3D.getWorldPosition(origin);
-        const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(aimObj3D.getWorldQuaternion(new THREE.Quaternion())).normalize();
+        const direction = new THREE.Vector3();
 
-        // Tilt the ray up by aimPitch degrees: the hand's aim sits low on the crates. The laser line itself is not moved
-        const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0));
-        if (right.lengthSq() > 1e-6) { // skip when pointing straight up or down
-            direction.applyAxisAngle(right.normalize(), THREE.MathUtils.degToRad(this.data.aimPitch));
+        // In VR use the aim hand's own laser ray, so the capture ray is the line the player sees
+        // (laser-controls replaces the hand's pointing direction once the controller model loads).
+        // On desktop, the ray goes from the centre of the view
+        const laser = this.el.sceneEl.is('vr-mode') && this.aimHand.components.raycaster;
+        if (laser) {
+            laser.updateOriginDirection();
+            origin.copy(laser.raycaster.ray.origin);
+            direction.copy(laser.raycaster.ray.direction);
+        } else {
+            if (!this.camera) return null;
+            this.camera.object3D.getWorldPosition(origin);
+            direction.set(0, 0, -1).applyQuaternion(this.camera.object3D.getWorldQuaternion(new THREE.Quaternion())).normalize();
         }
 
         // A crate is aimed at when the ray passes within aimRadius of its centre, so a slightly
