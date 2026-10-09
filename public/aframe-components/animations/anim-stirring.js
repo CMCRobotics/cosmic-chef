@@ -5,12 +5,17 @@ AFRAME.registerComponent('anim-stirring', {
         depth: {type: 'number', default: 0.1},
         randomness: {type: 'number', default: 0.1},
         clockwise: {type: 'boolean', default: false},
-        reverseRandomly: {type: 'boolean', default: false}
+        reverseRandomly: {type: 'boolean', default: false},
+        // Orbit around `origin` instead of the entity's own starting position
+        useOrigin: {type: 'boolean', default: false},
+        origin: {type: 'vec3', default: {x: 0, y: 0, z: 0}},
+        // Start point within the cycle (0 to 1); -1 picks a random start so spoons don't stir in sync
+        phase: {type: 'number', default: -1}
     },
 
     init: function () {
         var el = this.el;
-        var pos = el.getAttribute('position');
+        var pos = this.data.useOrigin ? this.data.origin : el.getAttribute('position');
         var rot = el.getAttribute('rotation');
 
         // Store the base position and rotation
@@ -21,9 +26,11 @@ AFRAME.registerComponent('anim-stirring', {
         this.baseRotY = rot.y;
         this.baseRotZ = rot.z;
 
-        // Random startup delay so multiple spoons don't stir in sync
-        var randomDelay = Math.random() * this.data.speed * 1000;
-        this.startTime = performance.now() - randomDelay;
+        // Startup delay: a fixed phase when given, otherwise random
+        var startDelay = this.data.phase >= 0
+            ? this.data.phase * this.data.speed * 1000
+            : Math.random() * this.data.speed * 1000;
+        this.startTime = performance.now() - startDelay;
 
         this.lastCycleCount = 0;
         // Set initial direction based on clockwise flag or random if reverseRandomly is enabled
