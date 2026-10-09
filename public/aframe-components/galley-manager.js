@@ -15,7 +15,7 @@ const RING_RADIUS = 0.5;
 // The ring draws in to this radius for the final stir
 const FINAL_STIR_RING_RADIUS = 0.3;
 // The orbit stops this long (ms) after the last stir tick
-const STIR_HOLD_MS = 300;
+const STIR_HOLD_MS = 2000;
 
 AFRAME.registerComponent('galley-manager', {
     schema: {
