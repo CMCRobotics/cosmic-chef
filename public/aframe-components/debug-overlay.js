@@ -80,7 +80,10 @@ AFRAME.registerComponent('debug-overlay', {
     // Events that tractor-beam and head-chef-camera-zoom emit on the scene
     listenToScene: function () {
         const scene = this.el.sceneEl;
-        scene.addEventListener('crate-highlighted', (evt) => this.log(`crate highlight: ${evt.detail.crate || 'none'}`));
+        scene.addEventListener('crate-highlighted', (evt) => {
+            const { crate, offset } = evt.detail;
+            this.log(crate ? `crate highlight: ${crate} (ray ${offset.toFixed(2)} m from centre)` : 'crate highlight: none');
+        });
         scene.addEventListener('crate-action', (evt) => this.log(`crate ${evt.detail.action}`));
         scene.addEventListener('zoom-input', (evt) => this.log(`zoom ${evt.detail.source || 'stopped'}`));
         scene.addEventListener('zoom-reset', () => this.log('zoom reset'));

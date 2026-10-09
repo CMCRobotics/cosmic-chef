@@ -109,7 +109,7 @@ AFRAME.registerComponent('tractor-beam', {
         this.unhighlightRecipe(this.highlightedRecipe);
         this.highlightedRecipe = target;
         this.highlightRecipe(target);
-        this.el.sceneEl.emit('crate-highlighted', { crate: target ? target.id : null });
+        this.el.sceneEl.emit('crate-highlighted', { crate: target ? target.id : null, offset: this.aimOffset });
     },
 
     raycastForRecipe: function () {
@@ -136,7 +136,14 @@ AFRAME.registerComponent('tractor-beam', {
         if (meshes.length === 0) return null;
 
         const hits = raycaster.intersectObjects(meshes);
-        return hits.length > 0 ? hits[0].object.userData.recipeEl : null;
+        if (hits.length === 0) return null;
+
+        // How far the aim ray passes from the crate's centre, for the debug overlay (0 = through the centre)
+        const recipeEl = hits[0].object.userData.recipeEl;
+        const toCentre = recipeEl.object3D.getWorldPosition(new THREE.Vector3()).sub(origin);
+        const along = toCentre.dot(raycaster.ray.direction);
+        this.aimOffset = toCentre.sub(raycaster.ray.direction.clone().multiplyScalar(along)).length();
+        return recipeEl;
     },
 
     // Glow the crate's model meshes. The mesh materials are swapped for copies, so the
