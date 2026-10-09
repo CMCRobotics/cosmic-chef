@@ -83,6 +83,7 @@ AFRAME.registerComponent('head-chef-camera-zoom', {
     resetZoom: function () {
         // Only set target; let the lerp smoothly transition to it
         this.targetZoom = this.data.defaultZoom;
+        this.el.sceneEl.emit('zoom-reset');
     },
 
     // Move the target zoom by a step, kept within the zoom range
@@ -91,8 +92,17 @@ AFRAME.registerComponent('head-chef-camera-zoom', {
     },
 
     tick: function () {
+        // Announce when zoom input starts or stops (thumbstick or keys), for the debug overlay
+        const stickActive = Math.abs(this.thumbstickY) > STICK_DEAD_ZONE;
+        const keysActive = this.keysPressed.zoomIn || this.keysPressed.zoomOut;
+        const source = stickActive ? 'thumbstick' : keysActive ? 'keys' : null;
+        if (source !== this.zoomSource) {
+            this.zoomSource = source;
+            this.el.sceneEl.emit('zoom-input', { source });
+        }
+
         // VR: left thumbstick, pushed up zooms in. The speed scales with how far the stick is pushed
-        if (Math.abs(this.thumbstickY) > STICK_DEAD_ZONE) {
+        if (stickActive) {
             this.nudgeZoom(-this.thumbstickY * this.data.zoomSpeed);
         }
 

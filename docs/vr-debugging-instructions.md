@@ -40,6 +40,8 @@ The MQTT default `ws://localhost:9001` (see `MQTT_BROKER_URL` in `.env`) also re
 
 ## 3. Debugging
 
+**No PC console? Use the on-screen panel.** Add `debug=true` to the URL (for example `http://localhost:3000/vr.html?team=blue&debug=true`). A green text panel appears in front of the head chef's view. It lists the latest warnings and errors, uncaught exceptions, and hand controller events (connect, trigger, thumbstick press, thumbstick movement). Without `debug=true` the panel is not created.
+
 Open `chrome://inspect/#devices` in desktop Chrome. It lists the headset's pages, and you can open the console for the `vr.html` page. The loglevel output (`window.log`) and any errors appear there. Use `debug(true)` in that console for verbose logs, as described in [`AGENTS.md`](../AGENTS.md).
 
 ---

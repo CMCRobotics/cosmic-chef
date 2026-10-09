@@ -73,16 +73,22 @@ AFRAME.registerComponent('tractor-beam', {
         // The galley only takes a new recipe while it is waiting for one; a capture at any other time is ignored
         if (this.teamState && this.teamState !== 'waitingForRecipe') {
             this.log.info(`Team is busy (${this.teamState}), the crate cannot be captured yet`);
+            this.el.sceneEl.emit('crate-action', { action: 'busy' });
             return;
         }
 
+        let action;
         if (!this.aimedRecipe) {
             this.selectedRecipe = null; // right click on nothing clears the selection
+            action = 'clear';
         } else if (this.aimedRecipe === this.selectedRecipe) {
             this.captureRecipe(this.selectedRecipe);
+            action = 'capture';
         } else {
             this.selectedRecipe = this.aimedRecipe;
+            action = 'select';
         }
+        this.el.sceneEl.emit('crate-action', { action });
         this.updateHighlight();
     },
 
@@ -103,6 +109,7 @@ AFRAME.registerComponent('tractor-beam', {
         this.unhighlightRecipe(this.highlightedRecipe);
         this.highlightedRecipe = target;
         this.highlightRecipe(target);
+        this.el.sceneEl.emit('crate-highlighted', { crate: target ? target.id : null });
     },
 
     raycastForRecipe: function () {
