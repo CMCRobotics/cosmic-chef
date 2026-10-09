@@ -1,26 +1,23 @@
 AFRAME.registerComponent('anim-tenderizing', {
     schema: {
-        speed: {type: 'number', default: 0.6},
+        speed: {type: 'number', default: 0.5},
         depth: {type: 'number', default: 0.6},
         angle: {type: 'number', default: 45},
-        sideMotion: {type: 'number', default: 0.2},
-        choppiness: {type: 'number', default: 0.15},
+        sideMotion: {type: 'number', default: 0.1},
+        choppiness: {type: 'number', default: 0},
         randomness: {type: 'number', default: 0.1},
-        gravity: {type: 'number', default: 1}
+        gravity: {type: 'number', default: 0.8}
     },
 
     init: function () {
         var el = this.el;
         var pos = el.getAttribute('position');
-        var rot = el.getAttribute('rotation');
 
-        // Store the base position and rotation for the tenderizing motion
+        // Store the base position and orientation for the tenderizing motion
         this.baseX = pos.x;
         this.baseY = pos.y;
         this.baseZ = pos.z;
-        this.baseRotX = rot.x;
-        this.baseRotY = rot.y;
-        this.baseRotZ = rot.z;
+        this.baseQuat = el.object3D.quaternion.clone();
 
         // Random startup delay so tenderizers don't strike in sync
         var randomDelay = Math.random() * this.data.speed * 1000;
@@ -100,10 +97,11 @@ AFRAME.registerComponent('anim-tenderizing', {
             z: this.baseZ
         });
 
-        el.setAttribute('rotation', {
-            x: this.baseRotX + rotateAngle,
-            y: this.baseRotY,
-            z: this.baseRotZ
-        });
+        // Swing around the X axis on top of the base orientation. An Euler component
+        // would pivot around the wrong world axis here: the base rotation's 90° Y turns
+        // the Euler axes, so it is applied as a quaternion instead.
+        var swing = new AFRAME.THREE.Quaternion().setFromAxisAngle(
+            new AFRAME.THREE.Vector3(1, 0, 0), rotateAngle * Math.PI / 180);
+        el.object3D.quaternion.copy(this.baseQuat).premultiply(swing);
     }
 });
