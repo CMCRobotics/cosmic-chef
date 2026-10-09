@@ -1,6 +1,6 @@
 {
   "name": "cosmic-chef",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "description": "Cosmic Chef - an Augmented Reality game where you cook the universe",
   "scripts": {
     "build:vendor": "bun build src/vendor.js --outfile public/vendor/bundle.js --minify",
