@@ -4,6 +4,9 @@
  * Subscribes to preparation-manager state changes and syncs ingredient positions/animations.
  */
 
+// Red sphere over a station when its chef's gesture is invalid. Off for now (wrong-gesture feedback is disabled).
+const SHOW_INVALID_GESTURE_INDICATOR = false;
+
 AFRAME.registerComponent('galley-manager', {
     schema: {
         deliveryAreaPosition: { type: 'vec3', default: { x: -2, y: 1.7, z: 3 } },
@@ -128,6 +131,7 @@ AFRAME.registerComponent('galley-manager', {
     },
 
     onInvalidGesture: function (evt) {
+        if (!SHOW_INVALID_GESTURE_INDICATOR) return;
         this.showInvalidGestureIndicator(evt.detail.stationId, evt.detail.chefId);
     },
 
