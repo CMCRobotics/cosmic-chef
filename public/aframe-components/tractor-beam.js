@@ -15,6 +15,7 @@ AFRAME.registerComponent('tractor-beam', {
     schema: {
         maxDistance: { type: 'number', default: 100 }, // how far the aim ray reaches
         aimRadius: { type: 'number', default: 1.0 }, // a crate is aimed at when the ray passes this close to its centre (metres)
+        aimPitch: { type: 'number', default: 4 }, // degrees the aim ray is tilted up, to correct the hand's low aim
         highlightEmissive: { type: 'string', default: '#ffff00' }, // yellow glow for the selected crate
         highlightIntensity: { type: 'number', default: 0.2 } // glow intensity (subtle)
     },
@@ -121,6 +122,12 @@ AFRAME.registerComponent('tractor-beam', {
         const origin = new THREE.Vector3();
         aimObj3D.getWorldPosition(origin);
         const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(aimObj3D.getWorldQuaternion(new THREE.Quaternion())).normalize();
+
+        // Tilt the ray up by aimPitch degrees: the hand's aim sits low on the crates. The laser line itself is not moved
+        const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0));
+        if (right.lengthSq() > 1e-6) { // skip when pointing straight up or down
+            direction.applyAxisAngle(right.normalize(), THREE.MathUtils.degToRad(this.data.aimPitch));
+        }
 
         // A crate is aimed at when the ray passes within aimRadius of its centre, so a slightly
         // off-centre aim still counts. The nearest such crate wins. Only falling crates can be aimed at.
