@@ -1,0 +1,31 @@
+{
+  "name": "cosmic-chef",
+  "version": "0.5.0",
+  "description": "Cosmic Chef - an Augmented Reality game where you cook the universe",
+  "scripts": {
+    "build:vendor": "bun build src/vendor.js --outfile public/vendor/bundle.js --minify",
+    "dev": "bun run build:vendor && bun run src/server.ts",
+    "compile": "bun build src/server.ts --compile --outfile dist/cosmic-chef",
+    "test": "bun test",
+    "clean": "rm -rf dist/ public/vendor/bundle.js",
+    "build": "bun run copy-public && bun run compile",
+    "copy-public": "mkdir -p dist && bun run build:vendor && cp -r public dist/"
+  },
+  "dependencies": {
+    "@tweenjs/tween.js": "^25.0.0",
+    "aframe": "1.7.1",
+    "aframe-environment-component": "^1.5.0",
+    "aframe-extras": "^7.7.0",
+    "aframe-inspector": "github:CMCRobotics/aframe-inspector",
+    "aframe-watcher-bun": "github:CMCRobotics/aframe-watcher-bun",
+    "dotenv": "^17.4.2",
+    "homie-lit": "github:CMCRobotics/homie-lit",
+    "loglevel": "^1.9.2",
+    "mqtt": "^5.0.0",
+    "rxjs": "^7.8.2",
+    "xstate": "^5.32.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.6"
+  }
+}

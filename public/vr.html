@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cosmic Chef — Head Chef VR</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Runtime config (MQTT_BROKER_URL from .env) — must load before components -->
+    <script src="config.js"></script>
+    <!-- Keeps warnings and errors for the headset debug panel (?debug=true). Before the bundle, which binds loglevel's console methods -->
+    <script src="debug-console.js"></script>
+    <!-- Vendor Dependencies Bundle (Offline / Local) -->
+    <script src="vendor/bundle.js"></script>
+    <!-- Team from ?team= (remembered in localStorage), default blue. Before components so their defaults see it -->
+    <script>
+        window.CURRENT_TEAM = window.CosmicChef.resolveTeamId(window.location.search, window.localStorage);
+    </script>
+
+    <script src="xstate/preparation-machine.js"></script>
+
+    <script src="aframe-components/animations/anim-linear.js"></script>
+    <script src="aframe-components/animations/anim-tenderizing.js"></script>
+    <script src="aframe-components/animations/anim-stirring.js"></script>
+    <script src="aframe-components/animations/anim-slicing.js"></script>
+    <script src="aframe-components/animations/anim-vacuum.js"></script>
+    <script src="aframe-components/load-fragment.js"></script>
+    <script src="aframe-components/ar-utils.js"></script>
+    <script src="aframe-components/sous-chef-gesture-feedback.js"></script>
+    <script src="aframe-components/galley-manager.js"></script>
+    <script src="aframe-components/quantum-particle.js"></script>
+    <script src="aframe-components/animations/anim-space-float.js"></script>
+    <script src="aframe-components/final-stir-camera.js"></script>
+    <script src="aframe-components/head-chef-mqtt-client.js"></script>
+    <script src="aframe-components/team-ring-color.js"></script>
+    <script src="aframe-components/recipe-crate.js"></script>
+    <script src="aframe-components/recipe-spawner.js"></script>
+    <script src="aframe-components/tractor-beam.js"></script>
+    <script src="aframe-components/crosshair.js"></script>
+    <script src="aframe-components/head-chef-camera-zoom.js"></script>
+    <script src="aframe-components/debug-overlay.js"></script>
+    <script src="aframe-components/head-chef-status-display.js"></script>
+    <script src="aframe-components/recipe-status-button.js"></script>
+
+</head>
+<body>
+    <script>
+        window.AFRAME_INSPECTOR_CONFIG = {saveEndpoint: "/save"};
+    </script>
+
+    <a-scene
+        start-experience
+        head-chef-mqtt-client="gameId: default"
+        webxr="optionalFeatures: hit-test, local-floor, hand-tracking; requiredFeatures: local-floor;"
+        renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
+        cursor="rayOrigin: mouse"
+        fog="color: #1d1d1e; distance: 800;"
+        raycaster="objects: .clickable"
+        inspector="url: /aframe-inspector.min.js">
+
+        <a-assets>
+            <a-asset-item id="asset_button_floor_square" src="assets/models/factory/button-floor-square.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe" src="assets/models/factory/conveyor-stripe.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_corner" src="assets/models/factory/conveyor-corner.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_corner" src="assets/models/factory/conveyor-stripe-corner.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_junction_t" src="assets/models/factory/conveyor-stripe-junction-t.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_part_end" src="assets/models/factory/conveyor-stripe-part-end.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_part_middle" src="assets/models/factory/conveyor-stripe-part-middle.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_sides" src="assets/models/factory/conveyor-stripe-sides.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_sides_cross" src="assets/models/factory/conveyor-stripe-sides-cross.glb"></a-asset-item>
+
+            <a-asset-item id="asset_hopper_high_round" src="assets/models/factory/hopper-high-round.glb"></a-asset-item>
+
+            <a-asset-item id="asset_machine_connection_pipe" src="assets/models/factory/machine-connection-pipe.glb"></a-asset-item>
+            <a-asset-item id="asset_machine_fortified" src="assets/models/factory/machine-fortified.glb"></a-asset-item>
+            <a-asset-item id="asset_piston_round" src="assets/models/factory/piston-round.glb"></a-asset-item>
+
+            <a-asset-item id="asset_scanner_high" src="assets/models/factory/scanner-high.glb"></a-asset-item>
+            <a-asset-item id="asset_screen_hanging_wide" src="assets/models/factory/screen-hanging-wide.glb"></a-asset-item>
+
+
+
+            <a-asset-item id="asset_cooking_knife" src="assets/models/food/cooking-knife.glb"></a-asset-item>
+            <a-asset-item id="asset_cooking_spatula" src="assets/models/food/cooking-spatula.glb"></a-asset-item>
+            <a-asset-item id="asset_cooking_spoon" src="assets/models/food/cooking-spoon.glb"></a-asset-item>
+            <a-asset-item id="asset_utensil_spoon" src="assets/models/food/utensil-spoon.glb"></a-asset-item>
+            <a-asset-item id="asset_meat_tenderizer" src="assets/models/food/meat-tenderizer.glb"></a-asset-item>
+            <a-asset-item id="asset_cutting_board" src="assets/models/food/cutting-board.glb"></a-asset-item>
+            <a-asset-item id="asset_frying_pan" src="assets/models/food/frying-pan.glb"></a-asset-item>
+
+
+            <a-asset-item id="asset_box_large" src="assets/models/factory/box-large.glb"></a-asset-item>
+
+            <a-asset-item id="asset_blackhole" src="assets/models/blackhole.glb"></a-asset-item>
+
+            <img id="skybox_space_nebula" src="assets/skybox-space-nebula.png">
+
+        </a-assets>
+
+        <!-- Main world container -->
+        <a-entity id="world-root" world-root>
+
+            <!-- Environment -->
+            <a-sky src="#skybox_space_nebula"></a-sky>
+            
+           <a-entity environment="preset: starry; stageSize: 100; lightPosition: 0 -0.01 -0.2; fog: none; ground: none; groundTexture: none;"></a-entity>
+
+            <a-entity id="primordial-chaos" gltf-model="#asset_blackhole" animation-mixer="clip: *; loop: repeat; timeScale: 0.1" position="0 40 20" scale="20 20 20"></a-entity>
+            <!-- Sky backdrop -->
+            <!-- <a-circle position="0 -30 0" scale="100 100 100" rotation="-90 0 0" color="black"></a-circle> -->
+
+            <!-- Lighting -->
+            <a-entity id="hemisphere-light" position="0 50 0" light="color: #CEE4F0; groundColor: #553e35; intensity: 2.3; type: hemisphere"></a-entity>
+
+            <!-- Head Chef Workspace -->
+            <a-entity id="head-chef-root" position="0 0 0">
+                <a-entity load-fragment="src: /head-chef-scene.html; templateId: cosmic-chef-head-chef-1"></a-entity>
+            </a-entity>
+
+
+        </a-entity>
+
+        <!-- Camera Rig -->
+        <!-- The VR hands live inside the rig: controller poses are relative to the same floor-level frame as the head, so this keeps them where the player's hands are -->
+        <a-entity id="cameraRig" position="0 2.6 4">
+            <a-camera position="0 0 0" crosshair="opacity: 0.5" head-chef-camera-zoom="minZoom: 1; maxZoom: 200.0; defaultZoom: 1 ; zoomSpeed: 5; zoomSmoothness: 0.5; FOV: 65; minFOV: 35; maxFOV: 65" debug-overlay></a-camera>
+
+            <!-- Controller Entities (VR hands) -->
+            <!-- cursor turns a trigger press on the hand into a click (e.g. the floor button) -->
+            <a-entity id="leftHand" laser-controls="hand: left" raycaster="objects: .clickable" cursor="rayOrigin: entity"></a-entity>
+            <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .clickable" cursor="rayOrigin: entity" tractor-beam></a-entity>
+        </a-entity>
+
+    </a-scene>
+
+    <!-- Developer console helpers -->
+    <script src="dev/console-helpers.js"></script>
+</body>
+</html>

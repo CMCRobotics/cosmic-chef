@@ -1,0 +1,26 @@
+include:
+  - component: '$CI_SERVER_FQDN/acc-co/devops/ksc-hq/ksc-ci-components/container@main'
+    inputs:
+      kaniko-build-args: "--build-arg BUN_IMAGE=registry.cern.ch/docker.io/oven/bun:slim"
+      image-promote-rules:
+        - when: never
+
+deploy-paas:
+  stage: deploy
+  image: registry.cern.ch/docker.io/alpine/helm:3.15.4
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+  environment:
+    name: paas
+    url: https://cosmic-chef.app.cern.ch
+  variables:
+    OPENSHIFT_API_URL: https://api.paas.okd.cern.ch
+  script:
+    - helm upgrade --install cosmic-chef ./chart
+        -f chart/values-paas.yaml
+        --set image.tag=$CI_COMMIT_REF_NAME
+        --set-string commitSha=$CI_COMMIT_SHA
+        --namespace $OPENSHIFT_PROJECT
+        --kube-apiserver $OPENSHIFT_API_URL
+        --kube-token $OPENSHIFT_TOKEN
+        --wait

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cosmic Chef</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Runtime config (MQTT_BROKER_URL from .env) — must load before components -->
+    <script src="config.js"></script>
+    <!-- Vendor Dependencies Bundle (Offline / Local) -->
+    <script src="vendor/bundle.js"></script>
+
+    <script src="xstate/preparation-machine.js"></script>
+
+    <script src="aframe-components/animations/anim-linear.js"></script>
+    <script src="aframe-components/animations/anim-tenderizing.js"></script>
+    <script src="aframe-components/animations/anim-stirring.js"></script>
+    <script src="aframe-components/animations/anim-slicing.js"></script>
+    <script src="aframe-components/animations/anim-vacuum.js"></script>
+    <script src="aframe-components/load-fragment.js"></script>
+    <script src="aframe-components/ar-utils.js"></script>
+    <script src="aframe-components/preparation-manager.js"></script>
+    <script src="aframe-components/mqtt-bridge.js"></script>
+    <script src="aframe-components/recipe-crate.js"></script>
+    <script src="aframe-components/captured-recipe-display.js"></script>
+    <script src="aframe-components/sous-chef-gesture-feedback.js"></script>
+    <script src="aframe-components/galley-manager.js"></script>
+    <script src="aframe-components/team-galley-receiver.js"></script>
+    <script src="aframe-components/galley-layout.js"></script>
+    <script src="aframe-components/quantum-particle.js"></script>
+    <script src="aframe-components/animations/anim-space-float.js"></script>
+    <script src="aframe-components/final-stir-camera.js"></script>
+    <script src="aframe-components/camera-focus-galley.js"></script>
+    <script src="dev/url-params.js"></script>
+
+</head>
+<body>
+    <script>
+         // Team from ?team= (remembered in localStorage), default blue
+         window.CURRENT_TEAM = window.CosmicChef.resolveTeamId(window.location.search, window.localStorage);
+         window.GAME_ID = window.URLParams.get('gameId', 'default');
+         window.NUM_SOUS_CHEFS = parseInt(window.URLParams.get('numSousChefs', '3'), 10);
+    </script>
+
+    <a-scene
+        start-experience
+        preparation-manager
+        captured-recipe-display
+        id="scene"
+        webxr="optionalFeatures: hit-test, local-floor, hand-tracking; requiredFeatures: local-floor;"
+        renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
+        cursor="rayOrigin: mouse"
+        fog="color: #1d1d1e; distance: 800;"
+        raycaster="objects: .clickable">
+
+        <script>
+            // Dynamically configure mqtt-bridge based on URL params
+            document.querySelector('#scene').setAttribute('mqtt-bridge', {
+                teamId: window.CURRENT_TEAM || 'blue',
+                gameId: window.GAME_ID || 'default',
+                numSousChefs: window.NUM_SOUS_CHEFS || 3
+            });
+        </script>
+      
+        <a-assets>
+            <a-asset-item id="asset_button_floor_square" src="assets/models/factory/button-floor-square.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe" src="assets/models/factory/conveyor-stripe.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_corner" src="assets/models/factory/conveyor-corner.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_corner" src="assets/models/factory/conveyor-stripe-corner.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_junction_t" src="assets/models/factory/conveyor-stripe-junction-t.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_part_end" src="assets/models/factory/conveyor-stripe-part-end.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_part_middle" src="assets/models/factory/conveyor-stripe-part-middle.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_sides" src="assets/models/factory/conveyor-stripe-sides.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_sides_cross" src="assets/models/factory/conveyor-stripe-sides-cross.glb"></a-asset-item>
+
+            <a-asset-item id="asset_hopper_high_round" src="assets/models/factory/hopper-high-round.glb"></a-asset-item>
+            <a-asset-item id="asset_box_large" src="assets/models/factory/box-large.glb"></a-asset-item>
+
+            <a-asset-item id="asset_machine_connection_pipe" src="assets/models/factory/machine-connection-pipe.glb"></a-asset-item>
+            <a-asset-item id="asset_machine_fortified" src="assets/models/factory/machine-fortified.glb"></a-asset-item>
+            <a-asset-item id="asset_piston_round" src="assets/models/factory/piston-round.glb"></a-asset-item>
+
+            <a-asset-item id="asset_scanner_high" src="assets/models/factory/scanner-high.glb"></a-asset-item>
+            <a-asset-item id="asset_screen_hanging_wide" src="assets/models/factory/screen-hanging-wide.glb"></a-asset-item>
+
+
+
+            <a-asset-item id="asset_cooking_knife" src="assets/models/food/cooking-knife.glb"></a-asset-item>
+            <a-asset-item id="asset_cooking_spatula" src="assets/models/food/cooking-spatula.glb"></a-asset-item>
+            <a-asset-item id="asset_cooking_spoon" src="assets/models/food/cooking-spoon.glb"></a-asset-item>
+            <a-asset-item id="asset_utensil_spoon" src="assets/models/food/utensil-spoon.glb"></a-asset-item>
+            <a-asset-item id="asset_meat_tenderizer" src="assets/models/food/meat-tenderizer.glb"></a-asset-item>
+            <a-asset-item id="asset_cutting_board" src="assets/models/food/cutting-board.glb"></a-asset-item>
+            <a-asset-item id="asset_frying_pan" src="assets/models/food/frying-pan.glb"></a-asset-item>
+
+
+            <a-asset-item id="asset_blackhole" src="assets/models/blackhole.glb"></a-asset-item>
+
+            <img id="skybox_space_nebula" src="assets/skybox-space-nebula.png">
+
+        </a-assets>
+
+        <!-- Main world container -->
+        <a-entity id="world-root" world-root>
+            
+            <!-- Skybox -->
+            <a-sky src="#skybox_space_nebula"></a-sky>
+            
+           <a-entity environment="preset: starry; stageSize: 100; lightPosition: 0 -0.01 -0.2; fog: none; ground: none; groundTexture: none;"></a-entity>
+            
+            <!-- <a-circle position="0 -30 0" scale="100 100 100" rotation="-90 0 0" color="black"> </a-circle>  -->
+
+            <a-entity id="primordial-chaos" gltf-model="#asset_blackhole" animation-mixer="clip: *; loop: repeat; timeScale: 0.1" position="0 32 0" scale="20 20 20"></a-entity>
+          
+
+
+            <a-entity id="hemisphere-light" position="0 50 0" light="color: #CEE4F0; groundColor: #553e35; intensity: 2.3; type: hemisphere"></a-entity>
+
+
+            <!-- Galley layout: arranges all team galleys in a circle -->
+            <a-entity id="galley-layout-root" galley-layout="radius: 15; height: 0; rotationOffset: 0">
+                <!-- Team Blue's Galley -->
+                <a-entity id="galley-blue" team-galley-receiver="teamId: blue; gameId: default" galley-manager="galleryId: galley-blue">
+                    <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-blue"></a-entity>
+                </a-entity>
+
+                <!-- Team White's Galley -->
+                <a-entity id="galley-white" team-galley-receiver="teamId: white; gameId: default" galley-manager="galleryId: galley-white">
+                    <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-white"></a-entity>
+                </a-entity>
+
+                <!-- Team Red's Galley -->
+                <a-entity id="galley-red" team-galley-receiver="teamId: red; gameId: default" galley-manager="galleryId: galley-red">
+                    <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-red"></a-entity>
+                </a-entity>
+            </a-entity>
+
+        </a-entity>
+      
+        <!-- Controller Entities -->
+        <a-entity id="leftHand" laser-controls="hand: left" raycaster="objects: .clickable"></a-entity>
+        <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .clickable"></a-entity>
+
+        <!-- Camera Rig -->
+        <a-entity id="cameraRig" final-stir-camera camera-focus-galley="pitch: -9" rotation="-10 180 0" position="0 0 -5.5">
+            <a-camera position="0 1.2 0"></a-camera>
+        </a-entity>
+      
+    </a-scene>
+
+    <!-- Developer console helpers (testRecipe, testGesture, ...) -->
+    <script src="dev/console-helpers.js"></script>
+</body>
+</html>

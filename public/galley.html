@@ -1,0 +1,68 @@
+<a-entity id="entity_button_floor_square" recipe-status-button class="clickable" gltf-model="#asset_button_floor_square" position="-0.225 0.4 2"
+    scale="2 1.5 2"></a-entity>
+
+<a-entity id="entity_conveyor_stripe-2" data-ingredient-intake="1" gltf-model="#asset_conveyor_stripe" position="4 1 0" rotation="0 90 0"></a-entity>
+<a-entity id="entity_conveyor_stripe_corner" data-ingredient-intake="2" gltf-model="#asset_conveyor_stripe" position="4 1.05 -1"></a-entity>
+<a-entity id="entity_conveyor_stripe_corner-2" data-ingredient-delivery="1" gltf-model="#asset_conveyor_stripe" position="-5 1.05 -1" rotation="0 90 0"></a-entity>
+<a-entity id="entity_conveyor_stripe_corner-3" data-ingredient-delivery="2" gltf-model="#asset_conveyor_stripe" position="-5 1.05 3" rotation="0 180 0"></a-entity>
+
+<a-entity id="entity_conveyor_stripe_sides" gltf-model="#asset_conveyor_stripe_sides"
+    position="3 1 -1"></a-entity>
+    
+<a-entity id="entity_conveyor_stripe_sides-2"
+    gltf-model="#asset_conveyor_stripe_sides" position="1 1 -1"></a-entity>
+    
+<a-entity
+    id="entity_conveyor_stripe_sides-3" gltf-model="#asset_conveyor_stripe_sides"
+    position="-1 1 -1"></a-entity><a-entity id="entity_conveyor_stripe_sides-6"
+    gltf-model="#asset_conveyor_stripe_sides" position="-5 1 0" rotation="0 90 0"></a-entity><a-entity
+    id="entity_conveyor_stripe_sides-7" gltf-model="#asset_conveyor_stripe_sides" position="-5 1 1"
+    rotation="0 90 0"></a-entity><a-entity id="entity_conveyor_stripe_sides-8"
+    gltf-model="#asset_conveyor_stripe_sides" position="-5 1 2" rotation="0 90 0"></a-entity><a-entity
+    id="entity_conveyor_stripe_sides-9" gltf-model="#asset_conveyor_stripe_sides"
+    position="-4 1 3"></a-entity><a-entity id="entity_conveyor_stripe_sides-4"
+    gltf-model="#asset_conveyor_stripe_sides" position="-3 1 -1"></a-entity><a-entity
+    id="entity_conveyor_stripe_sides-5" gltf-model="#asset_conveyor_stripe_sides" position="-4 1 -1"></a-entity>
+
+    <!-- Station (S1) -->
+    <a-entity id="entity_chef_station_1" class="chef-station" data-station-id="S1" gltf-model="#asset_conveyor_stripe_sides_cross"
+    position="2 0.9 -1"></a-entity>
+    <a-entity id="entity_chef_board_1" gltf-model="#asset_cutting_board" rotation="0 90 0" position="2 1.3 -1"></a-entity>
+
+    <!-- Station (S2) -->
+    <a-entity id="entity_chef_station_2" class="chef-station" data-station-id="S2"
+    gltf-model="#asset_conveyor_stripe_sides_cross" position="0 0.9 -1"></a-entity>
+    <a-entity id="entity_chef_board_2" gltf-model="#asset_cutting_board" rotation="0 90 0" position="0 1.3 -1"></a-entity>
+
+    <!-- Station (S3) -->
+    <a-entity id="entity_chef_station_3" class="chef-station" data-station-id="S3" gltf-model="#asset_conveyor_stripe_sides_cross"
+    position="-2 0.9 -1"></a-entity>
+    <a-entity id="entity_chef_board_3" gltf-model="#asset_cutting_board" rotation="0 90 0" position="-2 1.3 -1"></a-entity>
+
+
+<a-entity id="entity_hopper_high_round" class="recipe-team-intake" data-recipe-team-intake="true" gltf-model="#asset_hopper_high_round" position="4 2.21289 0"
+    scale="1.2 0.83298 1.2"></a-entity>
+    
+
+<a-entity id="entity_hopper_high_round-2" gltf-model="#asset_hopper_high_round" position="-2.73612 0.02306 2.96769"
+    scale="1.2 0.83298 1.2"></a-entity>
+<a-entity id="entity_hopper_round" gltf-model="" position="-7.39439 2 -1.59581"></a-entity>
+
+<a-entity id="entity_machine_connection_pipe" gltf-model="#asset_machine_connection_pipe" position="4 1 0"
+    rotation="0 90 0"></a-entity>
+<a-entity id="entity_machine_fortified" gltf-model="#asset_machine_fortified" position="-4 1 -1"></a-entity>
+
+<a-entity id="entity_piston_round" data-ingredient-delivery="3" gltf-model="#asset_piston_round" position="-2.73654 1.00541 3.02123"
+    scale="2 0.4 2"></a-entity>
+
+<a-entity id="entity_scanner_high" gltf-model="#asset_scanner_high" position="0 0 -6" scale="2 5.60 8.25"
+    rotation="0 90 0"></a-entity>
+
+<a-entity id="entity_screen_hanging_wide" gltf-model="#asset_screen_hanging_wide" position="0 2.7 -5.23928"
+    scale="11.45 8.8 1" rotation="0 180 0"></a-entity>
+
+<a-circle id="galley_floor" opacity="0.8" position="0 0.004 0" rotation="-90 0 0" scale="6.2 6.2 6.2" color="#121213" shadow="receive: true"> </a-circle>
+
+<!-- <a-camera id="delivery_camera" data-delivery-camera camera="fov: 20" rotation="-28 180 0" active="false" position="-2.2 4.41098 -1.8"></a-camera> -->
+
+<a-entity id="delivery_camera" data-delivery-camera rotation="-25 170 0" active="false" position="-2.2 4.4 -1.2"></a-entity>

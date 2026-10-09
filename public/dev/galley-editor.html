@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cosmic Chef - Galley Editor</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Vendor Dependencies Bundle (Offline / Local) -->
+    <script src="../vendor/bundle.js"></script>
+
+    <script src="../aframe-components/load-fragment.js"></script>
+
+</head>
+<body>
+    <script>
+         window.AFRAME_INSPECTOR_CONFIG = {saveEndpoint: "/save"};
+    </script>
+
+    <a-scene
+        id="scene"
+        renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
+        fog="color: #1d1d1e; distance: 800;"
+        inspector="url: /aframe-inspector.min.js">
+
+        <a-assets>
+            <a-asset-item id="asset_button_floor_square" src="../assets/models/factory/button-floor-square.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe" src="../assets/models/factory/conveyor-stripe.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_corner" src="../assets/models/factory/conveyor-corner.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_corner" src="../assets/models/factory/conveyor-stripe-corner.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_junction_t" src="../assets/models/factory/conveyor-stripe-junction-t.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_part_end" src="../assets/models/factory/conveyor-stripe-part-end.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_part_middle" src="../assets/models/factory/conveyor-stripe-part-middle.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_sides" src="../assets/models/factory/conveyor-stripe-sides.glb"></a-asset-item>
+            <a-asset-item id="asset_conveyor_stripe_sides_cross" src="../assets/models/factory/conveyor-stripe-sides-cross.glb"></a-asset-item>
+
+            <a-asset-item id="asset_hopper_high_round" src="../assets/models/factory/hopper-high-round.glb"></a-asset-item>
+
+            <a-asset-item id="asset_machine_connection_pipe" src="../assets/models/factory/machine-connection-pipe.glb"></a-asset-item>
+            <a-asset-item id="asset_machine_fortified" src="../assets/models/factory/machine-fortified.glb"></a-asset-item>
+            <a-asset-item id="asset_piston_round" src="../assets/models/factory/piston-round.glb"></a-asset-item>
+
+            <a-asset-item id="asset_scanner_high" src="../assets/models/factory/scanner-high.glb"></a-asset-item>
+            <a-asset-item id="asset_screen_hanging_wide" src="../assets/models/factory/screen-hanging-wide.glb"></a-asset-item>
+
+
+
+            <a-asset-item id="asset_cooking_knife" src="../assets/models/food/cooking-knife.glb"></a-asset-item>
+            <a-asset-item id="asset_cooking_spatula" src="../assets/models/food/cooking-spatula.glb"></a-asset-item>
+            <a-asset-item id="asset_cooking_spoon" src="../assets/models/food/cooking-spoon.glb"></a-asset-item>
+            <a-asset-item id="asset_utensil_spoon" src="../assets/models/food/utensil-spoon.glb"></a-asset-item>
+            <a-asset-item id="asset_meat_tenderizer" src="../assets/models/food/meat-tenderizer.glb"></a-asset-item>
+            <a-asset-item id="asset_cutting_board" src="../assets/models/food/cutting-board.glb"></a-asset-item>
+            <a-asset-item id="asset_frying_pan" src="../assets/models/food/frying-pan.glb"></a-asset-item>
+
+
+            <a-asset-item id="asset_blackhole" src="../assets/models/blackhole.glb"></a-asset-item>
+
+            <img id="skybox_space_nebula" src="../assets/skybox-space-nebula.png">
+
+        </a-assets>
+
+        <!-- Main world container -->
+        <a-entity id="world-root" world-root>
+            
+            <!-- Skybox -->
+            <a-sky src="#skybox_space_nebula"></a-sky>
+            
+           <a-entity environment="preset: starry; stageSize: 100; lightPosition: 0 -0.01 -0.2; fog: none; ground: none; groundTexture: none;"></a-entity>
+            
+            <a-entity id="primordial-chaos" gltf-model="#asset_blackhole" position="0 32 0" scale="20 20 20"></a-entity>
+          
+            <a-entity id="hemisphere-light" position="0 50 0" light="color: #CEE4F0; groundColor: #553e35; intensity: 2.3; type: hemisphere"></a-entity>
+
+
+           <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley; renameEntityIds:false "></a-entity>
+
+        </a-entity>
+      
+        <a-camera position="0 3 8" rotation="-10 180 0"></a-camera>
+      
+    </a-scene>
+
+</body>
+</html>

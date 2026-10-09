@@ -1,0 +1,26 @@
+<!-- Head Chef VR Scene Fragment -->
+
+<!-- Galley (where sous-chefs work) -->
+<a-entity id="galley" position="0 0 0" galley-manager>
+    <a-entity geometry="primitive: ring; radiusInner:6 ; radiusOuter: 9" team-ring-color rotation="-90 0 0" position="0 0.03 0"></a-entity>
+    <a-entity load-fragment="src: /galley.html; templateId: cosmic-chef-galley-1"></a-entity>
+</a-entity>
+
+<!-- Recipe spawn area (positioned above galley) -->
+<a-entity id="head-chef-workspace" position="0 30 0">
+
+    <!-- Recipe Spawn Point (recipes fall from here at galley center) -->
+    <a-entity
+        id="recipe-spawn-zone"
+        recipe-spawner="fallDistance: 40"
+        position="0 0 10">
+    </a-entity>
+
+</a-entity>
+
+<!-- Status Display on the large screen -->
+<a-entity
+    id="head-chef-status-display"
+    head-chef-status-display
+    position="0 2.7 -5.2">
+</a-entity>

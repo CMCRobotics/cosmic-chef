@@ -1,0 +1,2 @@
+* "Blackhole" (https://skfb.ly/PCYW) by rubykamen is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+* "Space Skyboxes", "Food" and "Factory" (https://kenney.nl/assets/) assets by Kenney  is licensed under Creative Commons CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/).

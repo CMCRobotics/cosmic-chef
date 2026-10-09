@@ -1,0 +1,231 @@
+@startuml cosmic-chef-structure
+skinparam backgroundColor #FAFAFA
+skinparam classBackgroundColor #E8F4F8
+skinparam classBorderColor #4A90A4
+skinparam arrowColor #4A90A4
+skinparam stereotypeCBackgroundColor #FFE6CC
+skinparam stereotypeABackgroundColor #CCE5FF
+skinparam stereotypeBBackgroundColor #E6F4CC
+
+' Root topic (namespace)
+class "cosmic-chef/" as root <<namespace>> {
+  **Type:** MQTT Topic Root/Namespace
+  **Path:** cosmic-chef/
+}
+
+package "Team Level" {
+  class "team-{id}/" as team <<node>> {
+    **Type:** Node (Team container)
+    **Topic path:** cosmic-chef/team-{id}/
+    --
+    Sub-nodes:
+    • identity
+    • score
+    • performance
+  }
+
+  class "identity" as team_identity <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/team-{id}/identity/
+    --
+    <<property>> name : string
+    <<property>> player-count : integer
+    <<property>> player-ids : string (CSV)
+  }
+
+  class "score" as team_score <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/team-{id}/score/
+    --
+    <<property>> current : integer (points)
+    <<property>> round : integer (points)
+    <<property>> dishes-completed : integer
+  }
+
+  class "performance" as team_perf <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/team-{id}/performance/
+    --
+    <<property>> accuracy : float (%)
+    <<property>> speed : float (gestures/min)
+    <<property>> error-rate : float (%)
+  }
+
+  team *-- team_identity
+  team *-- team_score
+  team *-- team_perf
+}
+
+package "Team × Game Level" {
+  class "game-{id}/" as tg_game <<node>> {
+    **Type:** Node (Team in Game)
+    **Topic path:** cosmic-chef/team-{id}/game-{id}/
+  }
+
+  class "head-chef" as head_chef <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/team-{id}/game-{id}/head-chef/
+    --
+    <<property>> player-id : string (→ global player)
+    <<property>> orientation/heading : float (°)
+    <<property>> position/x : float (m)
+    <<property>> gesture/current : enum
+    <<property>> gesture/confidence : float
+    <<property>> animation/capture-state : enum
+    <<property>> performance/accuracy : float (%)
+  }
+
+  class "sous-chef-{1,2,3}" as sous_chef <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/team-{id}/game-{id}/sous-chef-{n}/
+    --
+    <<property>> player-id : string (→ global player)
+    <<property>> identity/station-id : integer
+    <<property>> gesture/current : enum
+    <<property>> gesture/confidence : float
+    <<property>> performance/accuracy : float (%)
+    <<property>> contribution/ingredients-processed : integer
+  }
+
+  tg_game *-- head_chef
+  tg_game *-- sous_chef
+}
+
+package "Game Level (Global)" {
+  class "game-{id}/" as game <<node>> {
+    **Type:** Node (Game container)
+    **Topic path:** cosmic-chef/game-{id}/
+    --
+    Sub-nodes:
+    • session
+    • round
+    • timer
+    • machine
+    • statistics
+    • arena
+  }
+
+  class "session" as game_session <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/game-{id}/session/
+    --
+    <<property>> id : string (UUID)
+    <<property>> status : enum {running, paused, ended}
+  }
+
+  class "round" as game_round <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/game-{id}/round/
+    --
+    <<property>> number : integer
+    <<property>> recipe : string
+    <<property>> step-current : integer
+    <<property>> step-total : integer
+  }
+
+  class "timer" as game_timer <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/game-{id}/timer/
+    --
+    <<property>> remaining : float (sec)
+    <<property>> elapsed : float (sec)
+  }
+
+  class "machine" as game_machine <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/game-{id}/machine/
+    --
+    <<property>> state : string (XState path)
+    <<property>> context-recipe : string (JSON)
+    <<property>> context-ingredients : string (JSON)
+  }
+
+  class "statistics" as game_stats <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/game-{id}/statistics/
+    --
+    <<property>> total-dishes : integer
+    <<property>> total-errors : integer
+    <<property>> total-gestures : integer
+  }
+
+  class "arena" as game_arena <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/game-{id}/arena/
+    --
+    <<property>> player-count : integer
+    <<property>> team-count : integer
+    <<property>> location : string
+  }
+
+  class "stats-live" as game_stats_live <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/game-{id}/stats-live/
+    --
+    <<property>> leaderboard/top-team : string
+    <<property>> aggregate/avg-accuracy : float (%)
+    <<property>> snapshot/timestamp : integer (ms)
+  }
+
+  game *-- game_session
+  game *-- game_round
+  game *-- game_timer
+  game *-- game_machine
+  game *-- game_stats
+  game *-- game_arena
+  game *-- game_stats_live
+}
+
+package "Player Registry (Global)" {
+  class "player-{id}/" as player <<node>> {
+    **Type:** Node (Player Profile)
+    **Topic path:** cosmic-chef/player-{id}/
+    --
+    Sub-nodes:
+    • profile
+    • participation
+    • stats
+  }
+
+  class "profile" as player_profile <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/player-{id}/profile/
+    --
+    <<property>> name : string
+    <<property>> avatar-color : string (hex)
+    <<property>> first-appearance : integer (ms)
+  }
+
+  class "participation" as player_participation <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/player-{id}/participation/
+    --
+    <<property>> total-games : integer
+    <<property>> games-as-head-chef : integer
+    <<property>> games-as-sous-chef : integer
+    <<property>> game-history : string (CSV)
+    <<property>> role-history : string (CSV)
+  }
+
+  class "stats" as player_stats <<node>> {
+    **Type:** Node
+    **Topic path:** cosmic-chef/player-{id}/stats/
+    --
+    <<property>> total-dishes-contributed : integer
+    <<property>> average-accuracy : float (%)
+    <<property>> average-speed : float (gestures/min)
+  }
+
+  player *-- player_profile
+  player *-- player_participation
+  player *-- player_stats
+}
+
+root *-- team : contains
+root *-- game : contains
+root *-- player : contains players
+team *-- tg_game : participates in
+head_chef -up-> player : references (player-id)
+sous_chef -up-> player : references (player-id)
+
+@enduml

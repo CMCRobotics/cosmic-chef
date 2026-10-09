@@ -1,0 +1,42 @@
+{{- if .Values.route.enabled -}}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: cosmic-chef-aframe
+  labels:
+    app: cosmic-chef-aframe
+  annotations:
+    haproxy.router.openshift.io/ip_whitelist: ''
+
+spec:
+  host: {{ .Values.domain }}
+  to:
+    kind: Service
+    name: cosmic-chef-aframe
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mosquitto-ws
+  labels:
+    app: mosquitto
+  annotations:
+    haproxy.router.openshift.io/ip_whitelist: ''
+spec:
+  host: {{ .Values.mosquitto.wsDomain | default (printf "mqtt-%s" .Values.domain) }}
+  to:
+    kind: Service
+    name: mosquitto
+    weight: 100
+  port:
+    targetPort: ws
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+{{- end -}}
