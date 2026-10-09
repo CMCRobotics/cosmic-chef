@@ -1,0 +1,41 @@
+<!-- micro:bit gateway HUD. Root sits at the top-left corner of the view; behaviour: aframe-components/microbit-gateway-hud.js -->
+<a-entity class="microbit-hud" microbit-gateway-hud>
+    <!-- Invisible 64px square in the corner that shows/hides the panel. Sized by the component. -->
+    <a-entity data-hud="toggle" class="clickable" geometry="primitive: plane; width: 1; height: 1" material="transparent: true; opacity: 0"></a-entity>
+
+    <!-- Panel, hidden until the corner is clicked. Its offset from the corner is set by the component (padding). -->
+    <a-entity data-hud="panel" visible="false" scale="1 1 1" position="0 0 0">
+        <a-text data-hud="title" value="micro:bit gateway" width="1.6" color="#ffffff" scale="0.4 0.4 0.4" align="left" position="0 0 0"></a-text>
+        <a-text data-hud="status" value="Disconnected" width="1.6" color="#cccccc" scale="0.3 0.3 0.3" align="left" position="0 -0.07 0"></a-text>
+        <a-text data-hud="error" value="" width="1.6" color="#ff8787" scale="0.3 0.3 0.3" align="left" position="0 -0.12 0"></a-text>
+
+        <a-entity data-hud="connect" class="clickable" geometry="primitive: plane; width: 0.5; height: 0.09" material="color: #4c6ef5" position="0.25 -0.22 0">
+            <a-text data-hud="connect-label" value="Connect gateway" width="1.6" color="#ffffff" align="center" scale="0.3 0.3 0.3" position="0 0 0.01"></a-text>
+        </a-entity>
+
+        <a-entity data-row="0" position="0 -0.34 0">
+            <a-text data-hud="row-text" value="" width="1.2" color="#ffffff" align="left" scale="0.28 0.28 0.28" position="0 0 0"></a-text>
+            <a-entity data-hud="row-slot" class="clickable" geometry="primitive: plane; width: 0.4; height: 0.08" material="color: #2b8a3e" position="0.55 0 0">
+                <a-text data-hud="slot-label" value="" width="1.2" color="#ffffff" align="center" scale="0.26 0.26 0.26" position="0 0 0.01"></a-text>
+            </a-entity>
+        </a-entity>
+        <a-entity data-row="1" position="0 -0.44 0">
+            <a-text data-hud="row-text" value="" width="1.2" color="#ffffff" align="left" scale="0.28 0.28 0.28" position="0 0 0"></a-text>
+            <a-entity data-hud="row-slot" class="clickable" geometry="primitive: plane; width: 0.4; height: 0.08" material="color: #2b8a3e" position="0.55 0 0">
+                <a-text data-hud="slot-label" value="" width="1.2" color="#ffffff" align="center" scale="0.26 0.26 0.26" position="0 0 0.01"></a-text>
+            </a-entity>
+        </a-entity>
+        <a-entity data-row="2" position="0 -0.54 0">
+            <a-text data-hud="row-text" value="" width="1.2" color="#ffffff" align="left" scale="0.28 0.28 0.28" position="0 0 0"></a-text>
+            <a-entity data-hud="row-slot" class="clickable" geometry="primitive: plane; width: 0.4; height: 0.08" material="color: #2b8a3e" position="0.55 0 0">
+                <a-text data-hud="slot-label" value="" width="1.2" color="#ffffff" align="center" scale="0.26 0.26 0.26" position="0 0 0.01"></a-text>
+            </a-entity>
+        </a-entity>
+        <a-entity data-row="3" position="0 -0.64 0">
+            <a-text data-hud="row-text" value="" width="1.2" color="#ffffff" align="left" scale="0.28 0.28 0.28" position="0 0 0"></a-text>
+            <a-entity data-hud="row-slot" class="clickable" geometry="primitive: plane; width: 0.4; height: 0.08" material="color: #2b8a3e" position="0.55 0 0">
+                <a-text data-hud="slot-label" value="" width="1.2" color="#ffffff" align="center" scale="0.26 0.26 0.26" position="0 0 0.01"></a-text>
+            </a-entity>
+        </a-entity>
+    </a-entity>
+</a-entity>

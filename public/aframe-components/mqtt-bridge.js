@@ -138,6 +138,18 @@ AFRAME.registerComponent('mqtt-bridge', {
         }
     },
 
+    /**
+     * Publishes on behalf of other components (e.g. microbit-gateway-hud), so this stays the
+     * only MQTT client in the scene. Drops the message while not connected.
+     */
+    publish: function (topic, payload, options) {
+        if (!this.client) {
+            this.log.warn(`Not connected to MQTT, dropped publish to ${topic}`);
+            return;
+        }
+        this.client.publish(topic, payload, options);
+    },
+
     /** Feed a raw gesture update (as an MQTT sous-chef would) into the gesture stream. */
     pushGesture: function (chefId, gesture) {
         this.gestureInput.push(chefId, gesture);

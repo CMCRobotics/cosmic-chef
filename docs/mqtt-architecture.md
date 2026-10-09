@@ -79,10 +79,17 @@ All game topics follow the Homie v4 convention under `cosmic-chef/team-{teamId}/
 - **Publishers:** `recipe-status-button.js`, keyboard simulator (`test-sous-chefs.html`).
 
 ### 4. `.../sous-chef-{n}/gesture/current`
-- **Direction:** Motion sensors / keyboard simulator $\rightarrow$ `mqtt-bridge`
+- **Direction:** Motion sensors / keyboard simulator / micro:bit radio gateway $\rightarrow$ `mqtt-bridge`
 - **Purpose:** Real-time stream of physical gesture inputs from sous-chef $n$ ($1 \le n \le 3$).
 - **Payload:** Gesture name (`"tenderize"`, `"slice"`, `"stir"`) or `"idle"`.
 - **Handler:** `mqtt-bridge.pushGesture(chefId, gesture)` streams into RxJS pipeline, which emits `GESTURE_START`, `GESTURE_TICK` (every 100ms), and `GESTURE_STOP` into `preparation-manager`.
+- **micro:bit publisher:** `MicrobitGateway` (`src/client/microbit-gateway.ts`, page `/dev/microbit-gateway.html`) publishes here for each bound terminal. A start (`GEST,<g>,1`) sends the gesture name and a stop sends `idle`. Radio protocol: [`microbit-devices.md`](microbit-devices.md#radio-gesture-protocol).
+
+### 4b. `homie/terminal-{serialHex}/...` (micro:bit terminals)
+- **Direction:** micro:bit radio gateway $\rightarrow$ observers (dashboards, Homie consumers). Not read by the game.
+- **Purpose:** Homie v4 device per micro:bit terminal, with its sous-chef binding and live gesture.
+- **Topics:** `config/team` and `config/sousChef` (retained, `sous-chef-N` or `none`), `controls/gesture` (`<gesture>-<ms>` / `<gesture>-0`, not retained), plus retained `$homie`, `$name`, `$state`, `$nodes` and `$properties`.
+- **Builder:** `terminalTopic(terminalId, path)` in `src/client/topics.ts`. Full schema in [`homie-devices.md`](homie-devices.md) and [`microbit-devices.md`](microbit-devices.md).
 
 ---
 

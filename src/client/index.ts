@@ -5,4 +5,5 @@
 export * from "./topics";
 export * from "./adapters";
 export * from "./team";
+export * from "./microbit-gateway";
 export * from "./status";

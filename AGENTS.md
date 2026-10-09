@@ -49,6 +49,7 @@ src/server.ts                   Bun HTTP server: static files, A-Frame/Inspector
 src/vendor.js                   Bundle entry: npm deps + src/client → public/vendor/bundle.js
 src/client/topics.ts            Builds/parses every MQTT topic
 src/client/adapters.ts          Pure translators: MQTT payloads / gesture streams → machine events
+src/client/microbit-gateway.ts  micro:bit radio gateway: Web Serial → terminal bindings → sous-chef gesture + Homie topics
 public/index.html               Entry point: the <a-scene>, asset declarations, camera rig, hands
 public/galley.html              Galley fragment (stations, conveyors), injected by load-fragment
 public/scene.html               Particle showcase fragment (not loaded by default)
@@ -57,6 +58,9 @@ public/xstate/preparation-machine.js   Game state machine + RECIPES (pure, unit-
 public/aframe-components/*.js   Custom A-Frame components (most work happens here)
 public/dev/console-helpers.js   Browser-console helpers: testRecipe(), testGesture(), ...
 public/test-sous-chefs.html     Keyboard MQTT simulator for sous-chefs / head chef
+public/dev/microbit-gateway.html    micro:bit radio gateway page (Web Serial → MQTT), uses MicrobitGateway
+public/microbit-hud.html        Gateway HUD fragment (top-left of the camera in index.html), behaviour in microbit-gateway-hud.js
+microbit/gateway.py             MakeCode Python for the gateway micro:bit (radio → USB serial)
 docs/physics.md                 Physics + game-design reference (content authority)
 docs/head-chef-controls.md   Head-chef controls (desktop and VR), floor button, status panel
 docs/vr-debugging-instructions.md   Running vr.html on a Meta Quest over adb reverse (no HTTPS needed)
@@ -84,7 +88,7 @@ MQTT ─► mqtt-bridge ─► adapters (src/client) ─► preparation-manager.
                                                               ◄── 'invalid-gesture'
 ```
 - **`preparation-manager` is the only owner of the actor.** Other components read state from the scene's `game-state-changed` event, and send events via `sceneEl.components['preparation-manager'].send(event)`. Never subscribe to the actor directly, poll for it, or put it on `window`.
-- **`mqtt-bridge` (index.html) and `head-chef-mqtt-client` (vr.html) are the only MQTT clients.** To support a new topic, add its builder/parser to `src/client/topics.ts`, a pure translator to `src/client/adapters.ts` (with a test), and a `case` in `mqtt-bridge.onMessage`. See [`docs/mqtt-architecture.md`](docs/mqtt-architecture.md) for full topic flow details. **Never publish to input topics that the bridge subscribes to** (such as `round/recipe-desired`), as this produces circular echo loops.
+- **`mqtt-bridge` (index.html) and `head-chef-mqtt-client` (vr.html) are the only MQTT clients.** Other components in index.html publish through `mqtt-bridge.publish(topic, payload, options)`, as `microbit-gateway-hud` does; they must not create their own client. To support a new topic, add its builder/parser to `src/client/topics.ts`, a pure translator to `src/client/adapters.ts` (with a test), and a `case` in `mqtt-bridge.onMessage`. See [`docs/mqtt-architecture.md`](docs/mqtt-architecture.md) for full topic flow details. **Never publish to input topics that the bridge subscribes to** (such as `round/recipe-desired`), as this produces circular echo loops.
 - **One event vocabulary** for every input source (MQTT, console, tests): `GESTURE_START` / `GESTURE_TICK` / `GESTURE_STOP` `{ chefId: 'chef-N', gesture, progressAmount? }`, plus `CAPTURE_RECIPE`, `SUBMIT_RECIPE`, `CANCEL_ORDER`, `NEXT_ROUND`, `SET_ACTIVE_CHEFS`. The machine validates gestures and *emits* `invalid-gesture`; `preparation-manager` re-emits it on the scene.
 - **`galley-manager` owns all ingredient entities**: spawning, moving, animating, vacuuming. Don't position or animate ingredients from anywhere else.
 
@@ -133,6 +137,7 @@ AFRAME.registerComponent('my-thing', {
 - **The galley ring colour comes from MQTT.** `head-chef-mqtt-client` re-emits the retained `identity/color` as `team-color-changed`, and `team-ring-color` applies it. Don't hard-code a team colour in a fragment.
 - **Multiple galleys share one state machine, each with scoped managers.** `index.html` can instantiate many galleys (via `galley-layout`), all listening to the same `game-state-changed`. Each `galley-manager` listens to events on its own parent entity, so they don't interfere. **ID namespacing:** When `load-fragment` clones `galley.html` multiple times, all element IDs are automatically suffixed (`entity_chef_station_1__cosmic-chef-galley-1_0`). This avoids DOM collisions. `aframe-watcher` edits the clean source `galley.html`; IDs get fresh suffixes on reload. **Team galleys:** For each team's window to see all teams' galleys simultaneously, use `team-galley-receiver` (scoped MQTT subscriber for a team) paired with `galley-component` (renders that team's live state). Each team's window independently fetches other teams' state via MQTT, so all galleys animate in real-time showing different recipes.
 - **A-Frame lasers only hit meshes on the `.clickable` entity itself, not on its children.** `raycaster` (and so `cursor` and laser hits) reads `el.object3DMap` of each clickable element, so a `gltf-model` on a child entity is invisible to lasers. Give the clickable root its own geometry, such as the invisible hitbox in `recipe-spawner.js`. Head-chef capture (`tractor-beam.js`) uses its own ray and is not affected.
+- **The micro:bit radio gateway is a third publisher to `sous-chef-N/gesture/current`.** `MicrobitGateway` (`src/client/microbit-gateway.ts`, page `public/dev/microbit-gateway.html`) reads a gateway micro:bit over **Web Serial** (not WebUSB: Chrome cannot claim the micro:bit's serial port that way). It needs Chrome or Edge, `https://` or `localhost`, and a user click on "Connect". Radio groups are per team (blue 31, white 32, red 33) and are set by the browser on connect. The gateway publishes gestures only for terminals bound to a slot, and it never publishes to input topics other than `gesture/current`. Protocol: [`docs/microbit-devices.md`](docs/microbit-devices.md).
 
 ## 7. Verifying changes
 
