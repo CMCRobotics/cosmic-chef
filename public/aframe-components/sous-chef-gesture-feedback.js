@@ -9,21 +9,18 @@
  */
 
 const UTENSILS = {
-    knife: { model: '#asset_cooking_knife', scale: '0.5 0.5 0.5', rotation: '-90 -90 0' },
-    hammer: { model: '#asset_meat_tenderizer', scale: '1 1 1', rotation: '0 0 90' },
-    spoon: { model: '#asset_cooking_spoon', scale: '0.5 0.5 0.5', rotation: '0 0 90' }
+    hammer: { model: '#asset_meat_tenderizer', scale: '2 2 2', rotation: '90 90 0', position: '0 0.6 0.1' },
+    knife: { model: '#asset_cooking_knife', scale: '2 2 2', rotation: '90 90 0', position: '0 -0.1 0' },
+    spoon: { model: '#asset_cooking_spoon', scale: '2 2 2', rotation: '0 0 85', position: '0 0.3 0' }
 };
 
+// One entry per gesture in the state machine (tenderize, slice, stir).
+// Each anim-* component (public/aframe-components/animations/) drives the utensil's
+// position/rotation while attached, and reads its base transform at init.
 const GESTURE_FEEDBACK = {
-    // Rapid up-down bouncing (hammering motion)
-    tenderize: { utensil: 'hammer', animation: 'property: position; from: 0 0 0; to: 0 0.3 0; dur: 200; easing: easeInOutQuad; loop: true; dir: alternate' },
-    // Fast down-bounce motion
-    smash: { utensil: 'hammer', animation: 'property: position; from: 0 0 0; to: 0 -0.2 0; dur: 150; easing: easeInOutQuad; loop: true; dir: alternate' },
-    // Fast side-to-side slashing motion
-    slice: { utensil: 'knife', animation: 'property: rotation; from: 0 0 -20; to: 0 0 20; dur: 300; easing: easeInOutQuad; loop: true; dir: alternate' },
-    dice: { utensil: 'knife', animation: 'property: rotation; from: 0 0 -20; to: 0 0 20; dur: 300; easing: easeInOutQuad; loop: true; dir: alternate' },
-    // Circular rotation motion
-    stir: { utensil: 'spoon', animation: 'property: rotation; from: 0 0 0; to: 0 360 0; dur: 1000; loop: true' }
+    tenderize: { utensil: 'hammer', anim: 'anim-tenderizing' },
+    slice: { utensil: 'knife', anim: 'anim-slicing' },
+    stir: { utensil: 'spoon', anim: 'anim-stirring' }
 };
 
 AFRAME.registerComponent('sous-chef-gesture-feedback', {
@@ -42,6 +39,7 @@ AFRAME.registerComponent('sous-chef-gesture-feedback', {
             utensilEl.setAttribute('gltf-model', spec.model);
             utensilEl.setAttribute('scale', spec.scale);
             utensilEl.setAttribute('rotation', spec.rotation);
+            utensilEl.setAttribute('position', spec.position);
             utensilEl.setAttribute('visible', false);
             this.el.appendChild(utensilEl);
             this.utensils[name] = utensilEl;
@@ -66,17 +64,25 @@ AFRAME.registerComponent('sous-chef-gesture-feedback', {
     },
 
     showUtensil: function (gesture) {
-        Object.values(this.utensils).forEach((utensilEl) => {
-            utensilEl.setAttribute('visible', false);
-            utensilEl.removeAttribute('animation');
-        });
+        Object.keys(this.utensils).forEach((name) => this.resetUtensil(name));
 
         const feedback = GESTURE_FEEDBACK[gesture];
         if (!feedback) return; // 'idle' or unknown gesture: nothing shown
 
         const utensilEl = this.utensils[feedback.utensil];
         utensilEl.setAttribute('visible', true);
-        utensilEl.setAttribute('animation', feedback.animation);
+        utensilEl.setAttribute(feedback.anim, '');
+    },
+
+    // Detach any anim-* component and put the utensil back at its base transform.
+    // anim-* components read the transform at init, so this must run before the next one attaches.
+    resetUtensil: function (name) {
+        const utensilEl = this.utensils[name];
+        const spec = UTENSILS[name];
+        Object.values(GESTURE_FEEDBACK).forEach((feedback) => utensilEl.removeAttribute(feedback.anim));
+        utensilEl.setAttribute('position', spec.position);
+        utensilEl.setAttribute('rotation', spec.rotation);
+        utensilEl.setAttribute('visible', false);
     },
 
     remove: function () {

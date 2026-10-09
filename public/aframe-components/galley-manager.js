@@ -4,12 +4,29 @@
  * Subscribes to preparation-manager state changes and syncs ingredient positions/animations.
  */
 
+// Red sphere over a station when its chef's gesture is invalid. Off for now (wrong-gesture feedback is disabled).
+const SHOW_INVALID_GESTURE_INDICATOR = false;
+
+// Scale of the plate that marks the recipe delivery area
+const PLATE_SCALE = 2;
+
+// Delivered ingredients arrange on a circle of this radius around the plate centre
+const RING_RADIUS = 0.5;
+// The ring draws in to this radius for the final stir
+const FINAL_STIR_RING_RADIUS = 0.3;
+// The orbit stops this long (ms) after the last stir tick
+const STIR_HOLD_MS = 300;
+
 AFRAME.registerComponent('galley-manager', {
     schema: {
         deliveryAreaPosition: { type: 'vec3', default: { x: -2, y: 1.7, z: 3 } },
+        // Centre of the plate in the galley (on the delivery piston), at plate height
+        platePosition: { type: 'vec3', default: { x: -2.73654, y: 1.4, z: 3.02123 } },
         vacuumDuration: { type: 'number', default: 2000 },
         vacuumResetDelay: { type: 'number', default: 2500 },
-        galleryId: { type: 'string', default: '' }
+        galleryId: { type: 'string', default: '' },
+        // Passed to spawned particles: show gesture distortion before a chef performs it
+        gestureHints: { type: 'boolean', default: false }
     },
 
     init: function () {
@@ -128,6 +145,7 @@ AFRAME.registerComponent('galley-manager', {
     },
 
     onInvalidGesture: function (evt) {
+        if (!SHOW_INVALID_GESTURE_INDICATOR) return;
         this.showInvalidGestureIndicator(evt.detail.stationId, evt.detail.chefId);
     },
 
@@ -140,6 +158,8 @@ AFRAME.registerComponent('galley-manager', {
         // Clear ingredients when entering preparingIngredients (new recipe captured)
         if (state === 'preparingIngredients' && this.lastState !== 'preparingIngredients') {
             this.clearAllIngredients();
+            this.recipeIngredientCount = context.ingredients.length;
+            this.spawnPlate();
         }
 
         // Also handle recipe name changes as a defensive check
@@ -154,12 +174,14 @@ AFRAME.registerComponent('galley-manager', {
             this.updateGestureAnimations(context);
         }
 
-        // Handle state-specific transitions
+        // Handle state-specific transitions: the orbit follows the stir tick by tick
         if (state === 'readyForFinalStir') {
-            this.convergeToDeliveryArea(context);
-            this.enableFinalStirAnimation();
-        } else if (state !== 'readyForFinalStir' && this.lastState === 'readyForFinalStir') {
-            this.disableFinalStirAnimation();
+            if (context.stirProgress !== this.lastStirProgress) {
+                this.lastStirProgress = context.stirProgress;
+                this.onFinalStirTick();
+            }
+        } else if (this.lastState === 'readyForFinalStir') {
+            this.stopFinalStirOrbit();
         }
 
         this.lastState = state;
@@ -236,7 +258,8 @@ AFRAME.registerComponent('galley-manager', {
                 ingredient: ingredientType,
                 active: true,
                 progress: 0,
-                gesture: firstGesture.gesture
+                gesture: firstGesture.gesture,
+                gestureHint: this.data.gestureHints
             });
         }
 
@@ -318,7 +341,9 @@ AFRAME.registerComponent('galley-manager', {
         if (!data) return;
 
         const el = data.el;
-        const deliveryPos = this.data.deliveryAreaPosition;
+        const ringPos = this.ringPosition(this.deliveredCount);
+        data.deliverySlot = this.deliveredCount;
+        this.deliveredCount++;
         const duration = 600; // ms
 
         // Remove floating animation temporarily
@@ -335,50 +360,89 @@ AFRAME.registerComponent('galley-manager', {
 
         el.setAttribute('animation', {
             property: 'position',
-            to: `${deliveryPos.x} ${deliveryPos.y} ${deliveryPos.z}`,
+            to: `${ringPos.x} ${ringPos.y} ${ringPos.z}`,
             dur: duration,
             easing: 'easeInOutQuad'
         });
     },
 
-    convergeToDeliveryArea: function (context) {
-        this.log.debug('All ingredients ready — final convergence to delivery area');
+    // Position of the delivery slot on the circle around the plate (slots spread over the whole recipe)
+    ringPosition: function (slot, radius = RING_RADIUS) {
+        const platePos = this.data.platePosition;
+        const count = Math.max(this.recipeIngredientCount, slot + 1, 1);
+        const angle = (2 * Math.PI * slot) / count;
 
-        const deliveryPos = this.data.deliveryAreaPosition;
+        return {
+            x: platePos.x + Math.cos(angle) * radius,
+            y: this.data.deliveryAreaPosition.y,
+            z: platePos.z + Math.sin(angle) * radius
+        };
+    },
 
-        // All ingredients should already be at or near delivery area
-        // Do a final subtle convergence for synchronized stir
+    // Each stir tick keeps the orbit going; it stops once the ticks have been silent for STIR_HOLD_MS
+    onFinalStirTick: function () {
+        if (!this.orbitActive) {
+            this.startFinalStirOrbit();
+        }
+        clearTimeout(this.stirHoldTimeout);
+        this.stirHoldTimeout = setTimeout(() => this.stopFinalStirOrbit(), STIR_HOLD_MS);
+    },
+
+    startFinalStirOrbit: function () {
+        this.orbitActive = true;
+        this.log.debug('Final stir orbit started');
+
         this.ingredientEntities.forEach((data, ingredientId) => {
             if (data.inDeliveryArea) {
                 const el = data.el;
-                const duration = 200; // ms (quick final adjustment)
+                const platePos = this.data.platePosition;
+                const count = Math.max(this.recipeIngredientCount, data.deliverySlot + 1, 1);
 
-                el.setAttribute('animation', {
-                    property: 'position',
-                    to: `${deliveryPos.x} ${deliveryPos.y} ${deliveryPos.z}`,
-                    dur: duration,
-                    easing: 'easeInOutQuad'
+                // Stop floating: anim-stirring takes over the position
+                el.removeAttribute('anim-space-float');
+                // Orbit the plate centre, evenly spaced by delivery slot, starting on its ring spot
+                el.setAttribute('anim-stirring', {
+                    useOrigin: true,
+                    origin: `${platePos.x} ${this.data.deliveryAreaPosition.y} ${platePos.z}`,
+                    radius: this.finalStirDrawnIn ? FINAL_STIR_RING_RADIUS : RING_RADIUS,
+                    speed: 1.5,
+                    depth: 0,
+                    randomness: 0,
+                    clockwise: true,
+                    phase: data.deliverySlot / count
                 });
+                // First orbit draws in from the ring radius to the final-stir radius
+                if (!this.finalStirDrawnIn) {
+                    el.setAttribute('animation__final-stir-ring', {
+                        property: 'anim-stirring.radius',
+                        from: RING_RADIUS,
+                        to: FINAL_STIR_RING_RADIUS,
+                        dur: 600, // ms
+                        easing: 'easeInOutQuad'
+                    });
+                }
             }
         });
+        this.finalStirDrawnIn = true;
     },
 
-    enableFinalStirAnimation: function () {
-        this.log.debug('Enabling final stir animation on all ingredients');
-        this.ingredientEntities.forEach((data, ingredientId) => {
-            const el = data.el;
-            if (el && el.getAttribute('quantum-particle')) {
-                el.setAttribute('quantum-particle', { isFinalStir: true });
-            }
-        });
-    },
+    // Stop orbiting and float again, where each ingredient stopped
+    stopFinalStirOrbit: function () {
+        clearTimeout(this.stirHoldTimeout);
+        if (!this.orbitActive) return;
 
-    disableFinalStirAnimation: function () {
-        this.log.debug('Disabling final stir animation on all ingredients');
+        this.orbitActive = false;
+        this.log.debug('Final stir orbit stopped');
+
         this.ingredientEntities.forEach((data, ingredientId) => {
             const el = data.el;
-            if (el && el.getAttribute('quantum-particle')) {
-                el.setAttribute('quantum-particle', { isFinalStir: false });
+            if (el && data.inDeliveryArea) {
+                el.removeAttribute('animation__final-stir-ring');
+                el.removeAttribute('anim-stirring');
+                el.setAttribute('anim-space-float', {
+                    speed: 0.8,
+                    distance: 0.2
+                });
             }
         });
     },
@@ -390,7 +454,30 @@ AFRAME.registerComponent('galley-manager', {
             }
         });
         this.ingredientEntities.clear();
+        this.deliveredCount = 0;
+        this.orbitActive = false;
+        this.finalStirDrawnIn = false;
+        this.lastStirProgress = 0;
+        clearTimeout(this.stirHoldTimeout);
         this.log.debug('Cleared all ingredient entities');
+
+        if (this.plateEl) {
+            this.plateEl.remove();
+            this.plateEl = null;
+        }
+    },
+
+    spawnPlate: function () {
+        const platePos = this.data.platePosition;
+
+        const el = document.createElement('a-entity');
+        el.setAttribute('id', `plate_${this.galleryId}`);
+        el.setAttribute('gltf-model', '#asset_plate_deep');
+        el.setAttribute('position', `${platePos.x} ${platePos.y} ${platePos.z}`);
+        el.setAttribute('scale', `${PLATE_SCALE} ${PLATE_SCALE} ${PLATE_SCALE}`);
+
+        this.el.appendChild(el);
+        this.plateEl = el;
     },
 
     vacuumAllIngredientsAndReset: function (isCancellation) {
@@ -406,23 +493,16 @@ AFRAME.registerComponent('galley-manager', {
         this.ingredientEntities.forEach((data, ingredientId) => {
             const el = data.el;
             if (el) {
-                // Stop floating animation before vacuum
-                el.removeAttribute('anim-space-float');
-
-                // Apply vacuum animation: stretch upwards and move 10 units up
-                el.setAttribute('anim-vacuum', {
-                    distance: 10,
-                    stretchAxis: 'y',
-                    stretchDirection: 1,  // positive = upward
-                    duration: this.data.vacuumDuration,
-                    resistance: 1.5,
-                    loop: false
-                });
+                this.applyVacuum(el);
 
                 vacuumedCount++;
                 this.log.debug(`Applied vacuum animation to ${ingredientId}`);
             }
         });
+
+        if (this.plateEl) {
+            this.applyVacuum(this.plateEl);
+        }
 
         this.log.info(`Vacuumed ${vacuumedCount} ingredients`);
 
@@ -432,6 +512,21 @@ AFRAME.registerComponent('galley-manager', {
             this.requestNextRound();
             this.vacuumInProgress = false;
         }, this.data.vacuumResetDelay);
+    },
+
+    applyVacuum: function (el) {
+        // Stop floating animation before vacuum
+        el.removeAttribute('anim-space-float');
+
+        // Apply vacuum animation: stretch upwards and move 10 units up
+        el.setAttribute('anim-vacuum', {
+            distance: 10,
+            stretchAxis: 'y',
+            stretchDirection: 1,  // positive = upward
+            duration: this.data.vacuumDuration,
+            resistance: 1.5,
+            loop: false
+        });
     },
 
     requestNextRound: function () {

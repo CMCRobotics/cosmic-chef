@@ -1,9 +1,9 @@
 AFRAME.registerComponent('anim-slicing', {
     schema: {
-        speed: {type: 'number', default: 0.6},
-        depth: {type: 'number', default: 0.6},
+        speed: {type: 'number', default: 0.5},
+        depth: {type: 'number', default: 0.8},
         angle: {type: 'number', default: 45},
-        sideMotion: {type: 'number', default: 0.1},
+        sideMotion: {type: 'number', default: 0.01},
         choppiness: {type: 'number', default: 0.01},
         randomness: {type: 'number', default: 0.1},
         gravity: {type: 'number', default: 1.5}
@@ -102,7 +102,7 @@ AFRAME.registerComponent('anim-slicing', {
 
         el.setAttribute('rotation', {
             x: this.baseRotX,
-            y: this.baseRotY + rotateAngle,
+            y: this.baseRotY,// + rotateAngle,
             z: this.baseRotZ
         });
     }
