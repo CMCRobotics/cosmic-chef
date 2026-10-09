@@ -6,6 +6,7 @@
  *   cosmic-chef/team-{teamId}/game-{gameId}/round/recipe-desired               payload: recipe JSON (incoming)
  *   cosmic-chef/team-{teamId}/game-{gameId}/round/recipe-actual                payload: recipe JSON (outgoing)
  *   cosmic-chef/team-{teamId}/game-{gameId}/identity/color                     payload: hex colour, e.g. "#0066ff" (retained)
+ *   homie/terminal-{serialHex}/config/sousChef                                 payload: "sous-chef-N" | "none" (retained, micro:bit gateway)
  *
  * Every topic string in the client is built or parsed here.
  */
@@ -44,6 +45,11 @@ export function recipeTopic(teamId: string, gameId: string): string {
 
 export function teamColorTopic(teamId: string, gameId: string): string {
   return `${gameTopic(teamId, gameId)}/identity/color`;
+}
+
+/** Homie topic of a micro:bit terminal, e.g. terminalTopic("terminal-02b1cf45", "config/team"). */
+export function terminalTopic(terminalId: string, path: string): string {
+  return `homie/${terminalId}/${path}`;
 }
 
 export function gameStateTopic(teamId: string, gameId: string): string {

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>micro:bit Radio Gateway</title>
+    <!-- Runtime config (MQTT_BROKER_URL from .env) -->
+    <script src="../config.js"></script>
+    <!-- Vendor bundle: mqtt.js + window.CosmicChef (MicrobitGateway) -->
+    <script src="../vendor/bundle.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #1d1d1e;
+        color: #eee;
+        padding: 16px;
+        min-height: 100vh;
+      }
+      h1 { font-size: 1.4rem; margin-bottom: 12px; }
+      h2 { font-size: 1rem; margin-bottom: 8px; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; }
+      .panel { background: #2a2a2d; border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+      .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+      .chip { padding: 4px 10px; border-radius: 999px; background: #444; font-size: 0.85rem; }
+      .chip.ok { background: #1f7a3d; }
+      .chip.off { background: #7a1f1f; }
+      .team { font-weight: 600; text-transform: capitalize; }
+      button {
+        padding: 8px 14px;
+        border: none;
+        border-radius: 6px;
+        background: #4c6ef5;
+        color: #fff;
+        font-size: 0.95rem;
+        cursor: pointer;
+      }
+      button:disabled { background: #555; cursor: not-allowed; }
+      button.danger { background: #c92a2a; }
+      select { padding: 6px; border-radius: 4px; background: #111; color: #eee; border: 1px solid #555; }
+      table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+      th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid #3a3a3e; }
+      .muted { color: #888; }
+      #log { max-height: 240px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; line-height: 1.5; }
+      #log div.error { color: #ff8787; }
+      #log div.gesture { color: #8ce99a; }
+      #unsupported { display: none; background: #7a1f1f; padding: 10px; border-radius: 6px; margin-bottom: 14px; }
+    </style>
+  </head>
+  <body>
+    <h1>micro:bit Radio Gateway</h1>
+
+    <div id="unsupported">
+      Web Serial is not available in this browser. Use Chrome or Edge on desktop, over
+      <code>https://</code> or <code>localhost</code>.
+    </div>
+
+    <div class="panel">
+      <h2>Team</h2>
+      <div class="row">
+        <span class="team" id="teamName">-</span>
+        <span class="chip" id="radioGroup">radio group -</span>
+        <span class="chip" id="gameId">game -</span>
+        <span class="muted">Change team with <code>?team=blue|white|red</code></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Connections</h2>
+      <div class="row">
+        <span class="chip off" id="mqttChip">MQTT: disconnected</span>
+        <span class="chip off" id="serialChip">Gateway: disconnected</span>
+      </div>
+      <div class="row" style="margin-top: 12px;">
+        <button id="connectGatewayBtn">Connect gateway micro:bit</button>
+        <button id="disconnectGatewayBtn" class="danger" disabled>Disconnect gateway</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Terminals</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Terminal</th>
+            <th>Sous-chef</th>
+            <th>Gesture</th>
+            <th>Last seen</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="terminals">
+          <tr><td colspan="5" class="muted">No terminals yet. Shake one within radio range.</td></tr>
+        </tbody>
+      </table>
+      <p class="muted" style="margin-top: 10px;">
+        New terminals take the lowest free sous-chef slot. Change a slot here to move a terminal.
+        Bindings are remembered in this browser.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>Log</h2>
+      <div id="log"></div>
+    </div>
+
+    <script>
+      (function () {
+        const { MicrobitGateway, resolveTeamId, radioGroupFor } = window.CosmicChef;
+        const params = new URLSearchParams(window.location.search);
+
+        const teamId = resolveTeamId(window.location.search, window.localStorage);
+        const gameId = params.get('gameId') || 'default';
+        const brokerUrl = (window.COSMIC_CHEF_CONFIG && window.COSMIC_CHEF_CONFIG.MQTT_BROKER_URL) || 'ws://localhost:9001';
+
+        const el = (id) => document.getElementById(id);
+        const els = {
+          teamName: el('teamName'),
+          radioGroup: el('radioGroup'),
+          gameId: el('gameId'),
+          mqttChip: el('mqttChip'),
+          serialChip: el('serialChip'),
+          connectGateway: el('connectGatewayBtn'),
+          disconnectGateway: el('disconnectGatewayBtn'),
+          terminals: el('terminals'),
+          log: el('log'),
+        };
+
+        els.teamName.textContent = `Team ${teamId}`;
+        els.radioGroup.textContent = `radio group ${radioGroupFor(teamId)}`;
+        els.gameId.textContent = `game ${gameId}`;
+
+        if (!navigator.serial) {
+          el('unsupported').style.display = 'block';
+          els.connectGateway.disabled = true;
+        }
+
+        function log(message, kind) {
+          const line = document.createElement('div');
+          if (kind) line.className = kind;
+          line.textContent = `${new Date().toLocaleTimeString()}  ${message}`;
+          els.log.prepend(line);
+        }
+
+        function setChip(chip, text, ok) {
+          chip.textContent = text;
+          chip.classList.toggle('ok', ok);
+          chip.classList.toggle('off', !ok);
+        }
+
+        // MQTT: one client for the page, handed to the gateway.
+        const client = mqtt.connect(brokerUrl, { clientId: `microbit-gateway-${teamId}-${Date.now()}`, reconnectPeriod: 1000 });
+        client.on('connect', () => {
+          setChip(els.mqttChip, `MQTT: connected (${brokerUrl})`, true);
+          log('Connected to MQTT broker', 'info');
+        });
+        client.on('close', () => setChip(els.mqttChip, 'MQTT: disconnected', false));
+        client.on('error', (err) => log(`MQTT error: ${err.message}`, 'error'));
+
+        const gateway = new MicrobitGateway({
+          teamId,
+          gameId,
+          mqtt: client,
+          storage: window.localStorage,
+        });
+
+        // Terminal state for display only: the registry is the source of truth for bindings.
+        const rows = new Map();
+
+        function renderRows() {
+          const bindings = gateway.registry.list();
+          if (bindings.length === 0) {
+            els.terminals.innerHTML = '<tr><td colspan="5" class="muted">No terminals yet. Shake one within radio range.</td></tr>';
+            return;
+          }
+          els.terminals.innerHTML = '';
+          for (const binding of bindings) {
+            const row = rows.get(binding.terminalId) || {};
+            const tr = document.createElement('tr');
+
+            const id = document.createElement('td');
+            id.textContent = binding.terminalId;
+
+            const slotCell = document.createElement('td');
+            const select = document.createElement('select');
+            select.innerHTML = '<option value="">unassigned</option><option value="1">sous-chef 1</option><option value="2">sous-chef 2</option><option value="3">sous-chef 3</option>';
+            select.value = binding.sousChef ? String(binding.sousChef) : '';
+            select.addEventListener('change', () => {
+              const slot = select.value ? parseInt(select.value, 10) : null;
+              try {
+                gateway.setSousChef(binding.terminalId, slot);
+                log(`${binding.terminalId} -> ${slot ? `sous-chef ${slot}` : 'unassigned'}`, 'info');
+              } catch (err) {
+                log(err.message, 'error');
+              }
+              renderRows();
+            });
+            slotCell.appendChild(select);
+
+            const gestureCell = document.createElement('td');
+            gestureCell.textContent = row.active ? row.gesture : '-';
+
+            const seenCell = document.createElement('td');
+            seenCell.className = 'muted';
+            seenCell.textContent = row.lastSeen ? new Date(row.lastSeen).toLocaleTimeString() : '-';
+
+            const forgetCell = document.createElement('td');
+            const forget = document.createElement('button');
+            forget.textContent = 'Forget';
+            forget.className = 'danger';
+            forget.addEventListener('click', () => gateway.forget(binding.terminalId));
+            forgetCell.appendChild(forget);
+
+            tr.append(id, slotCell, gestureCell, seenCell, forgetCell);
+            els.terminals.appendChild(tr);
+          }
+        }
+
+        gateway.on('connection', ({ connected }) => {
+          setChip(els.serialChip, `Gateway: ${connected ? 'connected' : 'disconnected'}`, connected);
+          els.connectGateway.disabled = connected || !navigator.serial;
+          els.disconnectGateway.disabled = !connected;
+          log(connected ? 'Gateway micro:bit connected' : 'Gateway micro:bit disconnected', connected ? 'info' : 'error');
+        });
+
+        gateway.on('ready', ({ group }) => log(`Gateway radio group set to ${group}`, 'info'));
+
+        gateway.on('terminal', (binding) => {
+          rows.set(binding.terminalId, { ...rows.get(binding.terminalId), lastSeen: Date.now() });
+          log(`Terminal ${binding.terminalId}: ${binding.sousChef ? `sous-chef ${binding.sousChef}` : 'unassigned'}`, 'info');
+          renderRows();
+        });
+
+        gateway.on('terminal-forgotten', ({ terminalId }) => {
+          rows.delete(terminalId);
+          log(`Forgot ${terminalId}`, 'info');
+          renderRows();
+        });
+
+        gateway.on('gesture', ({ terminalId, gesture, active, sousChef }) => {
+          rows.set(terminalId, { gesture, active, lastSeen: Date.now() });
+          log(`${terminalId} ${active ? 'start' : 'stop'} ${gesture}${sousChef ? ` (sous-chef ${sousChef})` : ' (unassigned)'}`, 'gesture');
+          renderRows();
+        });
+
+        gateway.on('error', ({ message }) => log(message, 'error'));
+
+        els.connectGateway.addEventListener('click', async () => {
+          try {
+            await gateway.connect();
+          } catch (err) {
+            // The user closing the port picker is not an error worth showing.
+            if (err && err.name === 'NotFoundError') return;
+            log(err.message, 'error');
+          }
+        });
+
+        els.disconnectGateway.addEventListener('click', () => gateway.disconnect());
+
+        setChip(els.serialChip, 'Gateway: disconnected', false);
+        renderRows();
+        log(`Team ${teamId}, radio group ${radioGroupFor(teamId)}. Connect the gateway micro:bit to begin.`, 'info');
+      })();
+    </script>
+  </body>
+</html>

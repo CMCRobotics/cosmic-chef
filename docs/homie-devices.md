@@ -299,6 +299,24 @@ See also: [homie-mqtt-structure.puml](diagrams/homie-mqtt-structure.puml) (raw P
 
 ---
 
+## Node: micro:bit Terminal (device `terminal-{serialHex}`)
+
+**Topic path:** `homie/terminal-{serialHex}/{node}/{property}` (a Homie *device* at the root, not under `cosmic-chef/`)
+
+One device per sous-chef micro:bit terminal, published by the micro:bit radio gateway (`src/client/microbit-gateway.ts`). Full protocol: [`microbit-devices.md`](microbit-devices.md#radio-gesture-protocol).
+
+| Node | Property | Type | Values | Retained | Notes |
+|------|----------|------|--------|----------|-------|
+| `config` | `team` | enum | `blue`, `white`, `red` | Yes | Team that the gateway is serving |
+| `config` | `sousChef` | enum | `sous-chef-1`, `sous-chef-2`, `sous-chef-3`, `none` | Yes | Binding; `none` when unassigned or forgotten |
+| `controls` | `gesture` | string | `<gesture>-<timestamp ms>` (start), `<gesture>-0` (stop) | No | `gesture` is `tenderize`, `slice` or `stir` |
+
+The device also has retained Homie metadata: `$homie` (`4.0.0`), `$name`, `$state` (`ready`), `$nodes` (`config,controls`), and `$properties` on each node.
+
+**Example topics:** `homie/terminal-02b1cf45/config/sousChef`, `homie/terminal-02b1cf45/controls/gesture`
+
+---
+
 ## Connection Notes
 
 **MQTT Broker:** configurable via `.env` (e.g. `MQTT_BROKER=mqtt://localhost:1883`).

@@ -9,17 +9,18 @@
 
 Unlike fixed-pairing hardware, the micro:bit v2 devices act as **generic hardware terminals** (e.g., Terminal A, Terminal B, Terminal C). 
 
-1. **Agnostic Startup:** When powered on, a micro:bit terminal connects over radio to the WebUSB gateway, which publishes it to the MQTT broker as an unassigned Homie device (e.g., `terminal-02b1cf45`).
-2. **Lobby Binding Phase:** During game setup, the team is registered with a randomly generated name and assigned an in-game team color (`red`, `blue`, or `white`). The Head Chef registers this team color and assigns each connected terminal to a specific sous-chef profile (e.g., binding `terminal-02b1cf45` to `Team Color: red`, `SousChef: Alice`).
-3. **Dynamic Property Updates:** The gateway updates the terminal's Homie metadata properties (`team` and `sousChef`). The game backend tracks these bindings so incoming gestures route to the correct player in the XState machine.
+1. **Agnostic Startup:** When powered on, a micro:bit terminal broadcasts its gestures on its team's radio group. The gateway publishes it to the MQTT broker as an unbound Homie device (`terminal-<serial hex>`, e.g. `terminal-02b1cf45`), with `config/sousChef` set to `none`.
+2. **Binding:** The gateway binds a new terminal to the lowest free sous-chef slot (1, then 2, then 3). Any terminal beyond three stays unassigned. The operator can move or forget a terminal in the gateway page. Bindings are stored in the browser per team (see [Sous-chef assignment](#sous-chef-assignment)).
+3. **Dynamic Property Updates:** Each binding change republishes `config/team` and `config/sousChef` (retained). Gestures from a bound terminal are published to the sous-chef's game topic, so incoming gestures route to the correct player in the XState machine.
 
 
 ## Communication Overview
 
-To bridge physical cooking movements (slicing, dicing, stirring, smashing) into the game loop without complicated tethered wiring, *Cosmic Chef* utilizes a wireless hardware pipeline:
+To bridge physical cooking movements (slicing, tenderizing, stirring) into the game loop without complicated tethered wiring, *Cosmic Chef* utilizes a wireless hardware pipeline:
 
-1. **The WebUSB Gateway:** A dedicated browser or companion application connected via WebUSB acts as a bridge, receiving the radio packets from the micro:bit network.
-2. **MQTT / Homie Convention Bridge:** The gateway translates the micro:bit radio signals into standardized **Homie IoT Convention** messages published over MQTT, mapping cleanly to `Device / Node / Property` hierarchies.
+1. **The Radio Gateway:** A gateway micro:bit plugged into the computer running the browser page (`/dev/microbit-gateway.html`). It receives the terminals' radio packets and prints them on USB serial. The browser reads them with the Web Serial API (see [Gateway serial protocol](#gateway-serial-protocol)).
+2. **MQTT / Homie Convention Bridge:** `src/client/microbit-gateway.ts` (`MicrobitGateway`) translates the packets into game topics `sous-chef-N/gesture/current` and Homie device topics `homie/terminal-<id>/...`.
+3. **RxJS & XState Integration:** `mqtt-bridge` consumes `sous-chef-N/gesture/current` like any other gesture input, which becomes `GESTURE_START` / `GESTURE_TICK` / `GESTURE_STOP` for the XState game engine.
 3. **RxJS & XState Integration:** The game backend ingests these Homie updates reactively via RxJS, parsing them into valid gesture events (`SOUS_CHEF_GESTURE_START`, `SOUS_CHEF_GESTURE_TICK`, `SOUS_CHEF_GESTURE_STOP`) processed by the XState game engine.
 
 ---
@@ -28,15 +29,15 @@ To bridge physical cooking movements (slicing, dicing, stirring, smashing) into 
 
 ```text
 +-----------------------------+       Radio (2.4GHz)      +-----------------------------+
-|   micro:bit v2 (Sous-Chef)  | ------------------------> |   micro:bit v2 (WebUSB)     |
-|   - Accelerometer gestures  |                           |   (Gateway / Coordinator)   |
+|   micro:bit v2 (Sous-Chef)  | ------------------------> |   micro:bit v2 (Gateway)    |
+|   - Accelerometer gestures  |                           |   gateway.py, USB serial    |
 +-----------------------------+                           +-----------------------------+
                                                                          |
-                                                                         | WebUSB API
+                                                                         | USB serial (Web Serial API)
                                                                          ▼
                                                           +-----------------------------+
-                                                          |  Gateway Bridge Software    |
-                                                          |  (Translates to MQTT/Homie) |
+                                                          |  microbit-gateway.html      |
+                                                          |  MicrobitGateway (TS)       |
                                                           +-----------------------------+
                                                                          |
                                                                          | MQTT Broker
@@ -47,7 +48,86 @@ To bridge physical cooking movements (slicing, dicing, stirring, smashing) into 
                                                           +-----------------------------+
 ```
 
-* **Radio Protocol:** Micro:bit terminals communicate over the built-in 2.4GHz radio library, sending short line protocol-style text payloads containing the `chefId`, `action`, and `state`.
+* **Radio Protocol:** Terminals send a fixed text message `GEST,<gesture>,<onoff>` on their team's radio group. See [Radio gesture protocol](#radio-gesture-protocol).
+
+---
+
+## Radio gesture protocol
+
+### Terminal side (existing MakeCode Python)
+
+Each sous-chef terminal runs this setup:
+
+1. `radio.set_transmit_serial_number(True)`: every packet carries the micro:bit's device serial number. This is what identifies the terminal.
+2. The radio group is set on the device, one per team (below).
+3. When a motion change is detected it sends:
+   ```python
+   radio.send_string("GEST" + "," + GESTURE + "," + str(ONOFF))
+   ```
+   - `GESTURE`: `TEND` (tenderizing), `SLIC` (slicing), or `STIR` (stirring).
+   - `ONOFF`: `1` when the gesture starts or is ongoing, `0` when it stops.
+   - Examples: `GEST,TEND,1`, `GEST,SLIC,0`. The string is always 11 characters, below the 19-character radio limit.
+
+### Radio groups per team
+
+| Team | Radio group (terminals and gateway) |
+|------|-------------------------------------|
+| `blue`  | 31 |
+| `white` | 32 |
+| `red`   | 33 |
+
+The terminal's group is set on the device. The gateway's group is set by the browser on connect (`GROUP,<n>`), so one gateway serves one team. Only terminals of the same team are heard.
+
+| Radio code | Game gesture (`gesture/current` payload) |
+|------------|------------------------------------------|
+| `TEND` | `tenderize` |
+| `SLIC` | `slice` |
+| `STIR` | `stir` |
+| `REST` | `idle` (sous-chef resting) |
+
+`GEST,REST,<onoff>` means the sous-chef is idle. The ONOFF flag is ignored. It always publishes `idle` to the bound sous-chef, even when no gesture was running, so a lost stop message cannot leave a sous-chef stuck. Any other code or ONOFF value is ignored.
+
+### Gateway micro:bit (`microbit/gateway.py`)
+
+The gateway micro:bit is flashed with `microbit/gateway.py` and plugged into the computer. It does not decode the message. It forwards the raw radio string, with the terminal's serial number, over USB serial.
+
+### Gateway serial protocol
+
+Browser ⇄ gateway, 115200 baud, one line per message, terminated by `\n`:
+
+| Direction | Line | Meaning |
+|-----------|------|---------|
+| browser → gateway | `GROUP,<n>` | Set the radio group. Sent on connect. |
+| gateway → browser | `READY,<n>` | Booted, or confirms `GROUP,<n>`. If the browser sees a different group it sends `GROUP` again. |
+| gateway → browser | `RX,<serial>,<payload>` | A radio packet. `<serial>` is the decimal device serial number; `<payload>` is the raw radio string (for example `GEST,TEND,1`). |
+
+### Browser transport: Web Serial, not WebUSB
+
+The gateway is read with the **Web Serial API** (`navigator.serial`), not raw WebUSB. Chrome cannot claim a micro:bit's USB serial port through WebUSB on Linux or macOS because the OS driver owns it. Web Serial reaches the same port with a single port-picker click.
+
+- Browsers: Chrome or Edge on desktop only. Firefox and Safari do not implement Web Serial.
+- Secure context: `https://` or `localhost`.
+- The user must click **Connect gateway micro:bit**. The browser requires a user gesture to open the port picker.
+
+### Terminal identity
+
+A terminal's Homie device id is `terminal-` followed by its serial number as 8 lowercase hex digits (`0x02b1cf45` → `terminal-02b1cf45`). Serial numbers are unsigned 32-bit values.
+
+### Sous-chef assignment
+
+Assignment is done in the gateway page (`/dev/microbit-gateway.html?team=<team>`):
+
+- **Auto:** a terminal heard for the first time takes the lowest free sous-chef slot (1, 2, 3). If all three are taken it stays unassigned.
+- **Manual:** the slot dropdown moves a terminal. If the slot is taken, the previous holder becomes unassigned.
+- **Forget:** removes the terminal's binding and publishes `config/sousChef = none`. Its next radio message binds it again.
+- **Unassigned terminals** publish Homie telemetry only. They publish nothing to the game topics.
+- **Storage:** bindings are kept in localStorage under `cosmic-chef.microbit.<team>` as JSON, e.g. `{"terminal-02b1cf45":1,"terminal-11223344":null}`. They are per browser, not shared between windows or machines.
+
+### Gesture publication
+
+For a bound terminal, `GEST,<gesture>,1` publishes the gesture name to `cosmic-chef/team-<team>/game-<game>/sous-chef-<n>/gesture/current`. `GEST,<gesture>,0` publishes `idle`, but only if that same gesture was running on that terminal. A terminal reassigned mid-gesture publishes `idle` to its old slot, and its next start message goes to the new slot.
+
+The gateway only publishes to `gesture/current` (the sous-chef topics). It never publishes to `round/recipe-desired` or other input topics.
 
 ---
 
@@ -62,39 +142,43 @@ homie/<device-id>/<node>/<property>
 
 ### Homie Node & Property Schema for a Terminal:
 
-* **Device ID:** `microbit-terminal-01`
-* **Node 1: `config`** (Metadata for binding)
-  * Property `team`: String (`red`, `blue`, `white`, or `none`)
-  * Property `sousChef`: String (Assigned player name or ID)
-* **Node 2: `controls`** (Real-time telemetry)
-  * Property `gesture`: String (`slice`, `dice`, `stir`, `smash`, or `idle`)
-  * Property `confidence`: Integer (`0` to `100`)
+* **Device ID:** `terminal-<serial hex>`, e.g. `terminal-02b1cf45` (see [Terminal identity](#terminal-identity))
+* **Node 1: `config`** (binding, retained)
+  * Property `team`: String (`red`, `blue`, or `white`)
+  * Property `sousChef`: String (`sous-chef-1`, `sous-chef-2`, `sous-chef-3`, or `none`)
+* **Node 2: `controls`** (telemetry)
+  * Property `gesture`: String `<gesture>-<timestamp ms>` while running, `<gesture>-0` when it stops (gesture is `tenderize`, `slice` or `stir`)
+
+Not retained: `controls/gesture` is live telemetry, so a late subscriber does not see a stale start message.
 
 #### Sample MQTT Broker Publish Payload:
 ```json
-homie/terminal-02b1cf45/$name "Micro:bit Terminal 1"
-homie/terminal-02b1cf45/$state "ready"
-homie/terminal-02b1cf45/$nodes "config,controls"
+homie/terminal-02b1cf45/$homie "4.0.0"                        (retained)
+homie/terminal-02b1cf45/$name "Micro:bit Terminal 02b1cf45"  (retained)
+homie/terminal-02b1cf45/$state "ready"                        (retained)
+homie/terminal-02b1cf45/$nodes "config,controls"              (retained)
 
-homie/terminal-02b1cf45/config/$name "Terminal Configuration"
-homie/terminal-02b1cf45/config/$properties "team,sousChef"
-homie/terminal-02b1cf45/config/team "red"
-homie/terminal-02b1cf45/config/sousChef "Alice"
+homie/terminal-02b1cf45/config/$properties "team,sousChef"    (retained)
+homie/terminal-02b1cf45/config/team "red"                     (retained)
+homie/terminal-02b1cf45/config/sousChef "sous-chef-1"         (retained)
 
-homie/terminal-02b1cf45/controls/$name "Motion Controls"
-homie/terminal-02b1cf45/controls/$properties "gesture-timestamp"
-homie/terminal-02b1cf45/controls/gesture "slice-1053879"
+homie/terminal-02b1cf45/controls/$properties "gesture"
+homie/terminal-02b1cf45/controls/gesture "slice-1719999999999"
 ```
 
-When an ongoing gesture stops, the terminal will send :
+When the gesture stops, the terminal publishes:
 
 ```json
 homie/terminal-02b1cf45/controls/gesture "slice-0"
 ```
 
+The same start and stop also go to the game topic as `tenderize`/`slice`/`stir` and `idle` on `sous-chef-1/gesture/current`, but only when the terminal is bound to a slot.
+
 ---
 
-## RxJS & Homie-Lit Adaptation Layer (`terminalAdapter.ts`)
+## RxJS & Homie-Lit Adaptation Layer (`terminalAdapter.ts`) — alternative design, not used by the game
+
+> **Status:** This section is an earlier design sketch. The game does not read `homie/terminal-*` topics. The gateway (`MicrobitGateway`) publishes straight to `sous-chef-N/gesture/current`, which `mqtt-bridge` already consumes. The Homie topics are published for dashboards and observers. This sketch also uses the older gesture names (`dice`, `smash`); the real names are `tenderize`, `slice` and `stir`.
 
 Because terminals are dynamically bound, your RxJS stream needs to maintain a lookup map of `terminalId -> { team, sousChef }` based on changes to the `config` node, ensuring incoming gestures are correctly translated into XState events with the right player context.
 
@@ -163,11 +247,14 @@ export function createTerminalBindingStream(brokerUrl: string): Observable<{ reg
 
 ## Hardware Deployment & Pairing Guide
 
-1. **Flashing Firmware:** All micro:bit v2 terminals are flashed with identical generic firmware that listens to button inputs and accelerometer shakes, transmitting via the micro:bit radio layer.
-2. **The WebUSB Gateway:** A dedicated browser session running on a machine near the micro:bit radio receiver captures the raw serial frames and publishes them to the local MQTT broker using standard Homie formatting.
-3. **Lobby Assignment UI:** In the *Cosmic Chef* web interface, the Head Chef selects a team color (`red`, `blue`, or `white`), picks an online terminal from a dropdown list of detected Homie devices, and assigns a sous-chef's name. This writes to the MQTT topic `homie/<terminal-id>/config/team` and `homie/<terminal-id>/config/sousChef`, instantly pairing the hardware for that session.
+1. **Flashing the terminals:** Each sous-chef terminal runs the MakeCode Python described in [Terminal side](#terminal-side-existing-makecode-python). Set its radio group to its team's group (31 blue, 32 white, 33 red).
+2. **Flashing the gateway:** Flash `microbit/gateway.py` (MakeCode Python) on one micro:bit and plug it into the computer running the browser. Its LED shows the group once the browser has set it.
+3. **The gateway page:** Open `/dev/microbit-gateway.html?team=<team>` in Chrome or Edge, then click **Connect gateway micro:bit** and pick the gateway's serial port. The page connects MQTT, sets the radio group, and lists terminals as they are heard.
+4. **Binding:** New terminals are bound automatically to sous-chef 1, 2, 3 in the order they are heard. Use the slot dropdown to move a terminal, or **Forget** to unbind it.
 
 ## Troubleshooting
-1. **WebUSB Permissions:** Browsers restrict WebUSB access for security. The gateway coordinator app must prompt the user via a physical browser interaction click ("Connect Microbit Gateway") before serial streams can open.
-2. **Radio Interference:** The 2.4GHz radio band shared by micro:bits can experience interference in crowded rooms. Ensure micro:bits are flashed with matching group IDs (channels 0–83) corresponding to their game pod.
+1. **Web Serial access:** The port picker only opens from a click on the page, and only on Chrome or Edge over `https://` or `localhost`. Close any other program that has the gateway's serial port open (for example MakeCode's serial console).
+2. **Radio Interference:** The 2.4GHz radio band shared by micro:bits can experience interference in crowded rooms. Keep the three teams on their own groups (31/32/33). Teams on the same group hear each other's terminals.
+3. **In the game scene:** `index.html` shows the same gateway as a HUD in the top-left corner of the camera (`microbit-hud.html` + `microbit-gateway-hud.js`). It has Connect/Disconnect, one row per bound terminal (its current gesture, and a button that cycles its sous-chef slot), and it is hidden in VR. Its MQTT output goes through `mqtt-bridge`.
+4. **Terminals not appearing:** Check that the terminal and the gateway use the same group. The gateway page logs `Gateway radio group set to N` once it is set.
 3. **Debouncing & Hold Tracking:** Fast accelerometer shakes can chatter (`slice` $\rightarrow$ `idle` $\rightarrow$ `slice`). The RxJS buffer layer combined with XState's internal `HoldingGesture` state absorbs micro-jitters, ensuring a smooth transition experience for the players.
