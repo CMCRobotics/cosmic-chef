@@ -29,6 +29,7 @@
     <script src="aframe-components/animations/anim-space-float.js"></script>
     <script src="aframe-components/final-stir-camera.js"></script>
     <script src="aframe-components/head-chef-mqtt-client.js"></script>
+    <script src="aframe-components/team-ring-color.js"></script>
     <script src="aframe-components/recipe-crate.js"></script>
     <script src="aframe-components/recipe-spawner.js"></script>
     <script src="aframe-components/tractor-beam.js"></script>
@@ -115,14 +116,15 @@
 
         </a-entity>
 
-        <!-- Controller Entities (VR hands) -->
-        <!-- cursor turns a trigger press on the hand into a click (e.g. the floor button) -->
-        <a-entity id="leftHand" laser-controls="hand: left" raycaster="objects: .clickable" cursor="rayOrigin: entity"></a-entity>
-        <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .clickable" cursor="rayOrigin: entity" tractor-beam></a-entity>
-
         <!-- Camera Rig -->
+        <!-- The VR hands live inside the rig: controller poses are relative to the same floor-level frame as the head, so this keeps them where the player's hands are -->
         <a-entity id="cameraRig" position="0 2.6 4">
             <a-camera position="0 0 0" crosshair="opacity: 0.5" head-chef-camera-zoom="minZoom: 1; maxZoom: 200.0; defaultZoom: 1 ; zoomSpeed: 5; zoomSmoothness: 0.5; FOV: 65; minFOV: 35; maxFOV: 65"></a-camera>
+
+            <!-- Controller Entities (VR hands) -->
+            <!-- cursor turns a trigger press on the hand into a click (e.g. the floor button) -->
+            <a-entity id="leftHand" laser-controls="hand: left" raycaster="objects: .clickable" cursor="rayOrigin: entity"></a-entity>
+            <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .clickable" cursor="rayOrigin: entity" tractor-beam></a-entity>
         </a-entity>
 
     </a-scene>

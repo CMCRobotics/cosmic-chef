@@ -23,7 +23,7 @@ AFRAME.registerComponent('head-chef-camera-zoom', {
 
         this.currentZoom = this.data.defaultZoom;
         this.targetZoom = this.data.defaultZoom;
-        this.baseDistance = 4; // Default camera distance from rig (from head-chef.html)
+        this.baseDistance = 4; // Default camera distance from rig (from vr.html)
         this.triggerPressed = false;
 
         // The component is attached to the a-camera element itself

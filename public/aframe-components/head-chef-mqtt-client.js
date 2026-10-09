@@ -1,14 +1,17 @@
 /**
  * head-chef-mqtt-client.js
- * The single MQTT connection for head-chef.html, scoped to the head chef's team.
+ * The single MQTT connection for vr.html, scoped to the head chef's team.
  *
  * - Subscribes to the team's state broadcast (published by index.html's mqtt-bridge) and
  *   re-emits it as 'game-state-changed' on the scene, so the head-chef components only
  *   ever see their own team's state.
+ * - Subscribes to the team's retained colour (identity/color) and emits 'team-color-changed'
+ *   on the scene, so the galley ring takes the team's colour. `teamColor` keeps the last value,
+ *   for a ring that loads after the message arrived.
  * - Exposes `client` and `data.teamId` so tractor-beam and recipe-status-button can publish
  *   capture / submit / cancel events to the same team.
  *
- * The team is resolved by the inline script in head-chef.html (window.CURRENT_TEAM).
+ * The team is resolved by the inline script in vr.html (window.CURRENT_TEAM).
  *
  * Usage: <a-scene head-chef-mqtt-client="gameId: default">
  */
@@ -25,6 +28,7 @@ AFRAME.registerComponent('head-chef-mqtt-client', {
         this.log.debug('Initializing head-chef-mqtt-client');
 
         this.data.teamId = this.data.teamId || window.CURRENT_TEAM || 'blue';
+        this.teamColor = null; // set when the team's colour arrives
         this.log.info(`Head chef plays for team ${this.data.teamId}`);
 
         this.connect();
@@ -38,6 +42,7 @@ AFRAME.registerComponent('head-chef-mqtt-client', {
 
         const { brokerUrl, teamId, gameId } = this.data;
         const stateTopic = window.CosmicChef.gameStateTopic(teamId, gameId);
+        const colorTopic = window.CosmicChef.teamColorTopic(teamId, gameId);
 
         this.log.info(`Connecting to MQTT broker at ${brokerUrl}...`);
         this.client = window.mqtt.connect(brokerUrl, {
@@ -54,6 +59,11 @@ AFRAME.registerComponent('head-chef-mqtt-client', {
                     this.log.info(`Subscribed to ${stateTopic}`);
                 }
             });
+            this.client.subscribe(colorTopic, (err) => {
+                if (err) {
+                    this.log.warn('Subscription failed for team colour:', err);
+                }
+            });
         });
         this.client.on('error', (err) => this.log.warn('MQTT connection error:', err.message));
         this.client.on('message', (topic, message) => this.onMessage(topic, message.toString()));
@@ -62,6 +72,12 @@ AFRAME.registerComponent('head-chef-mqtt-client', {
     onMessage: function (topic, payload) {
         const { teamId, gameId } = this.data;
         const parsed = window.CosmicChef.parseTopic(topic, teamId, gameId);
+        if (parsed && parsed.kind === 'team-color') {
+            this.teamColor = payload.trim();
+            this.el.emit('team-color-changed', { color: this.teamColor });
+            this.log.debug(`🎨 Team ${teamId} colour: ${this.teamColor}`);
+            return;
+        }
         if (!parsed || parsed.kind !== 'game-state') return;
 
         try {

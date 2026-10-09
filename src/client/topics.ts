@@ -5,6 +5,7 @@
  *   cosmic-chef/team-{teamId}/game-{gameId}/head-chef/animation/submit-state   payload: "idle" | "submitting"
  *   cosmic-chef/team-{teamId}/game-{gameId}/round/recipe-desired               payload: recipe JSON (incoming)
  *   cosmic-chef/team-{teamId}/game-{gameId}/round/recipe-actual                payload: recipe JSON (outgoing)
+ *   cosmic-chef/team-{teamId}/game-{gameId}/identity/color                     payload: hex colour, e.g. "#0066ff" (retained)
  *
  * Every topic string in the client is built or parsed here.
  */
@@ -14,7 +15,8 @@ export type ParsedTopic =
   | { kind: "head-chef-submit" }
   | { kind: "recipe-desired" }
   | { kind: "recipe-actual" }
-  | { kind: "game-state" };
+  | { kind: "game-state" }
+  | { kind: "team-color" };
 
 export function gameTopic(teamId: string, gameId: string): string {
   return `cosmic-chef/team-${teamId}/game-${gameId}`;
@@ -38,6 +40,10 @@ export function recipeActualTopic(teamId: string, gameId: string): string {
 
 export function recipeTopic(teamId: string, gameId: string): string {
   return recipeDesiredTopic(teamId, gameId);
+}
+
+export function teamColorTopic(teamId: string, gameId: string): string {
+  return `${gameTopic(teamId, gameId)}/identity/color`;
 }
 
 export function gameStateTopic(teamId: string, gameId: string): string {
@@ -66,5 +72,6 @@ export function parseTopic(topic: string, teamId: string, gameId: string): Parse
   if (rest === "round/recipe-actual") return { kind: "recipe-actual" };
   if (rest === "round/recipe") return { kind: "recipe-desired" }; // Fallback for legacy topic
   if (rest === "state/broadcast") return { kind: "game-state" };
+  if (rest === "identity/color") return { kind: "team-color" };
   return null;
 }

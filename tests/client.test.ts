@@ -11,6 +11,7 @@ import {
   recipeActualTopic,
   recipeTopic,
   sousChefGestureTopic,
+  teamColorTopic,
 } from "../src/client/topics";
 import {
   TEAM_STORAGE_KEY,
@@ -53,6 +54,11 @@ describe("topics", () => {
     expect(parseTopic(recipeActualTopic("t", "g"), "t", "g")).toEqual({ kind: "recipe-actual" });
     expect(parseTopic(recipeDesiredTopic("t", "other"), "t", "g")).toBeNull();
     expect(parseTopic("cosmic-chef/team-t/game-g/unknown", "t", "g")).toBeNull();
+  });
+
+  test("team colour topic is built and parsed", () => {
+    expect(teamColorTopic("team-1", "default")).toBe("cosmic-chef/team-team-1/game-default/identity/color");
+    expect(parseTopic(teamColorTopic("t", "g"), "t", "g")).toEqual({ kind: "team-color" });
   });
 });
 

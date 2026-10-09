@@ -56,7 +56,7 @@ AFRAME.registerComponent('team-galley-receiver', {
 
         const { teamId, gameId, brokerUrl } = this.data;
         const stateTopic = window.CosmicChef.gameStateTopic(teamId, gameId);
-        const teamColorTopic = `cosmic-chef/team-${teamId}/game-${gameId}/identity/color`;
+        const teamColorTopic = window.CosmicChef.teamColorTopic(teamId, gameId);
 
         this.log.info(`Connecting to MQTT broker at ${brokerUrl} for team ${teamId}...`);
         this.client = window.mqtt.connect(brokerUrl, {

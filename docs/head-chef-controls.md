@@ -1,6 +1,6 @@
 # Cosmic Chef — Head Chef controls
 
-Reference for how the head chef plays `head-chef.html`, on desktop and in VR (Meta Quest).
+Reference for how the head chef plays `vr.html`, on desktop and in VR (Meta Quest).
 
 > **Scope:** Input controls and what they do. The sous-chef side is in [`game.md`](game.md) and the MQTT flow in [`mqtt-architecture.md`](mqtt-architecture.md).
 
@@ -8,7 +8,7 @@ Reference for how the head chef plays `head-chef.html`, on desktop and in VR (Me
 
 ## 1. What the head chef does
 
-1. **Aim** at a falling recipe crate with the crosshair (the centre of the view).
+1. **Aim** at a falling recipe crate. On desktop, use the crosshair (the centre of the view). In VR, point with the right hand.
 2. **Select** the crate that is under the crosshair.
 3. **Capture** the selected crate. It is pulled to the team's intake, and the recipe is sent to the team's sous-chefs.
 4. **Submit or cancel** the dish with the floor button, once the sous-chefs are done.
@@ -21,7 +21,7 @@ Only one crate can be captured at a time. Crates can only be captured while the 
 
 | Input | Action |
 | :--- | :--- |
-| **Head gaze** (aim) | Moves the crosshair. The crate under it is highlighted. |
+| **Right hand** (aim) | The laser from the right hand points at the crates. The crate under it is highlighted. No crosshair is shown in VR. |
 | **Right trigger** | **Select** the aimed crate. Press again on the same crate to **capture** it. Press on empty space to clear the selection. |
 | **Right grip** (squeeze) and hand movement | **Zoom** in and out. Hold to zoom, release to keep the current zoom. |
 | **Either hand's trigger** (laser pointer) | **Press the floor button**: submit (green O) or cancel (red X). |
@@ -29,6 +29,7 @@ Only one crate can be captured at a time. Crates can only be captured while the 
 Notes:
 
 - The floor button is pressed with the hand's laser pointer, so aim it at the button and pull the trigger.
+- The hands are part of the camera rig, so they stay in front of the player wherever the rig is moved.
 - The right trigger is used for capture, so zooming uses the right grip instead.
 
 ---
@@ -37,6 +38,7 @@ Notes:
 
 | Input | Action |
 | :--- | :--- |
+| **Crosshair** (centre of the view) | Aims at the crates. Shown on desktop only. |
 | **Mouse pointer** | Points at the floor button and clicks it (left button). |
 | **Right mouse button** | Same as the right trigger: select the aimed crate, click again to capture. Right-click empty space to clear the selection. |
 | **`+` / `=`** | Zoom in (hold). |
@@ -81,7 +83,7 @@ If no state has been received yet (for example, the sous-chef window has not sta
 
 ## 7. Team selection
 
-The team comes from the `?team=` URL parameter, for example `head-chef.html?team=red`. It is remembered in localStorage, so a reload keeps the team. A `?team=` in the URL replaces the remembered team.
+The team comes from the `?team=` URL parameter, for example `vr.html?team=red`. It is remembered in localStorage, so a reload keeps the team. A `?team=` in the URL replaces the remembered team.
 
 Valid teams: `blue`, `red`, `white`. The default is `blue`.
 
@@ -89,4 +91,4 @@ Valid teams: `blue`, `red`, `white`. The default is `blue`.
 
 ## 8. Known gaps
 
-- VR controls have been written against the Quest 3S but not yet tested on the headset.
+- VR controls have been written against the Quest 3S but not yet tested on the headset. The hand position, the crosshair hiding, the right-hand aim and the team-coloured ring need a check there.

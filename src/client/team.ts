@@ -1,5 +1,5 @@
 /**
- * Team selection for the browser views (index.html, head-chef.html).
+ * Team selection for the browser views (index.html, vr.html).
  *
  * A window plays for one team, given by the `?team=` URL parameter. The choice is
  * remembered in localStorage so that a reload or MQTT reconnect keeps the team, but a

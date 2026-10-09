@@ -1,7 +1,8 @@
 /**
  * tractor-beam.js
  * Lets the head chef capture a falling recipe crate.
- * Aim with the crosshair (the centre of the view) to highlight the crate under it.
+ * Aim with the crosshair (the centre of the view) on desktop, or with the right hand in VR,
+ * to highlight the crate under it.
  * Right click selects the aimed crate, right click again captures it. The captured
  * crate is pulled to the closest intake, and the capture is published to its team.
  */
@@ -100,13 +101,13 @@ AFRAME.registerComponent('tractor-beam', {
     },
 
     raycastForRecipe: function () {
-        if (!this.camera || !this.camera.object3D) return null;
+        // In VR the ray comes out of the right hand (this entity); on desktop from the centre of the view
+        const aimObj3D = this.el.sceneEl.is('vr-mode') ? this.el.object3D : this.camera && this.camera.object3D;
+        if (!aimObj3D) return null;
 
-        // Ray from the camera through the centre of the view
-        const cameraObj3D = this.camera.object3D;
         const origin = new THREE.Vector3();
-        cameraObj3D.getWorldPosition(origin);
-        const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(cameraObj3D.getWorldQuaternion(new THREE.Quaternion()));
+        aimObj3D.getWorldPosition(origin);
+        const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(aimObj3D.getWorldQuaternion(new THREE.Quaternion()));
         const raycaster = new THREE.Raycaster(origin, direction.normalize(), 0, this.data.maxDistance);
 
         // Only crates that are still falling can be aimed at

@@ -6,7 +6,7 @@ Reference document for component responsibilities, MQTT topic layouts, and cross
 
 ## 1. System Topology & Component Roles
 
-Each client window (`index.html`) represents a view for a specific team (set via URL param `?team=blue|red|white`). The team is remembered in localStorage (`cosmic-chef.team`) and a `?team=` in the URL replaces it. `head-chef.html` uses the same team and only subscribes to its own team's state. A circular galley layout allows viewing all teams simultaneously, while each window runs its own local state machine for its active team.
+Each client window (`index.html`) represents a view for a specific team (set via URL param `?team=blue|red|white`). The team is remembered in localStorage (`cosmic-chef.team`) and a `?team=` in the URL replaces it. `vr.html` uses the same team and only subscribes to its own team's state. A circular galley layout allows viewing all teams simultaneously, while each window runs its own local state machine for its active team.
 
 ```
                       ┌────────────────────────────────────────┐
@@ -46,6 +46,7 @@ Each client window (`index.html`) represents a view for a specific team (set via
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`preparation-manager`** | Scene (`<a-scene>`) | **Local State Machine Owner.** Runs the pure XState v5 actor for the local team. | *None (No network awareness)* | *None (No network awareness)* | - Receives `.send(event)` calls from `mqtt-bridge` / console.<br>- Emits `game-state-changed` and `invalid-gesture` on the scene element. |
 | **`mqtt-bridge`** | Scene (`<a-scene>`) | **Local Controller / Bridge.** Translates inbound MQTT messages to local XState events, and publishes state changes to `state/broadcast`. | - `sous-chef-{n}/gesture/current`<br>- `head-chef/animation/submit-state`<br>- `round/recipe-desired` | - `state/broadcast` (when state value changes)<br>- *(Optional)* `round/recipe-actual` (dish completed) | - Listens to `game-state-changed` on scene.<br>- Calls `.send(event)` on `preparation-manager`. |
+| **`head-chef-mqtt-client`** | Scene (`<a-scene>`) | **Head-Chef Client** (`vr.html`). Re-emits the team's state, and publishes head-chef actions. | - `state/broadcast` (own team)<br>- `identity/color` (own team, retained) | - `head-chef/animation/submit-state` (from tractor-beam and recipe-status-button) | - Emits `game-state-changed` and `team-color-changed` on the scene. |
 | **`team-galley-receiver`** | Entity (`<a-entity>`) | **Remote Observer.** Listens to MQTT broadcasts for a specific remote team and relays state to its child/peer `galley-manager`. | - `state/broadcast` (for that specific team)<br>- `identity/color` | *None (Read-only observer)* | - Dormant if `teamId === window.CURRENT_TEAM`.<br>- Emits `game-state-changed` **on its own entity** for remote teams. |
 
 
