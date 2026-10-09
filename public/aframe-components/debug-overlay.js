@@ -21,6 +21,7 @@ AFRAME.registerComponent('debug-overlay', {
         this.lines = [];
         this.seenMessages = 0;
         this.lastStickLog = 0;
+        this.lastHits = {}; // hand id → the last set of entities its laser hit
 
         this.buildPanel();
         this.listenToControllers();
@@ -52,6 +53,19 @@ AFRAME.registerComponent('debug-overlay', {
 
             ['controllerconnected', 'controllerdisconnected', 'triggerdown', 'triggerup', 'thumbstickdown'].forEach((name) => {
                 hand.addEventListener(name, () => this.log(`${id} ${name}`));
+            });
+
+            // What the hand's laser is pointing at (the floor button and crates are .clickable)
+            hand.addEventListener('raycaster-intersection', (evt) => {
+                const hits = evt.detail.els.map((el) => el.id || el.className || el.tagName).join(', ');
+                if (hits === this.lastHits[id]) return;
+                this.lastHits[id] = hits;
+                this.log(`${id} laser hits: ${hits}`);
+            });
+            hand.addEventListener('raycaster-intersection-cleared', () => {
+                if (!this.lastHits[id]) return;
+                this.lastHits[id] = '';
+                this.log(`${id} laser hits: nothing`);
             });
 
             hand.addEventListener('thumbstickmoved', (evt) => {
