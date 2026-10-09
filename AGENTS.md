@@ -37,7 +37,7 @@ bun run dev          # serves http://localhost:3000
 ```
 
 - `bun run dev` → `build:vendor` then `src/server.ts`. Re-run it after editing `src/client/*.ts`.
-- MQTT: the game connects to `ws://localhost:9001` (see the `mqtt-bridge` schema). `public/test-sous-chefs.html` simulates the sous-chefs and the head chef from a keyboard.
+- MQTT: the game connects to `ws://localhost:9001` (see the `mqtt-bridge` schema). `public/dev/test-sous-chefs.html` simulates the sous-chefs and the head chef from a keyboard.
 - `bun run compile` → single Linux x64 binary named `cosmic-chef` (gitignored).
 - Env vars: `PORT` (default `3000`), `PROJECT_DIR` (default `public`), `AFRAME_WATCHER_HTML`, `MQTT_BROKER_URL` (default `ws://localhost:9001`, served to the browser as `window.COSMIC_CHEF_CONFIG` via `/config.js`; set it in `.env`).
 - The HTML target resolves as **CLI arg > `AFRAME_WATCHER_HTML` env > `public/*.html`**.
@@ -57,7 +57,7 @@ public/vr.html                  Head-chef VR page (/vr.html), its own window; sc
 public/xstate/preparation-machine.js   Game state machine + RECIPES (pure, unit-tested)
 public/aframe-components/*.js   Custom A-Frame components (most work happens here)
 public/dev/console-helpers.js   Browser-console helpers: testRecipe(), testGesture(), ...
-public/test-sous-chefs.html     Keyboard MQTT simulator for sous-chefs / head chef
+public/dev/test-sous-chefs.html     Keyboard MQTT simulator for sous-chefs / head chef
 public/dev/microbit-gateway.html    micro:bit radio gateway page (Web Serial → MQTT), uses MicrobitGateway
 public/microbit-hud.html        Gateway HUD fragment (top-left of the camera in index.html), behaviour in microbit-gateway-hud.js
 microbit/gateway.py             MakeCode Python for the gateway micro:bit (radio → USB serial)
@@ -153,7 +153,7 @@ bun test
 ### Manual Validation
 1. `bun run dev` and open `http://localhost:3000`.
 2. Check the browser console. It lists the console helpers. Run `testRecipe('proton')`, `testGesture('tenderize', 100, 'chef-1')` and so on, or `debug(true)` for verbose logs.
-3. For the MQTT path, run a broker with websockets on `9001`, open `/test-sous-chefs.html` in a second tab and drive gestures from the keyboard.
+3. For the MQTT path, run a broker with websockets on `9001`, open `/dev/test-sous-chefs.html` in a second tab and drive gestures from the keyboard.
 4. Confirm models actually appear (missing CDN assets fail silently apart from a network error).
 5. For AR paths, test on a WebXR device or emulator; desktop falls back to mouse cursor plus the camera rig at `0 0 -5.5`.
 

@@ -76,7 +76,7 @@ All game topics follow the Homie v4 convention under `cosmic-chef/team-{teamId}/
 - **Payload:**
   - `"idle"` $\rightarrow$ `{ type: 'CANCEL_ORDER' }`
   - `"submitting"` $\rightarrow$ `{ type: 'SUBMIT_RECIPE' }`
-- **Publishers:** `recipe-status-button.js`, keyboard simulator (`test-sous-chefs.html`).
+- **Publishers:** `recipe-status-button.js`, keyboard simulator (`dev/test-sous-chefs.html`).
 
 ### 4. `.../sous-chef-{n}/gesture/current`
 - **Direction:** Motion sensors / keyboard simulator / micro:bit radio gateway $\rightarrow$ `mqtt-bridge`
