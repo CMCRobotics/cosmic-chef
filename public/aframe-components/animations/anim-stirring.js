@@ -4,7 +4,7 @@ AFRAME.registerComponent('anim-stirring', {
         radius: {type: 'number', default: 0.3},
         depth: {type: 'number', default: 0.1},
         randomness: {type: 'number', default: 0.1},
-        clockwise: {type: 'boolean', default: true},
+        clockwise: {type: 'boolean', default: false},
         reverseRandomly: {type: 'boolean', default: false}
     },
 

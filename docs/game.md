@@ -87,7 +87,7 @@ To help sous-chefs distinguish between ingredients, the game uses a **Visual Ide
 The particle is a **coloured sphere** that transforms dynamically during the **Core Cooking Loop**:
 
 1.  **Idle:** Slowly rotating sphere in a neutral blue-grey color. Googly eyes stay full and reflective.
-2.  **Active Preparation:** When a sous-chef performs a cooking gesture, the particle responds:
+2.  **Active Preparation:** While an ingredient sits on a station, it keeps breathing until a sous-chef actually performs its cooking gesture (progress moving). Gesture distortion only plays while that gesture is being performed (set `gestureHints: true` on `galley-manager` to show the required gesture's distortion from the start). Once the chef stops, the particle returns to breathing. When a sous-chef performs a cooking gesture, the particle responds:
     *   **Color**: Changes to match the required ingredient (charge-based palette).
     *   **Aura Growth**: A glowing halo around the core grows in opacity and scale as `progress` increases, carrying the visual feedback of preparation advancement.
     *   **Gesture-Specific Distortion**: The particle morphs according to the active gesture:

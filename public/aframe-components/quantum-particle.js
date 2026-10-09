@@ -31,6 +31,18 @@ const PARTICLE_METADATA = {
     'tau-neutrino': { charge: 'neutral', color: '#ECEFF1' }
 };
 
+// Progress only moves while a chef is performing the gesture (GESTURE_TICK every ~100 ms),
+// so the particle counts as "being gestured" until progress has been still for this long.
+const GESTURE_HOLD_MS = 300;
+
+// Idle breathing: core scale swells and shrinks by this fraction, once per 2π × BREATHE_PERIOD_MS
+const BREATHE_AMPLITUDE = 0.10;
+const BREATHE_PERIOD_MS = 750;
+
+// Idle floating: core and aura drift up and down by this many metres, once per 2π × FLOAT_PERIOD_MS
+const FLOAT_AMPLITUDE = 0.04;
+const FLOAT_PERIOD_MS = 1300;
+
 AFRAME.registerComponent('quantum-particle', {
     schema: {
         ingredient: { type: 'string', default: '' },
@@ -38,7 +50,10 @@ AFRAME.registerComponent('quantum-particle', {
         progress: { type: 'number', default: 0 },
         gesture: { type: 'string', default: '' },
         inactiveColor: { type: 'color', default: '#f3ffe6' },
-        isFinalStir: { type: 'boolean', default: false }
+        isFinalStir: { type: 'boolean', default: false },
+        // When true, show the required gesture's distortion before any chef performs it.
+        // When false (default), the particle only distorts while a gesture is in progress and breathes otherwise.
+        gestureHint: { type: 'boolean', default: false }
     },
 
     init: function () {
@@ -117,6 +132,7 @@ AFRAME.registerComponent('quantum-particle', {
         this.core.appendChild(this.eyeRight);
 
         this.isAntimatter = false;
+        this.lastProgressChangeAt = -Infinity;
     },
 
     update: function (oldData) {
@@ -124,7 +140,8 @@ AFRAME.registerComponent('quantum-particle', {
         const activeChanged = oldData.active !== this.data.active;
         const progressChanged = oldData.progress !== this.data.progress;
 
-        if (ingredientChanged || progressChanged || activeChanged) {
+        if (progressChanged) {
+            this.lastProgressChangeAt = performance.now();
         }
 
         if (ingredientChanged) {
@@ -172,8 +189,9 @@ AFRAME.registerComponent('quantum-particle', {
         // Idle breathing and blinking (when not active)
         if (!this.data.active) {
             // Subtle breathing
-            const breathe = 1 + Math.sin(t / 1500) * 0.08;
+            const breathe = 1 + Math.sin(t / BREATHE_PERIOD_MS) * BREATHE_AMPLITUDE;
             this.core.setAttribute('scale', { x: breathe, y: breathe, z: breathe });
+            this.core.setAttribute('position', { x: 0, y: this.floatOffset(t), z: 0 });
 
             // Eyes blink with randomness
             this.updateEyeBlink(t);
@@ -199,8 +217,21 @@ AFRAME.registerComponent('quantum-particle', {
         }
     },
 
+    floatOffset: function (t) {
+        return Math.sin(t / FLOAT_PERIOD_MS) * FLOAT_AMPLITUDE;
+    },
+
+    isBeingGestured: function () {
+        return performance.now() - this.lastProgressChangeAt < GESTURE_HOLD_MS;
+    },
+
     computeDistortion: function (t) {
         const gesture = this.data.gesture;
+
+        // No chef is performing the gesture yet: breathe unless the gesture hint is on
+        if (!this.data.gestureHint && !this.isBeingGestured()) {
+            return { type: 'none' };
+        }
 
         if (gesture === 'tenderize') {
             // Large, slow bounce
@@ -292,9 +323,9 @@ AFRAME.registerComponent('quantum-particle', {
             }
         } else {
             // No distortion during active prep — subtle breathing, eyes blink separately
-            const breathe = 1 + Math.sin(t / 1500) * 0.06;
+            const breathe = 1 + Math.sin(t / BREATHE_PERIOD_MS) * BREATHE_AMPLITUDE;
             this.core.setAttribute('scale', { x: breathe, y: breathe, z: breathe });
-            this.core.setAttribute('position', { x: 0, y: 0, z: 0 });
+            this.core.setAttribute('position', { x: 0, y: this.floatOffset(t), z: 0 });
         }
     },
 
@@ -356,7 +387,7 @@ AFRAME.registerComponent('quantum-particle', {
             }
         } else {
             this.aura.setAttribute('scale', { x: pulse, y: pulse, z: pulse });
-            this.aura.setAttribute('position', { x: 0, y: 0, z: 0 });
+            this.aura.setAttribute('position', { x: 0, y: this.floatOffset(t), z: 0 });
         }
     },
 

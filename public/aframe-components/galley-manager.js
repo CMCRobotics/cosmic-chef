@@ -12,7 +12,9 @@ AFRAME.registerComponent('galley-manager', {
         deliveryAreaPosition: { type: 'vec3', default: { x: -2, y: 1.7, z: 3 } },
         vacuumDuration: { type: 'number', default: 2000 },
         vacuumResetDelay: { type: 'number', default: 2500 },
-        galleryId: { type: 'string', default: '' }
+        galleryId: { type: 'string', default: '' },
+        // Passed to spawned particles: show gesture distortion before a chef performs it
+        gestureHints: { type: 'boolean', default: false }
     },
 
     init: function () {
@@ -240,7 +242,8 @@ AFRAME.registerComponent('galley-manager', {
                 ingredient: ingredientType,
                 active: true,
                 progress: 0,
-                gesture: firstGesture.gesture
+                gesture: firstGesture.gesture,
+                gestureHint: this.data.gestureHints
             });
         }
 
