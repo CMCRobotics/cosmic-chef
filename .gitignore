@@ -21,3 +21,6 @@ cosmic-chef
 # Built vendor bundles
 public/vendor/
 
+# reveal.js copied from node_modules (bun run build:presentation)
+public/presentation/vendor/
+

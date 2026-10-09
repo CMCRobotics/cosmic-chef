@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <title>Cosmic Chef — Présentation</title>
+
+        <link rel="stylesheet" href="vendor/reveal/reset.css" />
+        <link rel="stylesheet" href="vendor/reveal/reveal.css" />
+        <link rel="stylesheet" href="css/code-club.css" />
+
+        <!-- Theme used for syntax highlighting of code -->
+        <link rel="stylesheet" href="vendor/reveal/plugin/highlight/monokai.css" />
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <!--
+                    Slides live in slides.md. Separators:
+                      ---  starts a new horizontal slide
+                      --   starts a vertical slide (nested under the previous horizontal one)
+                    Speaker notes: a line starting with "Note:" (press S to open the speaker view).
+                -->
+                <section
+                    data-markdown="slides.md"
+                    data-separator="^\r?\n---\r?\n$"
+                    data-separator-vertical="^\r?\n--\r?\n$"
+                ></section>
+            </div>
+            <footer class="footer">
+                <span class="footer-content">Cosmic Chef — Présentation</span>
+            </footer>
+        </div>
+
+        <script src="vendor/reveal/reveal.js"></script>
+        <script src="vendor/reveal/plugin/markdown.js"></script>
+        <script src="vendor/reveal/plugin/highlight.js"></script>
+        <script src="vendor/reveal/plugin/notes.js"></script>
+        <script>
+            Reveal.initialize({
+                hash: true,
+                progress: true,
+                center: true,
+                transition: 'slide',
+                controls: false,
+                keyboard: {
+                    37: 'prev', // LEFT arrow -> previous slide
+                    39: 'next', // RIGHT arrow -> next slide
+                    33: 'prev', // PAGE_UP -> previous slide
+                    34: 'next', // PAGE_DOWN -> next slide
+                },
+                plugins: [RevealMarkdown, RevealHighlight, RevealNotes],
+            });
+        </script>
+    </body>
+</html>

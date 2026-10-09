@@ -49,7 +49,10 @@ export const serverOptions = {
       }
     }
 
-    const filePath = path.join(PROJECT_DIR, url.pathname);
+    // Directory URLs (e.g. /presentation/) serve that directory's index.html
+    const filePath = url.pathname.endsWith("/")
+      ? path.join(PROJECT_DIR, url.pathname, "index.html")
+      : path.join(PROJECT_DIR, url.pathname);
     const file = Bun.file(filePath);
 
     if (await file.exists()) {

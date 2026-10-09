@@ -36,7 +36,8 @@ bun test             # runs the unit test suite
 bun run dev          # serves http://localhost:3000
 ```
 
-- `bun run dev` → `build:vendor` then `src/server.ts`. Re-run it after editing `src/client/*.ts`.
+- `bun run dev` → `build:vendor`, `build:presentation`, then `src/server.ts`. Re-run it after editing `src/client/*.ts`.
+- Slides: `http://localhost:3000/presentation/` (reveal.js, Markdown source in `public/presentation/slides.md`).
 - MQTT: the game connects to `ws://localhost:9001` (see the `mqtt-bridge` schema). `public/dev/test-sous-chefs.html` simulates the sous-chefs and the head chef from a keyboard.
 - `bun run compile` → single Linux x64 binary named `cosmic-chef` (gitignored).
 - Env vars: `PORT` (default `3000`), `PROJECT_DIR` (default `public`), `AFRAME_WATCHER_HTML`, `MQTT_BROKER_URL` (default `ws://localhost:9001`, served to the browser as `window.COSMIC_CHEF_CONFIG` via `/config.js`; set it in `.env`).
@@ -53,6 +54,9 @@ src/client/microbit-gateway.ts  micro:bit radio gateway: Web Serial → terminal
 public/index.html               Entry point: the <a-scene>, asset declarations, camera rig, hands
 public/galley.html              Galley fragment (stations, conveyors), injected by load-fragment
 public/scene.html               Particle showcase fragment (not loaded by default)
+public/presentation/index.html  reveal.js deck page, loads slides.md via data-markdown
+public/presentation/slides.md   Slide content (--- = new slide, -- = vertical slide, Note: = speaker notes)
+public/presentation/vendor/     reveal.js copied from node_modules by build:presentation (gitignored)
 public/vr.html                  Head-chef VR page (/vr.html), its own window; scene fragment is head-chef-scene.html
 public/xstate/preparation-machine.js   Game state machine + RECIPES (pure, unit-tested)
 public/aframe-components/*.js   Custom A-Frame components (most work happens here)

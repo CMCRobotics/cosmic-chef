@@ -4,13 +4,14 @@
   "description": "Cosmic Chef - an Augmented Reality game where you cook the universe",
   "scripts": {
     "build:vendor": "bun build src/vendor.js --outfile public/vendor/bundle.js --minify",
-    "dev": "bun run build:vendor && bun run src/server.ts",
+    "build:presentation": "mkdir -p public/presentation/vendor && rm -rf public/presentation/vendor/reveal && cp -r node_modules/reveal.js/dist public/presentation/vendor/reveal",
+    "dev": "bun run build:vendor && bun run build:presentation && bun run src/server.ts",
     "compile": "bun build src/server.ts --compile --outfile dist/cosmic-chef",
     "test": "bun test",
-    "clean": "rm -rf dist/ public/vendor/bundle.js",
+    "clean": "rm -rf dist/ public/vendor/bundle.js public/presentation/vendor/",
     "bump-version": "bun run scripts/bump-version.ts",
     "build": "bun run copy-public && bun run compile",
-    "copy-public": "mkdir -p dist && bun run build:vendor && cp -r public dist/"
+    "copy-public": "mkdir -p dist && bun run build:vendor && bun run build:presentation && cp -r public dist/"
   },
   "dependencies": {
     "@tweenjs/tween.js": "^25.0.0",
@@ -23,6 +24,7 @@
     "homie-lit": "github:CMCRobotics/homie-lit",
     "loglevel": "^1.9.2",
     "mqtt": "^5.0.0",
+    "reveal.js": "6.0.2",
     "rxjs": "^7.8.2",
     "xstate": "^5.32.6"
   },
