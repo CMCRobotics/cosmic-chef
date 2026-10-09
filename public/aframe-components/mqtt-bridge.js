@@ -154,15 +154,36 @@ AFRAME.registerComponent('mqtt-bridge', {
         const now = Date.now();
         const shouldPublishProgress = !this.lastProgressPublish || (now - this.lastProgressPublish >= 250);
 
-        // Publish immediately on state transition, or throttled during active cooking progress
+        // Publish immediately on state transition, or throttled during active cooking progress.
+        // A throttled update is held and sent once the window closes, so the last update
+        // (e.g. a gesture stopping back to idle) is never dropped.
         if (stateChanged || shouldPublishProgress) {
-            this.lastProgressPublish = now;
-            const stateTopic = window.CosmicChef.gameStateTopic(this.data.teamId, this.data.gameId);
-            this.client.publish(stateTopic, JSON.stringify({ state, context }), { qos: stateChanged ? 1 : 0 });
+            this.publishState(state, context, stateChanged);
+        } else {
+            this.latestState = { state, context };
+            if (this.trailingPublish) return;
+            const delay = 250 - (now - this.lastProgressPublish);
+            this.trailingPublish = setTimeout(() => {
+                this.trailingPublish = null;
+                const latest = this.latestState;
+                this.publishState(latest.state, latest.context, false);
+            }, delay);
         }
     },
 
+    publishState: function (state, context, stateChanged) {
+        if (this.trailingPublish) {
+            clearTimeout(this.trailingPublish);
+            this.trailingPublish = null;
+        }
+        this.latestState = { state, context };
+        this.lastProgressPublish = Date.now();
+        const stateTopic = window.CosmicChef.gameStateTopic(this.data.teamId, this.data.gameId);
+        this.client.publish(stateTopic, JSON.stringify({ state, context }), { qos: stateChanged ? 1 : 0 });
+    },
+
     remove: function () {
+        if (this.trailingPublish) clearTimeout(this.trailingPublish);
         this.el.removeEventListener('game-state-changed', this.onStateChange);
         this.el.removeEventListener('next-round-requested', this.onNextRoundRequested);
         this.gestureSubscription.unsubscribe();

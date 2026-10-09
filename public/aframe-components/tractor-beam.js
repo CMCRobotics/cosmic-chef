@@ -15,7 +15,7 @@ AFRAME.registerComponent('tractor-beam', {
     schema: {
         maxDistance: { type: 'number', default: 100 }, // how far the aim ray reaches
         highlightEmissive: { type: 'string', default: '#ffff00' }, // yellow glow for the selected crate
-        highlightIntensity: { type: 'number', default: 0.8 } // glow intensity
+        highlightIntensity: { type: 'number', default: 0.2 } // glow intensity (subtle)
     },
 
     init: function () {
@@ -29,6 +29,7 @@ AFRAME.registerComponent('tractor-beam', {
         this.capturedRecipe = null; // crate being pulled to intake
         this.teamState = null; // the team's last state broadcast, null until the first one
         this.savedMaterials = new Map(); // crate → its original mesh materials, while it is highlighted
+        this.aimHand = this.el; // VR: the hand the aim ray comes from (the one that pressed last)
 
         // Right click: first click selects the aimed crate, second click captures it
         this.onMouseDown = this.onMouseDown.bind(this);
@@ -36,9 +37,13 @@ AFRAME.registerComponent('tractor-beam', {
         document.addEventListener('mousedown', this.onMouseDown);
         document.addEventListener('contextmenu', this.onContextMenu);
 
-        // In VR the right trigger does the same job (this component lives on the right hand)
-        this.onTriggerDown = () => this.onPress();
-        this.el.addEventListener('triggerdown', this.onTriggerDown);
+        // In VR either trigger does the same job. The pressing hand becomes the aim hand, so its laser aims
+        this.onTriggerDown = (evt) => {
+            this.aimHand = evt.target;
+            this.onPress();
+        };
+        this.hands = [this.el, document.querySelector('#leftHand')].filter(Boolean);
+        this.hands.forEach((hand) => hand.addEventListener('triggerdown', this.onTriggerDown));
 
         // A submitted or cancelled order removes its crate from the intake
         this.onStateChanged = (evt) => {
@@ -101,8 +106,8 @@ AFRAME.registerComponent('tractor-beam', {
     },
 
     raycastForRecipe: function () {
-        // In VR the ray comes out of the right hand (this entity); on desktop from the centre of the view
-        const aimObj3D = this.el.sceneEl.is('vr-mode') ? this.el.object3D : this.camera && this.camera.object3D;
+        // In VR the ray comes out of the aim hand; on desktop from the centre of the view
+        const aimObj3D = this.el.sceneEl.is('vr-mode') ? this.aimHand.object3D : this.camera && this.camera.object3D;
         if (!aimObj3D) return null;
 
         const origin = new THREE.Vector3();
@@ -299,7 +304,7 @@ AFRAME.registerComponent('tractor-beam', {
         this.el.sceneEl.removeEventListener('game-state-changed', this.onStateChanged);
         document.removeEventListener('mousedown', this.onMouseDown);
         document.removeEventListener('contextmenu', this.onContextMenu);
-        this.el.removeEventListener('triggerdown', this.onTriggerDown);
+        this.hands.forEach((hand) => hand.removeEventListener('triggerdown', this.onTriggerDown));
         this.unhighlightRecipe(this.highlightedRecipe);
         this.log.debug('Tractor beam removed');
     }

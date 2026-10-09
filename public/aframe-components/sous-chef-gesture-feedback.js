@@ -47,9 +47,9 @@ AFRAME.registerComponent('sous-chef-gesture-feedback', {
             this.utensils[name] = utensilEl;
         });
 
-        // Resolve event source: check closest ancestor with team-galley-receiver or galley-manager, fallback to scene
-        const scopedAncestor = this.el.closest('[team-galley-receiver], [galley-manager]');
-        this.stateSource = scopedAncestor || this.el.sceneEl;
+        // Match galley-manager: only a team-galley-receiver re-emits state on its own entity; otherwise listen on the scene
+        const receiver = this.el.closest('[team-galley-receiver]');
+        this.stateSource = receiver || this.el.sceneEl;
 
         this.onStateChange = this.onStateChange.bind(this);
         this.stateSource.addEventListener('game-state-changed', this.onStateChange);

@@ -1,10 +1,12 @@
 /**
  * head-chef-camera-zoom.js
  * Analog camera zoom for head chef.
- * VR: squeeze (grip) the right hand to zoom in/out
- * Desktop: +/- keys to zoom in/out
+ * VR: push the left thumbstick up to zoom in, pull it down to zoom out, press it to reset
+ * Desktop: +/- keys to zoom in/out, 0 to reset
  * FOV narrows when zooming in (sniper-like effect)
  */
+
+const STICK_DEAD_ZONE = 0.15; // ignore small thumbstick movements to prevent drift
 
 AFRAME.registerComponent('head-chef-camera-zoom', {
     schema: {
@@ -24,16 +26,16 @@ AFRAME.registerComponent('head-chef-camera-zoom', {
         this.currentZoom = this.data.defaultZoom;
         this.targetZoom = this.data.defaultZoom;
         this.baseDistance = 4; // Default camera distance from rig (from vr.html)
-        this.triggerPressed = false;
+        this.thumbstickY = 0; // left thumbstick: -1 pushed up, +1 pulled down
 
         // The component is attached to the a-camera element itself
         this.log.info('Camera element:', this.el.tagName, 'Position:', this.el.getAttribute('position'));
 
-        // Get VR right hand controller
-        this.rightHand = document.querySelector('#rightHand');
-        if (this.rightHand) {
-            this.rightHand.addEventListener('gripdown', () => this.onTriggerDown());
-            this.rightHand.addEventListener('gripup', () => this.onTriggerUp());
+        // VR: the left thumbstick zooms, pressing it resets the zoom
+        this.leftHand = document.querySelector('#leftHand');
+        if (this.leftHand) {
+            this.leftHand.addEventListener('thumbstickmoved', (evt) => { this.thumbstickY = evt.detail.y; });
+            this.leftHand.addEventListener('thumbstickdown', () => this.resetZoom());
         }
 
         // Listen for keyboard zoom (+/- keys)
@@ -49,18 +51,7 @@ AFRAME.registerComponent('head-chef-camera-zoom', {
         // Update loop
         this.tick = AFRAME.utils.throttleTick(this.tick.bind(this), 60);
 
-        this.log.debug('Head chef camera zoom ready - VR: grip to zoom, Desktop: +/- keys');
-    },
-
-    onTriggerDown: function () {
-        this.log.debug('Trigger down - analog zoom enabled');
-        this.triggerPressed = true;
-    },
-
-    onTriggerUp: function () {
-        this.log.debug('Trigger up - analog zoom disabled');
-        this.triggerPressed = false;
-        // Keep current zoom level, don't reset
+        this.log.debug('Head chef camera zoom ready - VR: left thumbstick to zoom, Desktop: +/- keys');
     },
 
     onKeyDown: function (e) {
@@ -94,31 +85,23 @@ AFRAME.registerComponent('head-chef-camera-zoom', {
         this.targetZoom = this.data.defaultZoom;
     },
 
-    tick: function () {
-        // In VR, use trigger + hand motion for analog zoom
-        if (this.triggerPressed && this.rightHand) {
-            // Get right hand position for analog input
-            const rightHandPos = this.rightHand.getAttribute('position');
-            // Use hand Y position to control zoom (up = zoom in, down = zoom out)
-            // Normalize to -1 to 1 range (rough estimate)
-            const handZoom = rightHandPos.y / 2; // adjust divisor for sensitivity
-            const zoomDirection = Math.max(-1, Math.min(1, handZoom));
+    // Move the target zoom by a step, kept within the zoom range
+    nudgeZoom: function (step) {
+        this.targetZoom = Math.max(this.data.minZoom, Math.min(this.data.maxZoom, this.targetZoom + step));
+    },
 
-            // Update zoom while trigger pressed (very gradual)
-            if (Math.abs(zoomDirection) > 0.1) { // dead zone to prevent jitter
-                this.targetZoom += zoomDirection * this.data.zoomSpeed;
-                this.targetZoom = Math.max(this.data.minZoom, Math.min(this.data.maxZoom, this.targetZoom));
-            }
+    tick: function () {
+        // VR: left thumbstick, pushed up zooms in. The speed scales with how far the stick is pushed
+        if (Math.abs(this.thumbstickY) > STICK_DEAD_ZONE) {
+            this.nudgeZoom(-this.thumbstickY * this.data.zoomSpeed);
         }
 
         // Update zoom from keyboard (held keys)
         if (this.keysPressed.zoomIn) {
-            this.targetZoom += this.data.zoomSpeed;
-            this.targetZoom = Math.max(this.data.minZoom, Math.min(this.data.maxZoom, this.targetZoom));
+            this.nudgeZoom(this.data.zoomSpeed);
         }
         if (this.keysPressed.zoomOut) {
-            this.targetZoom -= this.data.zoomSpeed;
-            this.targetZoom = Math.max(this.data.minZoom, Math.min(this.data.maxZoom, this.targetZoom));
+            this.nudgeZoom(-this.data.zoomSpeed);
         }
 
         // Very smooth lerp current zoom toward target (maintains zoom when keys released)
