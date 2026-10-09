@@ -82,7 +82,9 @@ AFRAME.registerComponent('debug-overlay', {
         const scene = this.el.sceneEl;
         scene.addEventListener('crate-highlighted', (evt) => {
             const { crate, offset } = evt.detail;
-            this.log(crate ? `crate highlight: ${crate} (ray ${offset.toFixed(2)} m from centre)` : 'crate highlight: none');
+            if (!crate) return this.log('crate highlight: none');
+            const distance = offset == null ? '' : ` (ray ${offset.toFixed(2)} m from centre)`;
+            this.log(`crate highlight: ${crate}${distance}`);
         });
         scene.addEventListener('crate-action', (evt) => this.log(`crate ${evt.detail.action}`));
         scene.addEventListener('zoom-input', (evt) => this.log(`zoom ${evt.detail.source || 'stopped'}`));

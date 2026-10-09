@@ -14,6 +14,7 @@ const CRATE_SHRINK_MS = 500; // how long a finished crate takes to shrink away
 AFRAME.registerComponent('tractor-beam', {
     schema: {
         maxDistance: { type: 'number', default: 100 }, // how far the aim ray reaches
+        aimRadius: { type: 'number', default: 1.0 }, // a crate is aimed at when the ray passes this close to its centre (metres)
         highlightEmissive: { type: 'string', default: '#ffff00' }, // yellow glow for the selected crate
         highlightIntensity: { type: 'number', default: 0.2 } // glow intensity (subtle)
     },
@@ -119,31 +120,28 @@ AFRAME.registerComponent('tractor-beam', {
 
         const origin = new THREE.Vector3();
         aimObj3D.getWorldPosition(origin);
-        const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(aimObj3D.getWorldQuaternion(new THREE.Quaternion()));
-        const raycaster = new THREE.Raycaster(origin, direction.normalize(), 0, this.data.maxDistance);
+        const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(aimObj3D.getWorldQuaternion(new THREE.Quaternion())).normalize();
 
-        // Only crates that are still falling can be aimed at
-        const meshes = [];
+        // A crate is aimed at when the ray passes within aimRadius of its centre, so a slightly
+        // off-centre aim still counts. The nearest such crate wins. Only falling crates can be aimed at.
+        let aimed = null;
+        let aimedDistance = Infinity;
         document.querySelectorAll('.fallable-recipe:not([data-captured="true"])').forEach((el) => {
             if (!el.object3D) return;
-            el.object3D.traverse((child) => {
-                if (child.isMesh) {
-                    child.userData.recipeEl = el;
-                    meshes.push(child);
-                }
-            });
+            const toCentre = el.object3D.getWorldPosition(new THREE.Vector3()).sub(origin);
+            const along = toCentre.dot(direction);
+            if (along < 0 || along > this.data.maxDistance) return;
+
+            // Distance from the crate's centre to the ray, for the debug overlay (0 = through the centre)
+            const offset = toCentre.sub(direction.clone().multiplyScalar(along)).length();
+            if (offset <= this.data.aimRadius && along < aimedDistance) {
+                aimed = { el, offset };
+                aimedDistance = along;
+            }
         });
-        if (meshes.length === 0) return null;
 
-        const hits = raycaster.intersectObjects(meshes);
-        if (hits.length === 0) return null;
-
-        // How far the aim ray passes from the crate's centre, for the debug overlay (0 = through the centre)
-        const recipeEl = hits[0].object.userData.recipeEl;
-        const toCentre = recipeEl.object3D.getWorldPosition(new THREE.Vector3()).sub(origin);
-        const along = toCentre.dot(raycaster.ray.direction);
-        this.aimOffset = toCentre.sub(raycaster.ray.direction.clone().multiplyScalar(along)).length();
-        return recipeEl;
+        this.aimOffset = aimed ? aimed.offset : null;
+        return aimed ? aimed.el : null;
     },
 
     // Glow the crate's model meshes. The mesh materials are swapped for copies, so the
