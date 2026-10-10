@@ -60,6 +60,11 @@ export function recipeMessageToEvent(payload: string): GameEvent | null {
   }
 }
 
+/** Score-reset payload → RESET_SCORE, or null for anything but "reset". */
+export function scoreResetMessageToEvent(payload: string): GameEvent | null {
+  return payload.trim().toLowerCase() === "reset" ? { type: "RESET_SCORE" } : null;
+}
+
 export interface GestureStreamOptions {
   /** Interval between GESTURE_TICKs while a gesture is held. */
   tickMs?: number;

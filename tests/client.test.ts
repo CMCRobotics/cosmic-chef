@@ -10,6 +10,7 @@ import {
   recipeDesiredTopic,
   recipeActualTopic,
   recipeTopic,
+  scoreResetTopic,
   sousChefGestureTopic,
   teamColorTopic,
 } from "../src/client/topics";
@@ -23,7 +24,9 @@ import {
   createGestureEventStream,
   headChefMessageToEvent,
   recipeMessageToEvent,
+  scoreResetMessageToEvent,
 } from "../src/client/adapters";
+import { describeScoreboard } from "../src/client/scoreboard";
 
 describe("topics", () => {
   test("builds the documented topic layout", () => {
@@ -44,6 +47,7 @@ describe("topics", () => {
       sousChefGestureTopic("t", "g", 1),
       sousChefGestureTopic("t", "g", 2),
       sousChefGestureTopic("t", "g", 3),
+      scoreResetTopic("t", "g"),
     ]);
   });
 
@@ -59,6 +63,11 @@ describe("topics", () => {
   test("team colour topic is built and parsed", () => {
     expect(teamColorTopic("team-1", "default")).toBe("cosmic-chef/team-team-1/game-default/identity/color");
     expect(parseTopic(teamColorTopic("t", "g"), "t", "g")).toEqual({ kind: "team-color" });
+  });
+
+  test("score reset topic is built and parsed", () => {
+    expect(scoreResetTopic("team-1", "default")).toBe("cosmic-chef/team-team-1/game-default/score/reset");
+    expect(parseTopic(scoreResetTopic("t", "g"), "t", "g")).toEqual({ kind: "score-reset" });
   });
 });
 
@@ -79,6 +88,29 @@ describe("head-chef and recipe adapters", () => {
 
   test("chefIdFor matches the machine's station chef ids", () => {
     expect(chefIdFor(1)).toBe("chef-1");
+  });
+
+  test("score reset payload maps to RESET_SCORE, anything else to null", () => {
+    expect(scoreResetMessageToEvent("reset")).toEqual({ type: "RESET_SCORE" });
+    expect(scoreResetMessageToEvent(" RESET ")).toEqual({ type: "RESET_SCORE" });
+    expect(scoreResetMessageToEvent("zero")).toBeNull();
+    expect(scoreResetMessageToEvent("")).toBeNull();
+  });
+});
+
+describe("scoreboard text", () => {
+  test("one line per team, in the order given", () => {
+    expect(
+      describeScoreboard([
+        { teamId: "blue", score: 300 },
+        { teamId: "red", score: 0 },
+        { teamId: "white", score: 150 },
+      ])
+    ).toEqual(["EQUIPE BLUE : 300", "EQUIPE RED : 0", "EQUIPE WHITE : 150"]);
+  });
+
+  test("a team with no broadcast yet shows a dash", () => {
+    expect(describeScoreboard([{ teamId: "red", score: null }])).toEqual(["EQUIPE RED : —"]);
   });
 });
 

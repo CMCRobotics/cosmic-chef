@@ -122,7 +122,7 @@ const RECIPES = [
  *   GESTURE_TICK  { chefId, gesture, progressAmount? }  (chefId optional for the final stir)
  *   GESTURE_STOP  { chefId }
  *   CAPTURE_RECIPE { recipe }, SUBMIT_RECIPE, CANCEL_ORDER, STEP_TIMEOUT,
- *   NEXT_ROUND, SET_ACTIVE_CHEFS { count }, GAME_OVER
+ *   NEXT_ROUND, SET_ACTIVE_CHEFS { count }, GAME_OVER, RESET_SCORE
  *
  * Emitted: 'invalid-gesture' { stationId, chefId, gesture } when a chef with an
  * ingredient performs the wrong gesture.
@@ -147,7 +147,8 @@ const preparationMachine = createMachine({
         GESTURE_START: { actions: 'setChefGesture' },
         GESTURE_STOP: { actions: 'clearChefGesture' },
         SET_ACTIVE_CHEFS: { actions: 'setActiveChefs' },
-        GAME_OVER: '.gameOver'
+        GAME_OVER: '.gameOver',
+        RESET_SCORE: { actions: 'resetScore' }
     },
     states: {
         waitingForRecipe: {
@@ -314,6 +315,7 @@ const preparationMachine = createMachine({
         incrementScore: assign(({ context }) => ({ score: context.score + 100 })),
         incrementSuccessCount: assign(({ context }) => ({ completedCount: context.completedCount + 1 })),
         applyPenalty: assign(({ context }) => ({ score: Math.max(0, context.score - 50) })),
+        resetScore: assign(() => ({ score: 0, completedCount: 0, penalizedCount: 0 })),
         incrementPenalizedCount: assign(({ context }) => ({ penalizedCount: context.penalizedCount + 1 })),
         setChefGesture: assign(({ context, event }) => {
             if (!event.chefId) return {};

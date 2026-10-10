@@ -782,3 +782,44 @@ describe("preparation-machine — gesture validation and sequences", () => {
         expect(actor.getSnapshot().context.chefGestures["chef-2"]).toBe("idle");
     });
 });
+
+describe("preparation-machine — score reset", () => {
+    function completePion(actor) {
+        actor.send({ type: "START_GAME" });
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 2 });
+        actor.send({ type: "CAPTURE_RECIPE", recipe: RECIPES.find(r => r.name === 'pion') });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-1", gesture: "tenderize", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", chefId: "chef-2", gesture: "stir", progressAmount: 100 });
+        actor.send({ type: "GESTURE_TICK", gesture: "stir", progressAmount: 100 });
+        actor.send({ type: "SUBMIT_RECIPE" });
+    }
+
+    test("RESET_SCORE zeroes score, served and failed counts", () => {
+        const actor = createActor(preparationMachine).start();
+        completePion(actor);
+        expect(actor.getSnapshot().context.score).toBe(100);
+        expect(actor.getSnapshot().context.completedCount).toBe(1);
+
+        actor.send({ type: "NEXT_ROUND" });
+        actor.send({ type: "RESET_SCORE" });
+
+        const { context } = actor.getSnapshot();
+        expect(context.score).toBe(0);
+        expect(context.completedCount).toBe(0);
+        expect(context.penalizedCount).toBe(0);
+    });
+
+    test("RESET_SCORE works from any state and leaves the current order alone", () => {
+        const actor = createActor(preparationMachine).start();
+        actor.send({ type: "START_GAME" });
+        actor.send({ type: "SET_ACTIVE_CHEFS", count: 2 });
+        actor.send({ type: "CAPTURE_RECIPE", recipe: RECIPES.find(r => r.name === 'pion') });
+        actor.send({ type: "CANCEL_ORDER" });
+        expect(actor.getSnapshot().context.penalizedCount).toBe(1);
+
+        actor.send({ type: "RESET_SCORE" });
+        expect(actor.getSnapshot().value).toBe("orderPenalized");
+        expect(actor.getSnapshot().context.penalizedCount).toBe(0);
+        expect(actor.getSnapshot().context.currentOrder).not.toBeNull();
+    });
+});

@@ -90,7 +90,7 @@ AFRAME.registerComponent('mqtt-bridge', {
     },
 
     onMessage: function (topic, payload) {
-        const { parseTopic, chefIdFor, headChefMessageToEvent, recipeMessageToEvent } = window.CosmicChef;
+        const { parseTopic, chefIdFor, headChefMessageToEvent, recipeMessageToEvent, scoreResetMessageToEvent } = window.CosmicChef;
         const parsed = parseTopic(topic, this.data.teamId, this.data.gameId);
         if (!parsed) return;
 
@@ -132,6 +132,17 @@ AFRAME.registerComponent('mqtt-bridge', {
                     return;
                 }
                 this.log.info(`Recipe to prepare received: ${event.recipe.name}`);
+                this.prepMgr.send(event);
+                break;
+            }
+
+            case 'score-reset': {
+                const event = scoreResetMessageToEvent(payload);
+                if (!event) {
+                    this.log.warn(`Unknown score-reset payload: ${payload}`);
+                    return;
+                }
+                this.log.info('Score reset requested, sending RESET_SCORE');
                 this.prepMgr.send(event);
                 break;
             }
@@ -191,7 +202,8 @@ AFRAME.registerComponent('mqtt-bridge', {
         this.latestState = { state, context };
         this.lastProgressPublish = Date.now();
         const stateTopic = window.CosmicChef.gameStateTopic(this.data.teamId, this.data.gameId);
-        this.client.publish(stateTopic, JSON.stringify({ state, context }), { qos: stateChanged ? 1 : 0 });
+        // Retained so a scoring screen opened after the last change still shows the current scores
+        this.client.publish(stateTopic, JSON.stringify({ state, context }), { qos: stateChanged ? 1 : 0, retain: true });
     },
 
     remove: function () {

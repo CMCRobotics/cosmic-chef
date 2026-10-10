@@ -6,6 +6,7 @@
  *   cosmic-chef/team-{teamId}/game-{gameId}/round/recipe-desired               payload: recipe JSON (incoming)
  *   cosmic-chef/team-{teamId}/game-{gameId}/round/recipe-actual                payload: recipe JSON (outgoing)
  *   cosmic-chef/team-{teamId}/game-{gameId}/identity/color                     payload: hex colour, e.g. "#0066ff" (retained)
+ *   cosmic-chef/team-{teamId}/game-{gameId}/score/reset                        payload: "reset" (scoring screen → mqtt-bridge)
  *   homie/terminal-{serialHex}/config/sousChef                                 payload: "sous-chef-N" | "none" (retained, micro:bit gateway)
  *
  * Every topic string in the client is built or parsed here.
@@ -17,7 +18,8 @@ export type ParsedTopic =
   | { kind: "recipe-desired" }
   | { kind: "recipe-actual" }
   | { kind: "game-state" }
-  | { kind: "team-color" };
+  | { kind: "team-color" }
+  | { kind: "score-reset" };
 
 export function gameTopic(teamId: string, gameId: string): string {
   return `cosmic-chef/team-${teamId}/game-${gameId}`;
@@ -56,12 +58,18 @@ export function gameStateTopic(teamId: string, gameId: string): string {
   return `${gameTopic(teamId, gameId)}/state/broadcast`;
 }
 
+/** Command from the scoring screen: zero the team's scores. Not retained, so a reconnect never resets. */
+export function scoreResetTopic(teamId: string, gameId: string): string {
+  return `${gameTopic(teamId, gameId)}/score/reset`;
+}
+
 /** All topics a game client subscribes to. */
 export function gameSubscriptions(teamId: string, gameId: string, numSousChefs: number): string[] {
   const topics = [headChefSubmitTopic(teamId, gameId), recipeDesiredTopic(teamId, gameId)];
   for (let n = 1; n <= numSousChefs; n++) {
     topics.push(sousChefGestureTopic(teamId, gameId, n));
   }
+  topics.push(scoreResetTopic(teamId, gameId));
   return topics;
 }
 
@@ -79,5 +87,6 @@ export function parseTopic(topic: string, teamId: string, gameId: string): Parse
   if (rest === "round/recipe") return { kind: "recipe-desired" }; // Fallback for legacy topic
   if (rest === "state/broadcast") return { kind: "game-state" };
   if (rest === "identity/color") return { kind: "team-color" };
+  if (rest === "score/reset") return { kind: "score-reset" };
   return null;
 }

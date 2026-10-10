@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cosmic Chef — Scoring</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Runtime config (MQTT_BROKER_URL from .env) — must load before components -->
+    <script src="config.js"></script>
+    <!-- Vendor Dependencies Bundle (Offline / Local) -->
+    <script src="vendor/bundle.js"></script>
+
+    <script src="aframe-components/ar-utils.js"></script>
+    <script src="aframe-components/scoring-mqtt-client.js"></script>
+    <script src="aframe-components/scoring-screen.js"></script>
+    <script src="aframe-components/scoring-reset-button.js"></script>
+</head>
+<body>
+    <a-scene
+        start-experience
+        scoring-mqtt-client="gameId: default"
+        renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
+        cursor="rayOrigin: mouse"
+        fog="color: #1d1d1e; distance: 800;"
+        raycaster="objects: .clickable">
+
+        <a-assets>
+            <a-asset-item id="asset_button_floor_square" src="assets/models/factory/button-floor-square.glb"></a-asset-item>
+            <a-asset-item id="asset_scanner_high" src="assets/models/factory/scanner-high.glb"></a-asset-item>
+            <a-asset-item id="asset_screen_hanging_wide" src="assets/models/factory/screen-hanging-wide.glb"></a-asset-item>
+
+            <a-asset-item id="asset_blackhole" src="assets/models/blackhole.glb"></a-asset-item>
+
+            <img id="skybox_space_nebula" src="assets/skybox-space-nebula.png">
+        </a-assets>
+
+        <!-- Main world container -->
+        <a-entity id="world-root" world-root>
+
+            <!-- Environment -->
+            <a-sky src="#skybox_space_nebula"></a-sky>
+
+            <a-entity environment="preset: starry; stageSize: 100; lightPosition: 0 -0.01 -0.2; fog: none; ground: none; groundTexture: none;"></a-entity>
+
+            <a-entity id="primordial-chaos" gltf-model="#asset_blackhole" animation-mixer="clip: *; loop: repeat; timeScale: 0.1" position="0 32 0" scale="20 20 20"></a-entity>
+
+            <a-entity id="hemisphere-light" position="0 50 0" light="color: #CEE4F0; groundColor: #553e35; intensity: 2.3; type: hemisphere"></a-entity>
+
+            <!-- Round floor, see-through so the space shows below the scoring area -->
+            <a-circle id="scoring-floor" material="color: #121213; transparent: true; opacity: 0.35" rotation="-90 0 0" position="0 0.004 0" scale="8 8 8"></a-circle>
+
+            <!-- Scanner backdrop and large screen. Both sit in front of the camera (galley.html places them behind it) -->
+            <a-entity id="entity_scanner_high" gltf-model="#asset_scanner_high" position="0 0 4" scale="2 5.60 8.25" rotation="0 90 0"></a-entity>
+            <a-entity id="entity_screen_hanging_wide" gltf-model="#asset_screen_hanging_wide" position="0 4 0" scale="8 6.15 1"></a-entity>
+
+            <!-- Current score of each team, just in front of the screen face -->
+            <a-entity id="scoring-screen" scoring-screen position="0 6 -0.3" rotation="0 180 0"></a-entity>
+
+            <!-- Reset every team's score -->
+            <a-entity id="scoring-reset-button" class="clickable" scoring-reset-button gltf-model="#asset_button_floor_square" position="0 0.4 2" rotate="0 180 0" scale="2 1.5 2"></a-entity>
+
+        </a-entity>
+
+        <!-- Camera Rig: same start view as index.html. WASD and mouse look are on (A-Frame defaults) -->
+        <a-entity id="cameraRig" rotation="-10 180 0" position="0 3 -5.5">
+            <a-camera position="0 1.2 0"></a-camera>
+
+            <!-- Controller Entities. cursor turns a trigger press on the hand into a click (e.g. the reset button) -->
+            <a-entity id="leftHand" laser-controls="hand: left" raycaster="objects: .clickable" cursor="rayOrigin: entity"></a-entity>
+            <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .clickable" cursor="rayOrigin: entity"></a-entity>
+        </a-entity>
+
+    </a-scene>
+</body>
+</html>
