@@ -37,8 +37,8 @@ export function describeHeadChefStatus(state: string, context: StatusContext): s
   const lines: string[] = [];
 
   if (!order) {
-    lines.push('RECIPE: none');
-    lines.push('Waiting for recipe capture');
+    lines.push('RECETTE : aucune');
+    lines.push('En attente de recette');
     lines.push(...scoreLines(context));
     return lines;
   }
@@ -46,17 +46,17 @@ export function describeHeadChefStatus(state: string, context: StatusContext): s
   const total = context.ingredients.length;
   const done = context.ingredients.filter((i) => i.completed).length;
 
-  lines.push(`RECIPE: ${order.name.toUpperCase()}${order.composition ? ` (${order.composition})` : ''}`);
-  lines.push(`Next: ${nextAction(state, context)}`);
+  lines.push(`RECETTE : ${order.name.toUpperCase()}${order.composition ? ` (${order.composition})` : ''}`);
+  lines.push(`Suivant : ${nextAction(state, context)}`);
   lines.push('');
-  lines.push(`Ingredients: ${done}/${total} delivered`);
+  lines.push(`Ingredients : ${done}/${total} livres`);
   lines.push('');
-  lines.push('Sous-chefs:');
+  lines.push('Sous-chefs :');
   context.stations.forEach((station) => lines.push(stationLine(station, state, context.chefGestures)));
   lines.push('');
   lines.push(state === 'readyForFinalStir' || state === 'recipeReadyForSubmit'
-    ? `Final stir (all chefs): ${Math.round(context.stirProgress)}%`
-    : 'Final stir: after all ingredients are ready');
+    ? `Melange final (tous) : ${Math.round(context.stirProgress)}%`
+    : 'Melange final : apres les ingredients');
   lines.push(...scoreLines(context));
   return lines;
 }
@@ -67,45 +67,55 @@ function nextAction(state: string, context: StatusContext): string {
 
   switch (state) {
     case 'waitingForRecipe':
-      return 'waiting for recipe capture';
+      return 'attendre la recette';
     case 'preparingIngredients':
-      return `sous-chefs prepare the ingredients (${total - done} left)`;
+      return `preparer (${total - done} restants)`;
     case 'readyForFinalStir':
-      return `everyone stir together (${Math.round(context.stirProgress)}%)`;
+      return `tous melangent (${Math.round(context.stirProgress)}%)`;
     case 'recipeReadyForSubmit':
-      return 'dish ready: press the floor button (green O) to submit';
+      return 'plat pret : bouton vert au sol';
     case 'orderSuccess':
-      return 'dish served! waiting for the next crate';
+      return 'servi ! commande suivante';
     case 'orderPenalized':
-      return 'order cancelled or failed, waiting for the next crate';
+      return 'rate ou annule, commande suivante';
     case 'gameOver':
-      return 'game over';
+      return 'fin de partie';
     default:
       return state;
   }
 }
 
+const GESTURE_LABELS: Record<string, string> = {
+  tenderize: 'Attendrir',
+  slice: 'Decouper',
+  stir: 'Remuer',
+};
+
+function gestureLabel(gesture: string): string {
+  return GESTURE_LABELS[gesture] ?? gesture;
+}
+
 function stationLine(station: StatusStation, state: string, chefGestures: Record<string, string>): string {
   if (!station.chefId) {
-    return `  ${station.stationId}: no chef assigned`;
+    return `  ${station.stationId} : aucun chef`;
   }
 
   const chef = station.chefId.replace('chef-', 'Chef ');
   const doing = chefGestures[station.chefId];
-  const doingSuffix = doing && doing !== 'idle' ? `  [doing: ${doing}]` : '';
+  const doingSuffix = doing && doing !== 'idle' ? `  [fait : ${gestureLabel(doing)}]` : '';
 
   if (!station.ingredientId) {
-    const idleText = state === 'readyForFinalStir' ? 'ready to stir' : 'idle, nothing to prepare';
-    return `  ${chef}: ${idleText}${doingSuffix}`;
+    const idleText = state === 'readyForFinalStir' ? 'pret a melanger' : 'libre';
+    return `  ${chef} : ${idleText}${doingSuffix}`;
   }
 
   const steps = station.gesturesRequired;
   const current = steps[station.currentGestureIndex];
-  const stepText = steps.length > 1 ? ` step ${station.currentGestureIndex + 1}/${steps.length}` : '';
-  return `  ${chef}: ${current.gesture.toUpperCase()} ${station.ingredientId}${stepText} ` +
+  const stepText = steps.length > 1 ? ` etape ${station.currentGestureIndex + 1}/${steps.length}` : '';
+  return `  ${chef} : ${gestureLabel(current.gesture)} ${station.ingredientId}${stepText} ` +
     `${Math.round(station.progress)}%${doingSuffix}`;
 }
 
 function scoreLines(context: StatusContext): string[] {
-  return [`Score ${context.score}  ·  served ${context.completedCount}  ·  failed ${context.penalizedCount}`];
+  return [`Score ${context.score}  ·  servis ${context.completedCount}  ·  rates ${context.penalizedCount}`];
 }

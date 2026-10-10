@@ -35,7 +35,7 @@ AFRAME.registerComponent('head-chef-status-display', {
         const textEl = document.createElement('a-entity');
         textEl.setAttribute('id', 'head-chef-status-text');
         textEl.setAttribute('text', {
-            value: 'Waiting for game state...',
+            value: 'En attente...',
             align: 'center',
             anchor: 'center',
             baseline: 'center',
@@ -83,7 +83,7 @@ AFRAME.registerComponent('head-chef-status-display', {
 
         // Wording and layout live in src/client/status.ts (unit-tested)
         const team = (window.CURRENT_TEAM || 'blue').toUpperCase();
-        const lines = [`TEAM ${team}`, ...window.CosmicChef.describeHeadChefStatus(this.lastState, this.lastContext)];
+        const lines = [`EQUIPE ${team}`,...window.CosmicChef.describeHeadChefStatus(this.lastState, this.lastContext)];
 
         const textAttr = this.statusText.getAttribute('text');
         textAttr.value = lines.join('\n');

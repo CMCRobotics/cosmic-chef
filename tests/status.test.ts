@@ -30,19 +30,19 @@ const baseContext = (overrides: Partial<StatusContext> = {}): StatusContext => (
 describe("head-chef status panel", () => {
   test("no recipe: asks for a capture", () => {
     const lines = describeHeadChefStatus("waitingForRecipe", baseContext({ currentOrder: null, ingredients: [] }));
-    expect(lines[0]).toBe("RECIPE: none");
-    expect(lines[1]).toBe("Waiting for recipe capture");
+    expect(lines[0]).toBe("RECETTE : aucune");
+    expect(lines[1]).toBe("En attente de recette");
   });
 
   test("preparing: shows recipe, progress and each sous-chef's next gesture", () => {
     const lines = describeHeadChefStatus("preparingIngredients", baseContext());
-    expect(lines[0]).toBe("RECIPE: PROTON (uud)");
-    expect(lines[1]).toBe("Next: sous-chefs prepare the ingredients (2 left)");
-    expect(lines).toContain("Ingredients: 1/3 delivered");
-    expect(lines).toContain("  Chef 1: TENDERIZE up-1 40%  [doing: tenderize]");
+    expect(lines[0]).toBe("RECETTE : PROTON (uud)");
+    expect(lines[1]).toBe("Suivant : preparer (2 restants)");
+    expect(lines).toContain("Ingredients : 1/3 livres");
+    expect(lines).toContain("  Chef 1 : Attendrir up-1 40%  [fait : Attendrir]");
     // Multi-step ingredient shows the current step, not the first one
-    expect(lines).toContain("  Chef 2: STIR down-1 step 2/2 0%");
-    expect(lines).toContain("  S3: no chef assigned");
+    expect(lines).toContain("  Chef 2 : Remuer down-1 etape 2/2 0%");
+    expect(lines).toContain("  S3 : aucun chef");
   });
 
   test("a chef with nothing at the station is idle", () => {
@@ -50,7 +50,7 @@ describe("head-chef status panel", () => {
       stations: [{ stationId: "S1", chefId: "chef-1", ingredientId: null, currentGestureIndex: 0, progress: 0, gesturesRequired: [] }],
       chefGestures: {},
     });
-    expect(describeHeadChefStatus("preparingIngredients", ctx)).toContain("  Chef 1: idle, nothing to prepare");
+    expect(describeHeadChefStatus("preparingIngredients", ctx)).toContain("  Chef 1 : libre");
   });
 
   test("final stir: every chef is asked to stir and the stir progress is shown", () => {
@@ -60,22 +60,22 @@ describe("head-chef status panel", () => {
       stirProgress: 60,
     });
     const lines = describeHeadChefStatus("readyForFinalStir", ctx);
-    expect(lines[1]).toBe("Next: everyone stir together (60%)");
-    expect(lines).toContain("  Chef 1: ready to stir");
-    expect(lines).toContain("Final stir (all chefs): 60%");
+    expect(lines[1]).toBe("Suivant : tous melangent (60%)");
+    expect(lines).toContain("  Chef 1 : pret a melanger");
+    expect(lines).toContain("Melange final (tous) : 60%");
   });
 
   test("dish ready: head chef is told to submit", () => {
-    expect(describeHeadChefStatus("recipeReadyForSubmit", baseContext())[1]).toContain("press the floor button");
+    expect(describeHeadChefStatus("recipeReadyForSubmit", baseContext())[1]).toContain("bouton vert au sol");
   });
 
   test("served and failed orders say what happens next", () => {
-    expect(describeHeadChefStatus("orderSuccess", baseContext())[1]).toContain("dish served");
-    expect(describeHeadChefStatus("orderPenalized", baseContext())[1]).toContain("cancelled or failed");
+    expect(describeHeadChefStatus("orderSuccess", baseContext())[1]).toContain("servi");
+    expect(describeHeadChefStatus("orderPenalized", baseContext())[1]).toContain("rate ou annule");
   });
 
   test("ends with the score line", () => {
     const lines = describeHeadChefStatus("preparingIngredients", baseContext());
-    expect(lines[lines.length - 1]).toBe("Score 0  ·  served 2  ·  failed 1");
+    expect(lines[lines.length - 1]).toBe("Score 0  ·  servis 2  ·  rates 1");
   });
 });
